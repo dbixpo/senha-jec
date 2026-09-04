@@ -400,7 +400,8 @@ textarea {
 
 .form-grid label,
 .setup-card label,
-.login-body label {
+.login-body label,
+.login-body .campo-login {
   display: grid;
   gap: 6px;
   font-size: 12px;
@@ -1103,11 +1104,75 @@ textarea {
   overflow: hidden;
 }
 
-.login-card { border-top: 3px solid var(--amarelo); }
+.login-card { border-top: 3px solid var(--amarelo); overflow: visible; }
 .setup-card { padding: 28px; display: grid; gap: 12px; }
 .login-body { padding: 24px; display: grid; gap: 10px; }
 .setup-card h1, .login-body h1 { color: var(--dark); font-size: 24px; }
 .login-body form { display: grid; gap: 10px; }
+
+.lab-linha {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tip {
+  position: relative;
+  display: inline-flex;
+}
+.tip-btn {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid rgba(13, 59, 94, 0.28);
+  border-radius: 99px;
+  background: #fff;
+  color: var(--dark);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+}
+.tip-btn:hover,
+.tip:focus-within .tip-btn {
+  background: var(--dark);
+  color: #fff;
+  border-color: var(--dark);
+}
+.tip-balao {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  z-index: 5;
+  width: min(240px, 70vw);
+  padding: 10px 12px;
+  background: var(--dark);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s;
+}
+.tip-balao::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: -6px;
+  border: 6px solid transparent;
+  border-bottom-color: var(--dark);
+  border-top-width: 0;
+}
+.tip:hover .tip-balao,
+.tip:focus-within .tip-balao {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
 
 .overlay-aviso {
   background: rgba(13, 59, 94, 0.48);

@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/app.css?v=31">
+  <link rel="stylesheet" href="css/app.css?v=32">
 </head>
 <body>
   <div id="setup" class="overlay hidden">
@@ -39,11 +39,18 @@
       <div class="login-body">
         <p class="eyebrow">Senha JEC</p>
         <h1>Entrar na fila</h1>
-        <p class="muted">Usuário é o primeiro.segundo nome.<br>A senha é o CPF.</p>
+        <p class="muted">A senha é o CPF.</p>
         <form id="form-login">
-          <label>Usuário
-            <input id="login-usuario" type="text" autocomplete="username" placeholder="primeiro.segundo" required>
-          </label>
+          <div class="campo-login">
+            <span class="lab-linha">
+              <label for="login-usuario">Usuário</label>
+              <span class="tip">
+                <button type="button" class="tip-btn" aria-label="Como preencher o usuário">?</button>
+                <span class="tip-balao" role="tooltip">Sempre o primeiro nome e o sobrenome, com um ponto no meio. Tipo maria.silva.</span>
+              </span>
+            </span>
+            <input id="login-usuario" type="text" autocomplete="username" required>
+          </div>
           <label>Senha
             <input id="login-senha" type="password" autocomplete="current-password" inputmode="numeric" required>
           </label>
@@ -109,7 +116,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
   <script src="js/config.js"></script>
-  <script src="js/app.js?v=31"></script>
+  <script src="js/app.js?v=32"></script>
   <script src="js/pwa.js"></script>
 </body>
 </html>
