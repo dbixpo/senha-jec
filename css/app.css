@@ -272,7 +272,7 @@ textarea { resize: vertical; width: 100%; }
 .login-card { border-top: 3px solid var(--amarelo); }
 .setup-card { padding: 28px; display: grid; gap: 12px; }
 .login-body { padding: 24px; display: grid; gap: 10px; }
-.login-body h1 { color: var(--dark); font-size: 24px; }
+.setup-card h1, .login-body h1 { color: var(--dark); font-size: 24px; }
 .login-body form { display: grid; gap: 10px; }
 
 .disclaimer {
