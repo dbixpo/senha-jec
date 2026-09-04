@@ -232,25 +232,33 @@ function opcoesServico(selected) {
   ).join("");
 }
 
+function proximoNumero() {
+  const usados = senhas.map((s) => Number(s.numero) || 0);
+  return (usados.length ? Math.max(...usados) : 0) + 1;
+}
+
 function telaRecepcao() {
   const naRecepcao = senhas.filter((s) => s.status === "recepcao");
   const encaminhadas = senhas.filter((s) => s.status !== "recepcao" && s.status !== "cancelado");
+  const proxima = String(proximoNumero()).padStart(2, "0");
   return `
     <section class="card">
       <h2>Quem chegou</h2>
       <form id="form-chegada" class="form-grid">
-        <label>Nº da senha
-          <input class="numero-input" id="campo-numero" type="number" min="1" step="1" required autofocus>
-        </label>
+        <div class="proxima">
+          <span class="eyebrow">Próxima senha</span>
+          <strong>${proxima}</strong>
+          <span class="meta">sai sozinha · clique no número depois se precisar ajustar</span>
+        </div>
         <label>Nome da pessoa
           <input id="campo-nome" type="text" placeholder="Nome de quem está sendo atendido" required autocomplete="off">
         </label>
         <label>Serviço
           <select id="campo-servico" required>${opcoesServico()}</select>
         </label>
-        <label>Encaminhar
-          <select id="campo-setor">
-            <option value="">Depois</option>
+        <label>Setor
+          <select id="campo-setor" required>
+            <option value="">Escolher setor</option>
             ${setores.map((s) => `<option value="${s.id}">${escapar(s.nome)}</option>`).join("")}
           </select>
         </label>
@@ -396,7 +404,7 @@ function desenhar() {
   if (aba === "recepcao") {
     app.innerHTML = telaRecepcao();
     document.getElementById("form-chegada")?.addEventListener("submit", onChegada);
-    document.getElementById("campo-numero")?.focus();
+    document.getElementById("campo-nome")?.focus();
     return;
   }
   if (aba === "servicos") {
@@ -427,36 +435,34 @@ async function onChegada(ev) {
   ev.preventDefault();
   const erro = document.getElementById("form-erro");
   erro.classList.add("hidden");
-  const numero = Number(document.getElementById("campo-numero").value);
   const nome = document.getElementById("campo-nome").value.trim();
   const servicoId = document.getElementById("campo-servico").value;
   const setorId = document.getElementById("campo-setor").value;
-  if (!numero || !nome || !servicoId) {
-    erro.textContent = "Número, nome e serviço são obrigatórios.";
+  if (!nome || !servicoId || !setorId) {
+    erro.textContent = "Nome, serviço e setor são obrigatórios.";
     erro.classList.remove("hidden");
     return;
   }
 
   const payload = {
     data: diaAtual(),
-    numero,
     nome,
     servico_id: servicoId,
-    status: setorId ? "na_fila" : "recepcao",
-    setor_id: setorId ? Number(setorId) : null,
-    hora_encaminhamento: setorId ? new Date().toISOString() : null,
+    status: "na_fila",
+    setor_id: Number(setorId),
+    hora_encaminhamento: new Date().toISOString(),
     created_by: sessao.id,
     updated_by: sessao.id,
   };
 
   const { error } = await sb.from("senhas").insert(payload);
   if (error) {
-    erro.textContent = error.code === "23505" ? `A senha ${numero} já está neste dia.` : error.message;
+    erro.textContent = error.code === "23505" ? "Esse número já está neste dia. Ajusta pelo número no cartão." : error.message;
     erro.classList.remove("hidden");
     return;
   }
   ev.target.reset();
-  document.getElementById("campo-numero").focus();
+  document.getElementById("campo-nome").focus();
   await carregar();
 }
 
@@ -559,7 +565,7 @@ async function onAcao(ev) {
   }
   if (acao === "corrigir") {
     const senha = senhas.find((s) => s.id === id);
-    const novo = window.prompt("Corrigir número da senha de papel:", senha?.numero ?? "");
+    const novo = window.prompt("Corrigir número da senha:", senha?.numero ?? "");
     if (novo == null || novo === "") return;
     const numero = Number(novo);
     if (!numero) {
