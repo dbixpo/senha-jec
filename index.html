@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/app.css?v=7">
+  <link rel="stylesheet" href="css/app.css?v=8">
 </head>
 <body>
   <div class="faixa" aria-hidden="true"></div>
@@ -63,15 +63,17 @@
       <h1>Senha JEC</h1>
       </div>
     </div>
+    <span id="live" class="live" title="Atualização ao vivo">ao vivo</span>
     <div class="top-actions">
       <p id="quem" class="quem"></p>
-      <label class="date-wrap">
-        <span>Dia</span>
-        <input type="date" id="dia">
-      </label>
-      <button type="button" class="btn ghost" id="btn-hoje">Hoje</button>
+      <div class="top-dia">
+        <label class="date-wrap">
+          <span>Dia</span>
+          <input type="date" id="dia">
+        </label>
+        <button type="button" class="btn ghost" id="btn-hoje">Hoje</button>
+      </div>
       <button type="button" class="btn ghost" id="btn-sair">Sair</button>
-      <span id="live" class="live" title="Atualização ao vivo">ao vivo</span>
     </div>
   </header>
 

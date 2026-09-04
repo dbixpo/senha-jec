@@ -271,17 +271,17 @@ function celulaHora(senha, campo, comCheck) {
 function linhaSenha(senha, { setor = false } = {}) {
   const atendida = !!senha.hora_atendimento;
   return `<tr class="${atendida ? "atendida" : "aguardando"} ${senha.preferencial ? "pref" : ""}">
-    <td data-label="Tipo">${setor ? badgeTipo(senha) : checksTipoLinha(senha)}</td>
-    <td class="col-num" data-label="Nº senha">
+    <td class="cel-tipo" data-label="Tipo">${setor ? badgeTipo(senha) : checksTipoLinha(senha)}</td>
+    <td class="cel-num col-num" data-label="Senha">
       <button type="button" class="btn ghost small num-btn" data-acao="corrigir" data-id="${senha.id}">${escapar(rotuloSenha(senha))}</button>
     </td>
-    <td class="col-pref" data-label="Preferencial">
-      <label class="pref-lab"><input type="checkbox" data-campo="preferencial" data-id="${senha.id}" ${senha.preferencial ? "checked" : ""}> P</label>
+    <td class="cel-pref col-pref" data-label="Preferencial">
+      <label class="pref-lab"><input type="checkbox" data-campo="preferencial" data-id="${senha.id}" ${senha.preferencial ? "checked" : ""}> <span class="pref-curto">P</span><span class="pref-longo">Preferencial</span></label>
     </td>
-    <td data-label="Hora recepção">${celulaHora(senha, "hora_recepcao", false)}</td>
-    <td data-label="Hora atendimento">${celulaHora(senha, "hora_atendimento", setor)}</td>
-    <td data-label="Nome"><input type="text" data-campo="nome" data-id="${senha.id}" value="${escapar(senha.nome || "")}" placeholder="Nome de quem está sendo atendido"></td>
-    <td data-label="Nº processo"><input type="text" data-campo="processo" data-id="${senha.id}" value="${escapar(senha.processo || "")}" placeholder="nº processo ou observação"></td>
+    <td class="cel-rec" data-label="Hora da recepção">${celulaHora(senha, "hora_recepcao", false)}</td>
+    <td class="cel-atend" data-label="Hora do atendimento">${celulaHora(senha, "hora_atendimento", setor)}</td>
+    <td class="cel-nome" data-label="Nome"><input type="text" data-campo="nome" data-id="${senha.id}" value="${escapar(senha.nome || "")}" placeholder="Nome de quem está sendo atendido"></td>
+    <td class="cel-proc" data-label="Nº processo"><input type="text" data-campo="processo" data-id="${senha.id}" value="${escapar(senha.processo || "")}" placeholder="nº processo ou observação"></td>
   </tr>`;
 }
 
@@ -321,7 +321,8 @@ function telaGeral() {
       <div class="card-topo">
         <div>
           <h2>Senha geral</h2>
-          <p class="muted form-dica">Marca o tipo: sai o número e a hora. Preferencial vira P01, P02… Rosa = esperando · azul = já chamaram.</p>
+          <p class="muted form-dica dica-web">Marca o tipo: sai o número e a hora. Preferencial vira P01, P02… Rosa = esperando · azul = já chamaram.</p>
+          <p class="muted form-dica dica-mobile">Marca o tipo → sai a senha e a hora. Se for preferencial, marca o amarelo. Depois coloca o nome e registra.</p>
         </div>
         ${legendaTipos()}
       </div>
@@ -329,29 +330,29 @@ function telaGeral() {
         <input type="hidden" id="campo-tipo" value="">
         <div class="form-linha">
           <fieldset class="campo campo-tipos">
-            <legend>Tipo de atendimento</legend>
+            <legend><span class="n-passo">1</span> Tipo de atendimento</legend>
             <div class="tipo-checks">${checksTipoForm()}</div>
           </fieldset>
           <label class="chip-check pref-chegada">
             <input id="campo-pref" type="checkbox">
-            <span class="chip-check-ui">Preferencial</span>
+            <span class="chip-check-ui"><span class="n-passo">2</span> Preferencial</span>
           </label>
         </div>
         <div class="form-linha form-linha-campos">
           <div class="campo campo-senha">
-            <span>Senha</span>
+            <span><span class="n-passo">3</span> Senha</span>
             <strong id="campo-senha-rotulo" class="senha-valor">—</strong>
           </div>
           <label class="campo campo-hora">Hora da recepção
             <input id="campo-hora-rec" type="time" value="">
           </label>
-          <label class="campo campo-nome">Nome da pessoa
+          <label class="campo campo-nome"><span class="n-passo">4</span> Nome da pessoa
             <input id="campo-nome" type="text" placeholder="Quem está sendo atendido" required autocomplete="off">
           </label>
           <label class="campo campo-processo">Nº processo
             <input id="campo-processo" type="text" placeholder="Número, CPF, voltou…" autocomplete="off">
           </label>
-          <button class="btn primary form-submit" type="submit">Registrar</button>
+          <button class="btn primary form-submit" type="submit">Registrar senha</button>
         </div>
       </form>
       <p id="form-erro" class="erro hidden"></p>
@@ -368,7 +369,7 @@ function telaTipo(tipo) {
     <div class="card-topo">
       <div>
         <h2>${escapar(tipo.nome)}</h2>
-        <p class="muted form-dica">Marca <strong>Chamou</strong> na hora que chamar a pessoa — isso aparece na senha geral e a linha fica azul.</p>
+        <p class="muted form-dica">Marca <strong>Chamou</strong> quando chamar a pessoa. A senha geral fica azul.</p>
       </div>
       <span class="sigla grande" style="background:${escapar(tipo.cor)}">${escapar(tipo.sigla)}</span>
     </div>
