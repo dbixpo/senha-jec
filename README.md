@@ -28,4 +28,4 @@ Login: `diego.bispo` e `flavia.abes`. A senha de cada um é o CPF.
 
 ## Identidade
 
-Paleta do fusca da Flavinha: amarelo-creme, não amarelo limão. O brasão do Tribunal não entra na cara do sistema para ninguém achar que é oficial.
+Amarelo **#FFD32C**. Sem brasão do Tribunal, para ninguém achar que é sistema oficial.

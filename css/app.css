@@ -4,8 +4,8 @@
   --muted: #7a6a3a;
   --paper: #fffdf3;
   --line: #f3e19a;
-  --fusca: #ffd32c;
-  --fusca-hover: #e8bc18;
+  --amarelo: #ffd32c;
+  --amarelo-hover: #e8bc18;
   --stamp: #b56a4a;
   --shadow: 0 12px 32px rgba(31, 26, 16, 0.1);
   --radius: 16px;
@@ -46,13 +46,9 @@ h2 { font-size: 18px; font-weight: 800; }
 .muted { color: var(--muted); margin: 0; }
 
 .brand { display: flex; align-items: center; gap: 12px; }
-.brand-mark {
-  width: 56px;
-  height: 56px;
-  object-fit: cover;
-  border-radius: 14px;
-  border: 2px solid var(--fusca);
-  background: var(--fusca);
+.brand h1 {
+  padding-left: 12px;
+  border-left: 5px solid var(--amarelo);
 }
 
 .top {
@@ -104,8 +100,8 @@ textarea { resize: vertical; width: 100%; }
   font-weight: 800;
 }
 
-.btn.primary { background: var(--fusca); color: var(--ink); }
-.btn.primary:hover { background: var(--fusca-hover); }
+.btn.primary { background: var(--amarelo); color: var(--ink); }
+.btn.primary:hover { background: var(--amarelo-hover); }
 .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
 .btn.ghost:hover { background: #fff; }
 .btn.stamp { background: var(--stamp); color: #fff; }
@@ -132,9 +128,9 @@ textarea { resize: vertical; width: 100%; }
 }
 
 .tab.active {
-  background: var(--fusca);
+  background: var(--amarelo);
   color: var(--ink);
-  border-color: var(--fusca);
+  border-color: var(--amarelo);
 }
 
 .tab .count {
@@ -258,14 +254,9 @@ textarea { resize: vertical; width: 100%; }
   overflow: hidden;
 }
 
-.setup-card { padding: 28px; display: grid; gap: 12px; }
+.login-card { border-top: 8px solid var(--amarelo); }
 
-.login-hero {
-  display: block;
-  width: 100%;
-  height: 180px;
-  object-fit: cover;
-}
+.setup-card { padding: 28px; display: grid; gap: 12px; }
 
 .login-body { padding: 22px 24px 24px; display: grid; gap: 10px; }
 .login-body form { display: grid; gap: 10px; }
@@ -298,5 +289,4 @@ textarea { resize: vertical; width: 100%; }
   .form-grid, .form-grid.cadastro, .cols, .ticket { grid-template-columns: 1fr; }
   .ticket .acoes { justify-content: flex-start; }
   body { padding: 16px; }
-  .brand-mark { width: 48px; height: 48px; }
 }
