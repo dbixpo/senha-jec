@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/app.css?v=42">
+  <link rel="stylesheet" href="css/app.css?v=43">
 </head>
 <body>
   <div id="setup" class="overlay hidden">
@@ -37,23 +37,22 @@
   <div id="login" class="overlay hidden">
     <div class="login-card">
       <div class="login-body">
-        <img class="logo-login" src="img/logo-login.png?v=42" alt="Senha JEC">
-        <h1>Entrar na fila</h1>
-        <p class="muted">A senha é o CPF.</p>
+        <img class="logo-login" src="img/logo-login.png?v=43" alt="Senha JEC">
         <form id="form-login">
           <div class="campo-login">
-            <span class="lab-linha">
-              <label for="login-usuario">Usuário</label>
-              <span class="tip">
-                <button type="button" class="tip-btn" aria-label="Como preencher o usuário">?</button>
-                <span class="tip-balao" role="tooltip">Sempre o primeiro nome e o sobrenome, com um ponto no meio. Tipo maria.silva.</span>
-              </span>
+            <input id="login-usuario" type="text" autocomplete="username" required aria-label="Usuário">
+            <span class="tip">
+              <button type="button" class="tip-btn" aria-label="Como preencher o usuário">?</button>
+              <span class="tip-balao" role="tooltip">O usuário é criado considerando o primeiro nome e o sobrenome do usuário, por exemplo, “Nelson Salvador Teixeira” teria como usuário nelson.salvador</span>
             </span>
-            <input id="login-usuario" type="text" autocomplete="username" required>
           </div>
-          <label>Senha
-            <input id="login-senha" type="password" autocomplete="current-password" inputmode="numeric" required>
-          </label>
+          <div class="campo-login">
+            <input id="login-senha" type="password" autocomplete="current-password" inputmode="numeric" required aria-label="Senha">
+            <span class="tip">
+              <button type="button" class="tip-btn" aria-label="Qual é a senha">?</button>
+              <span class="tip-balao" role="tooltip">A senha padrão do sistema é o CPF do usuário</span>
+            </span>
+          </div>
           <p id="login-erro" class="erro hidden"></p>
           <button class="btn primary" type="submit">Entrar</button>
         </form>
@@ -70,7 +69,7 @@
     <div class="faixa" aria-hidden="true"></div>
     <header class="top">
       <div class="brand">
-        <img class="logo-top" src="img/logo-topbar.png?v=42" alt="Senha JEC">
+        <img class="logo-top" src="img/logo-topbar.png?v=43" alt="Senha JEC">
       </div>
       <span id="live" class="live hidden" title="Atualização ao vivo">ao vivo</span>
       <div class="top-actions hidden">
@@ -145,7 +144,7 @@
       <p>No topo, o botão Relatório abre o dia na tela. Filtra, lê a lista e, se precisar, imprime ou salva em PDF. A data no topo troca o dia — chamada só vale hoje.</p>
 
       <h3>Login</h3>
-      <p>Usuário é <strong>primeiro.sobrenome</strong>. A senha desta mesa é o CPF.</p>
+      <p>O usuário junta o primeiro nome e o sobrenome com um ponto: Nelson Salvador Teixeira vira <strong>nelson.salvador</strong>. A senha padrão é o CPF do usuário.</p>
 
       <p class="credito-sobre">Projeto aberto: <a href="https://github.com/dbixpo/senha-jec" target="_blank" rel="noopener noreferrer">github.com/dbixpo/senha-jec</a><br>Feito por <strong>dbixpo</strong>.</p>
       <button type="button" class="btn primary" id="sobre-ok">Entendi</button>
@@ -156,7 +155,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
   <script src="js/config.js"></script>
-  <script src="js/app.js?v=42"></script>
+  <script src="js/app.js?v=43"></script>
   <script src="js/pwa.js"></script>
 </body>
 </html>

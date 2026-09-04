@@ -456,8 +456,7 @@ textarea {
 
 .form-grid label,
 .setup-card label,
-.login-body label,
-.login-body .campo-login {
+.login-body label {
   display: grid;
   gap: 6px;
   font-size: 12px;
@@ -1192,9 +1191,45 @@ textarea {
 
 .login-card { border-top: 3px solid var(--amarelo); overflow: visible; }
 .setup-card { padding: 28px; display: grid; gap: 12px; }
-.login-body { padding: 24px; display: grid; gap: 10px; }
+.login-body { padding: 24px; display: grid; gap: 12px; justify-items: center; text-align: center; }
 .setup-card h1, .login-body h1 { color: var(--dark); font-size: 24px; }
-.login-body form { display: grid; gap: 10px; }
+.login-body form {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+}
+.login-body .campo-login {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+.login-body .campo-login input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+.login-body .campo-login .tip-balao {
+  left: auto;
+  right: 0;
+  width: min(280px, calc(100vw - 40px));
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: left;
+}
+.login-body .campo-login .tip-balao::before {
+  left: auto;
+  right: 6px;
+}
+.login-body .btn { width: 100%; }
+.login-body .disclaimer,
+.login-body .credito {
+  text-align: center;
+  width: 100%;
+}
 
 .lab-linha {
   display: flex;
