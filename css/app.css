@@ -121,6 +121,17 @@ h2 { font-size: 18px; color: var(--ink); }
   outline-offset: 1px;
 }
 
+.date-wrap input[type="date"]:disabled {
+  opacity: 0.9;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.date-wrap input[type="date"]:disabled::-webkit-calendar-picker-indicator {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .date-wrap input[type="date"]::-webkit-datetime-edit {
   padding: 0;
 }

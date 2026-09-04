@@ -61,7 +61,35 @@ function isoDoDia(hhmm) {
 }
 
 function diaAtual() {
+  if (!ehAdmin()) return hojeISO();
   return document.getElementById("dia").value || hojeISO();
+}
+
+function ehHoje() {
+  return diaAtual() === hojeISO();
+}
+
+function dataLegivel(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+function aplicarDiaSessao() {
+  const input = document.getElementById("dia");
+  const hoje = document.getElementById("btn-hoje");
+  if (!input) return;
+  if (!ehAdmin()) {
+    input.value = hojeISO();
+    input.disabled = true;
+    input.title = "A fila do dia. Só administrador consulta outros dias.";
+    hoje?.classList.add("hidden");
+  } else {
+    if (!input.value) input.value = hojeISO();
+    input.disabled = false;
+    input.title = "Filtrar a fila por dia";
+    hoje?.classList.remove("hidden");
+  }
 }
 
 function ehAdmin() {
@@ -185,6 +213,7 @@ function pedirLogin() {
   }
   box.classList.add("hidden");
   document.getElementById("quem").textContent = textoQuem();
+  aplicarDiaSessao();
   return true;
 }
 
@@ -364,16 +393,8 @@ function legendaTipos() {
 }
 
 function telaGeral() {
-  return `
-    <section class="card">
-      <div class="card-topo">
-        <div>
-          <h2>Senha geral</h2>
-          <p class="muted form-dica">Preenche nome e tipo e clica em <strong>Registrar senha</strong> — o número e a hora da recepção saem na hora. Preferencial vira P01. Para chamar, usa a aba do tipo.</p>
-        </div>
-        ${legendaTipos()}
-      </div>
-      <form id="form-chegada" class="form-chegada">
+  const form = ehHoje()
+    ? `<form id="form-chegada" class="form-chegada">
         <input type="hidden" id="campo-tipo" value="">
         <div class="form-linha form-linha-campos">
           <div class="campo campo-senha">
@@ -405,12 +426,23 @@ function telaGeral() {
           <button class="btn primary form-submit" type="submit">Registrar senha</button>
         </div>
       </form>
-      <p id="form-erro" class="erro hidden"></p>
+      <p id="form-erro" class="erro hidden"></p>`
+    : `<p class="muted form-dica">Consultando ${dataLegivel(diaAtual())}. Para registrar senha, volta em <strong>Hoje</strong>.</p>`;
+  return `
+    <section class="card">
+      <div class="card-topo">
+        <div>
+          <h2>Senha geral</h2>
+          <p class="muted form-dica">${ehHoje() ? "Preenche nome e tipo e clica em Registrar senha — o número e a hora da recepção saem na hora. Preferencial vira P01. Para chamar, usa a aba do tipo." : "Fila de outro dia. Só consulta."}</p>
+        </div>
+        ${legendaTipos()}
+      </div>
+      ${form}
     </section>
     <section class="card">
       <div class="card-topo">
         <div>
-          <h2>Fila do dia</h2>
+          <h2>Fila ${ehHoje() ? "do dia" : "de " + dataLegivel(diaAtual())}</h2>
           <p id="fila-dica" class="muted form-dica">${verTudo ? "Inclui quem já foi atendido." : "Só quem ainda está na fila."}</p>
         </div>
         ${barraFiltro()}
@@ -429,17 +461,17 @@ function telaTipo(tipo) {
     <div class="card-topo">
       <div>
         <h2>${escapar(tipo.nome)}</h2>
-        <p class="muted form-dica">O botão <strong>Chamar</strong> grava a hora, quem chamou e o local. Se a pessoa disser que não ouviu, chama de novo — fica no histórico.</p>
+        <p class="muted form-dica">${ehHoje() ? "O botão <strong>Chamar</strong> grava a hora, quem chamou e o local. Se a pessoa disser que não ouviu, chama de novo — fica no histórico." : `Consultando ${dataLegivel(diaAtual())}. Chamada só no dia de hoje.`}</p>
         <p id="fila-dica" class="muted form-dica">${verTudo ? "Inclui quem já foi atendido." : "Só quem ainda está na fila."}</p>
       </div>
       <div class="topo-acoes">
-        <button type="button" class="btn primary" data-acao="chamar-proxima" data-tipo="${tipo.id}">Chamar próxima</button>
+        ${ehHoje() ? `<button type="button" class="btn primary" data-acao="chamar-proxima" data-tipo="${tipo.id}">Chamar próxima</button>` : ""}
         ${barraFiltro()}
         <span class="sigla grande" style="background:${escapar(tipo.cor)}">${escapar(tipo.sigla)}</span>
       </div>
     </div>
-    ${banner}
-    <div id="fila-lista">${tabelaFila(lista, { chamar: true })}</div>
+    ${ehHoje() ? banner : ""}
+    <div id="fila-lista">${tabelaFila(lista, { chamar: ehHoje() })}</div>
   </section>`;
 }
 
@@ -514,7 +546,7 @@ function telaControle() {
     <div class="card-topo">
       <div>
         <h2>Controle da produção</h2>
-        <p class="muted form-dica">Acompanha o dia de todo mundo. Administrador também registra senha na aba Senha geral.</p>
+        <p class="muted form-dica">${ehHoje() ? "Acompanha o dia de todo mundo." : `Produção de ${dataLegivel(diaAtual())}.`} Administrador também registra senha na aba Senha geral, no dia de hoje.</p>
       </div>
     </div>
     <div class="kpis">
@@ -653,7 +685,7 @@ function desenhar() {
   if (aba.startsWith("tipo-")) {
     const tipo = tipos.find((t) => t.id === aba.slice(5));
     app.innerHTML = tipo ? telaTipo(tipo) : "<p>Tipo não encontrado.</p>";
-    if (tipo) ligarFiltro(senhas.filter((s) => s.tipo_id === tipo.id), { chamar: true });
+    if (tipo) ligarFiltro(senhas.filter((s) => s.tipo_id === tipo.id), { chamar: ehHoje() });
     return;
   }
   aba = "geral";
@@ -692,7 +724,7 @@ function onChegadaCampos(ev) {
 
 async function onChegada(ev) {
   ev.preventDefault();
-  if (enviandoChegada) return;
+  if (enviandoChegada || !ehHoje()) return;
   const erro = document.getElementById("form-erro");
   erro.classList.add("hidden");
   const nome = document.getElementById("campo-nome").value.trim();
@@ -713,7 +745,7 @@ async function onChegada(ev) {
   const btn = ev.target.querySelector("[type=submit]");
   if (btn) btn.disabled = true;
   const payload = {
-    data: diaAtual(),
+    data: hojeISO(),
     nome,
     tipo_id: tipoId,
     preferencial,
@@ -791,6 +823,7 @@ function avisoChamada(res) {
   if (res?.motivo === "ja_chamada") mostrarErro(`Essa senha já está com ${res.com}.`);
   else if (res?.motivo === "fila_vazia") mostrarErro("Não tem ninguém esperando neste tipo.");
   else if (res?.motivo === "nao_e_sua") mostrarErro("Essa senha está com outra pessoa.");
+  else if (res?.motivo === "outro_dia") mostrarErro("Chamada só no dia de hoje. Volta a data no topo.");
   else mostrarErro("Não deu para pegar essa senha. Atualiza a tela.");
   return false;
 }
@@ -822,7 +855,7 @@ async function rpcLiberar(id) {
 }
 
 function podeChamar() {
-  return String(aba).startsWith("tipo-");
+  return ehHoje() && String(aba).startsWith("tipo-");
 }
 
 async function onAcao(ev) {
@@ -984,6 +1017,7 @@ async function onLogin(ev) {
   document.getElementById("login").classList.add("hidden");
   document.getElementById("quem").textContent = textoQuem();
   document.getElementById("dia").value = hojeISO();
+  aplicarDiaSessao();
   await carregar();
   escutar();
 }
@@ -1022,7 +1056,10 @@ function ligarEventos() {
   app.addEventListener("blur", (ev) => {
     if (ev.target.matches("input[data-campo=nome], input[data-campo=processo]")) onCampo(ev);
   }, true);
-  document.getElementById("dia").addEventListener("change", carregar);
+  document.getElementById("dia").addEventListener("change", () => {
+    if (!ehAdmin()) document.getElementById("dia").value = hojeISO();
+    carregar();
+  });
   document.getElementById("btn-hoje").addEventListener("click", () => {
     document.getElementById("dia").value = hojeISO();
     carregar();
@@ -1037,6 +1074,7 @@ async function init() {
   ligarEventos();
   if (!(await conectar())) return;
   if (!pedirLogin()) return;
+  aplicarDiaSessao();
   await carregar();
   escutar();
 }

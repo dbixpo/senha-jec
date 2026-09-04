@@ -247,6 +247,10 @@ begin
     return json_build_object('ok', false, 'motivo', 'nao_encontrada');
   end if;
 
+  if alvo.data is distinct from (timezone('America/Sao_Paulo', now()))::date then
+    return json_build_object('ok', false, 'motivo', 'outro_dia');
+  end if;
+
   select coalesce(t.nome, '') into local_nome
   from tipos_atendimento t
   where t.id = alvo.tipo_id;
@@ -285,6 +289,10 @@ declare
 begin
   if p_operador is null or p_tipo_id is null then
     return json_build_object('ok', false, 'motivo', 'dados_invalidos');
+  end if;
+
+  if p_data is distinct from (timezone('America/Sao_Paulo', now()))::date then
+    return json_build_object('ok', false, 'motivo', 'outro_dia');
   end if;
 
   select id into escolhida
