@@ -244,11 +244,11 @@ function telaRecepcao() {
   return `
     <section class="card">
       <h2>Quem chegou</h2>
-      <form id="form-chegada" class="form-grid">
+      <p class="muted form-dica">A senha sai sozinha. Se precisar ajustar, clique no número do cartão.</p>
+      <form id="form-chegada" class="form-grid form-chegada">
         <div class="proxima">
-          <span class="eyebrow">Próxima senha</span>
+          <span class="eyebrow">Próxima</span>
           <strong>${proxima}</strong>
-          <span class="meta">sai sozinha · clique no número depois se precisar ajustar</span>
         </div>
         <label>Nome da pessoa
           <input id="campo-nome" type="text" placeholder="Nome de quem está sendo atendido" required autocomplete="off">
@@ -262,7 +262,7 @@ function telaRecepcao() {
             ${setores.map((s) => `<option value="${s.id}">${escapar(s.nome)}</option>`).join("")}
           </select>
         </label>
-        <button class="btn primary" type="submit">Registrar</button>
+        <button class="btn primary form-submit" type="submit">Registrar</button>
       </form>
       <p id="form-erro" class="erro hidden"></p>
     </section>

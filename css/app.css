@@ -56,6 +56,7 @@ h2 { font-size: 18px; font-weight: 800; }
   justify-content: space-between;
   align-items: flex-end;
   gap: 16px;
+  flex-wrap: wrap;
   margin-bottom: 18px;
 }
 
@@ -150,15 +151,38 @@ textarea { resize: vertical; width: 100%; }
   padding: 18px;
 }
 
+.card h2 { margin-bottom: 6px; }
+.form-dica { margin: 0 0 14px; }
+
 .form-grid {
-  display: grid;
-  grid-template-columns: 110px 1.2fr 1fr 180px auto;
-  gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   align-items: end;
 }
 
-.form-grid.cadastro {
-  grid-template-columns: 1fr 1fr 160px auto;
+.form-grid > * {
+  min-width: 0;
+}
+
+.form-grid label {
+  flex: 1 1 200px;
+}
+
+.form-grid.cadastro label {
+  flex: 1 1 180px;
+}
+
+.form-grid input,
+.form-grid select,
+.form-grid textarea {
+  width: 100%;
+  max-width: 100%;
+}
+
+.form-submit {
+  flex: 0 0 auto;
+  height: 42px;
 }
 
 .form-grid label,
@@ -172,6 +196,7 @@ textarea { resize: vertical; width: 100%; }
 }
 
 .proxima {
+  flex: 0 0 88px;
   display: grid;
   gap: 2px;
   align-content: end;
@@ -196,9 +221,9 @@ textarea { resize: vertical; width: 100%; }
 
 .ticket {
   display: grid;
-  grid-template-columns: 92px 1fr auto;
-  gap: 14px;
-  align-items: center;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 12px 14px;
+  align-items: start;
   padding: 12px;
   border: 1px dashed var(--line);
   border-radius: 12px;
@@ -208,7 +233,13 @@ textarea { resize: vertical; width: 100%; }
 .ticket .num { font-family: "DM Mono", monospace; line-height: 1; }
 .ticket .nome { font-weight: 800; font-size: 18px; }
 .ticket .meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
-.ticket .acoes { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.ticket .acoes {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-start;
+}
 
 .setor-btn {
   border: 0;
@@ -221,7 +252,7 @@ textarea { resize: vertical; width: 100%; }
 
 .cols {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 14px;
 }
 
@@ -299,8 +330,19 @@ textarea { resize: vertical; width: 100%; }
 
 .foot { text-align: center; margin-top: 28px; }
 
-@media (max-width: 980px) {
-  .form-grid, .form-grid.cadastro, .cols, .ticket { grid-template-columns: 1fr; }
-  .ticket .acoes { justify-content: flex-start; }
+@media (min-width: 900px) {
+  .ticket {
+    grid-template-columns: 88px minmax(0, 1fr) auto;
+    align-items: center;
+  }
+  .ticket .acoes {
+    grid-column: auto;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 720px) {
   body { padding: 16px; }
+  .proxima { flex-basis: 100%; }
+  .table { display: block; overflow-x: auto; }
 }
