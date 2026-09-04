@@ -68,6 +68,8 @@ create table if not exists senhas (
   nome text not null default '',
   tipo_id uuid references tipos_atendimento (id),
   preferencial boolean not null default false,
+  preferencial_tipo text
+    check (preferencial_tipo is null or preferencial_tipo in ('cadeira', 'idoso', 'gestante', 'bebe', 'obesidade', 'autismo')),
   hora_recepcao timestamptz,
   hora_atendimento timestamptz,
   atendido_por uuid references operadores (id),
@@ -93,6 +95,7 @@ create index if not exists senhas_dia_status_idx on senhas (data, status);
 create index if not exists senhas_dia_setor_idx on senhas (data, setor_id, status);
 create index if not exists senhas_dia_servico_idx on senhas (data, servico_id);
 create index if not exists senhas_dia_atendido_idx on senhas (data, atendido_por);
+create index if not exists senhas_dia_pref_tipo_idx on senhas (data, preferencial_tipo);
 
 create table if not exists historico_chamadas (
   id uuid primary key default gen_random_uuid(),

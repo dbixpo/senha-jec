@@ -488,53 +488,6 @@ textarea {
   outline-offset: 2px;
 }
 
-.pref-chegada {
-  position: relative;
-}
-.pref-chegada .chip-check-ui {
-  min-width: 0;
-  height: var(--control-h);
-  min-height: var(--control-h);
-  padding: 0 8px;
-  background: #ffd4b8;
-  border-color: #f0a36a;
-  color: #9a4a12;
-}
-.pref-chegada .chip-check-ui img {
-  display: block;
-  height: 22px;
-  width: auto;
-  pointer-events: none;
-}
-.pref-chegada:hover .chip-check-ui {
-  background: #ffb066;
-  border-color: #ee7a28;
-}
-.pref-chegada input:checked + .chip-check-ui,
-.pref-chegada:hover input:checked + .chip-check-ui {
-  background: #e56a17;
-  border-color: #c44f0a;
-}
-.pref-chegada:hover::after,
-.pref-chegada:focus-within::after {
-  content: "Preferencial";
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 6px);
-  transform: translateX(-50%);
-  z-index: 40;
-  padding: 5px 8px;
-  background: #0d3b5e;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  border-radius: 4px;
-  white-space: nowrap;
-  pointer-events: none;
-  box-shadow: var(--shadow);
-}
-
 .chip-check.mini .chip-check-ui {
   min-width: 36px;
   height: 36px;
@@ -561,6 +514,138 @@ textarea {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+.pref-tipos {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+.btn-pref {
+  position: relative;
+  appearance: none;
+  -webkit-appearance: none;
+  width: var(--control-h);
+  height: var(--control-h);
+  min-width: var(--control-h);
+  min-height: var(--control-h);
+  padding: 0;
+  border: 1px solid #c5dcea;
+  border-radius: var(--radius);
+  background: #d9edf6;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex: 0 0 var(--control-h);
+  box-sizing: border-box;
+}
+.btn-pref img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.btn-pref:not(.on):not(.colorido) img {
+  filter: invert(28%) sepia(18%) saturate(1800%) hue-rotate(163deg) brightness(95%) contrast(90%);
+}
+.btn-pref:hover {
+  background: #b7d9ee;
+  border-color: #7eb6d6;
+}
+.btn-pref:hover img { opacity: 0.85; }
+.btn-pref.on {
+  background: #1a82b8;
+  border-color: #1a82b8;
+}
+.btn-pref.on img { opacity: 1; }
+.btn-pref.on:not(.colorido) img {
+  filter: brightness(0) invert(1);
+}
+.btn-pref:focus-visible {
+  outline: 2px solid var(--amarelo);
+  outline-offset: 2px;
+}
+.btn-pref[data-tip]:hover::after,
+.btn-pref[data-tip]:focus-visible::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 6px);
+  transform: translateX(-50%);
+  z-index: 40;
+  padding: 5px 8px;
+  background: #0d3b5e;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: var(--shadow);
+}
+.senha-com-ico {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pref-ico {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex: 0 0 18px;
+}
+.pref-motivos {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+.pref-motivo {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 8px 10px;
+  background: #eaf3f8;
+  border: 1px solid #d4e4ef;
+  border-radius: 10px;
+  text-align: center;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.pref-motivo .pref-ico {
+  width: 28px;
+  height: 28px;
+  opacity: 0.55;
+}
+.pref-motivo span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.25;
+}
+.pref-motivo strong {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--dark);
+  font-variant-numeric: tabular-nums;
+}
+.pref-motivo:hover {
+  background: #d4eaf6;
+  border-color: #9cc7e0;
+}
+.pref-motivo.on {
+  background: #1a82b8;
+  border-color: #1a82b8;
+}
+.pref-motivo.on span,
+.pref-motivo.on strong { color: #fff; }
+.pref-motivo.on .pref-ico { opacity: 1; }
+.pref-motivo.on:not(.colorido) .pref-ico {
+  filter: brightness(0) invert(1);
 }
 .campo-hora { flex: 0 0 64px; }
 .campo-nome,
@@ -594,6 +679,12 @@ textarea {
   color: var(--dark);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
+}
+#campo-senha-rotulo {
+  justify-content: flex-start;
+  width: 3.4em;
+  min-width: 3.4em;
+  flex: 0 0 3.4em;
 }
 
 .form-chegada .campo-hora input,
@@ -1058,7 +1149,7 @@ textarea {
   padding: 0 8px;
 }
 
-.planilha .col-num { width: 84px; }
+.planilha .col-num { width: 108px; }
 .planilha .col-pref { width: 72px; }
 .num-btn {
   font-weight: 700;
@@ -1133,7 +1224,7 @@ textarea {
 @media (min-width: 801px) {
   .pwa-bar { display: none !important; }
   .form-chegada {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 8px;
     width: 100%;
     padding: 8px 10px;
@@ -1144,14 +1235,29 @@ textarea {
   .form-chegada .form-submit,
   .form-chegada #btn-chamar-recepcao,
   .form-chegada #btn-nao-respondeu-recepcao,
+  .form-chegada .btn-pref,
   .form-chegada input[type="text"] {
     height: 36px;
     min-height: 36px;
+  }
+  .form-chegada .btn-pref {
+    width: 36px;
+    min-width: 36px;
+    flex-basis: 36px;
+  }
+  .form-chegada .btn-pref img {
+    width: 20px;
+    height: 20px;
   }
   .form-chegada .senha-valor {
     height: 36px;
     min-height: 36px;
     font-size: 20px;
+  }
+  .form-chegada #campo-senha-rotulo {
+    width: 3.5em;
+    min-width: 3.5em;
+    flex-basis: 3.5em;
   }
   .form-chegada .senha-hora-dica {
     font-size: 13px;
@@ -1260,6 +1366,7 @@ textarea {
   .topo-acoes .btn.primary { width: 100%; height: 48px; min-height: 48px; }
   .kpis { grid-template-columns: 1fr 1fr; }
   .dash-grid { grid-template-columns: 1fr; }
+  .pref-motivos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .espera-faixas { grid-template-columns: 1fr 1fr; }
   .card-topo { margin-bottom: 10px; }
   .legenda { font-size: 12px; }
@@ -1310,9 +1417,26 @@ textarea {
     width: 100%;
     max-width: none;
   }
-  .chip-check:not(.pref-chegada),
-  .chip-check:not(.pref-chegada) .chip-check-ui {
+  .chip-check .chip-check-ui {
     width: 100%;
+  }
+  .form-chegada .campo-senha-bloco {
+    grid-column: 1 / -1;
+  }
+  .form-chegada .senha-com-pref {
+    width: 100%;
+  }
+  .form-chegada .pref-tipos {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .form-chegada .btn-pref {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 40px;
+    max-width: 52px;
+    height: 44px;
+    min-height: 44px;
   }
   .form-submit {
     position: sticky;
@@ -1335,16 +1459,13 @@ textarea {
     height: 44px;
     font-size: 16px;
   }
-  .pref-chegada .chip-check-ui {
-    width: auto;
-    height: 44px;
-    min-height: 44px;
-  }
-  .pref-chegada .chip-check-ui img {
-    height: 26px;
-  }
   textarea { height: auto; min-height: 88px; }
   .senha-valor { height: 44px; min-height: 44px; }
+  .form-chegada #campo-senha-rotulo {
+    width: 3.5em;
+    min-width: 3.5em;
+    flex-basis: 3.5em;
+  }
   .form-submit {
     height: 52px;
     min-height: 52px;

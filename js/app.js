@@ -15,13 +15,22 @@ let enviandoChegada = false;
 let rascunhoChegada = {
   chamado: false,
   horaIso: null,
-  preferencial: false,
+  preferencialTipo: "",
   nome: "",
   tipoId: "",
   processo: "",
 };
 let dashFiltro = { tipo: "", status: "todos", pref: "todos", pessoa: "" };
 let tipoEditandoId = null;
+
+const PREF_TIPOS = [
+  { id: "cadeira", nome: "Deficiência" },
+  { id: "idoso", nome: "60 anos ou mais" },
+  { id: "gestante", nome: "Gestante" },
+  { id: "bebe", nome: "Criança de colo" },
+  { id: "obesidade", nome: "Obesidade" },
+  { id: "autismo", nome: "Autismo" },
+];
 
 function hojeISO() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -201,6 +210,39 @@ function rotuloProxima(preferencial) {
   return preferencial ? "P" + n : n;
 }
 
+function prefTipo(id) {
+  return PREF_TIPOS.find((p) => p.id === id) || null;
+}
+
+function rascunhoEhPref() {
+  return !!rascunhoChegada.preferencialTipo;
+}
+
+function iconePref(id, extra = "") {
+  const p = prefTipo(id);
+  if (!p) return "";
+  return `<img class="pref-ico ${extra}" src="img/pref/${p.id}.png" alt="${escapar(p.nome)}" title="${escapar(p.nome)}" width="22" height="22">`;
+}
+
+function botoesPrefForm() {
+  return `<div class="pref-tipos" role="group" aria-label="Preferencial">
+    ${PREF_TIPOS.map((p) => {
+      const on = rascunhoChegada.preferencialTipo === p.id;
+      return `<button type="button" class="btn-pref${p.id === "autismo" ? " colorido" : ""}${on ? " on" : ""}" data-pref="${p.id}" data-tip="${escapar(p.nome)}" title="${escapar(p.nome)}" aria-pressed="${on ? "true" : "false"}" aria-label="${escapar(p.nome)}">
+        <img src="img/pref/${p.id}.png" alt="">
+      </button>`;
+    }).join("")}
+  </div>`;
+}
+
+function pintarPrefBotoes() {
+  document.querySelectorAll("#form-chegada [data-pref]").forEach((btn) => {
+    const on = btn.getAttribute("data-pref") === rascunhoChegada.preferencialTipo;
+    btn.classList.toggle("on", on);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+}
+
 function filtrarLista(lista) {
   if (verTudo) return lista;
   return lista.filter((s) => !s.hora_atendimento);
@@ -375,7 +417,7 @@ function linhaSenha(senha, { chamar = false } = {}) {
       </td>`
     : "";
   return `<tr class="${atendida ? "atendida" : "aguardando"} ${senha.preferencial ? "pref" : ""} ${faltou && !atendida ? "faltou" : ""}">
-    <td class="cel-num col-num" data-label="Senha"><span class="senha-num">${escapar(rotuloSenha(senha))}</span>${faltou ? `<span class="chip ausente">${senha.nao_respondeu}x não resp.</span>` : ""}</td>
+    <td class="cel-num col-num" data-label="Senha"><span class="senha-com-ico"><span class="senha-num">${escapar(rotuloSenha(senha))}</span>${iconePref(senha.preferencial_tipo, "pref-ico-planilha")}</span>${faltou ? `<span class="chip ausente">${senha.nao_respondeu}x não resp.</span>` : ""}</td>
     <td class="cel-rec" data-label="Hora da recepção"><span class="hora-lida">${escapar(hora(senha.hora_recepcao) || "—")}</span></td>
     <td class="cel-atend" data-label="Hora do atendimento">${htmlHistorico(senha)}</td>
     <td class="cel-nome" data-label="Nome"><span class="hora-lida">${escapar(senha.nome || "—")}</span></td>
@@ -444,13 +486,8 @@ function telaGeral() {
         <div class="campo campo-senha-bloco">
           <span>Senha</span>
           <div class="senha-com-pref">
-            <strong id="campo-senha-rotulo" class="senha-valor">${rotuloProxima(rascunhoChegada.preferencial)}</strong>
-            <label class="chip-check pref-chegada" title="Preferencial">
-              <input id="campo-pref" type="checkbox" ${rascunhoChegada.preferencial ? "checked" : ""}>
-              <span class="chip-check-ui" aria-label="Preferencial">
-                <img src="img/preferencial.png" alt="" width="104" height="28">
-              </span>
-            </label>
+            <strong id="campo-senha-rotulo" class="senha-valor">${rotuloProxima(rascunhoEhPref())}</strong>
+            ${botoesPrefForm()}
           </div>
         </div>
         <button type="button" class="btn primary" id="btn-chamar-recepcao">Chamar</button>
@@ -592,8 +629,10 @@ function senhasDash() {
     if (dashFiltro.tipo && s.tipo_id !== dashFiltro.tipo) return false;
     if (dashFiltro.status === "fila" && s.hora_atendimento) return false;
     if (dashFiltro.status === "atendidas" && !s.hora_atendimento) return false;
-    if (dashFiltro.pref === "sim" && !s.preferencial) return false;
     if (dashFiltro.pref === "nao" && s.preferencial) return false;
+    if (dashFiltro.pref !== "todos" && dashFiltro.pref !== "nao") {
+      if (s.preferencial_tipo !== dashFiltro.pref) return false;
+    }
     if (dashFiltro.pessoa) {
       const chamou = (s.chamadas || []).some((c) => c.chamado_por === dashFiltro.pessoa);
       if (s.created_by !== dashFiltro.pessoa && s.atendido_por !== dashFiltro.pessoa && !chamou) return false;
@@ -633,6 +672,13 @@ function ligarDash() {
   bind("dash-status", "status");
   bind("dash-pref", "pref");
   bind("dash-pessoa", "pessoa");
+  document.querySelectorAll(".pref-motivo[data-pref]").forEach((el) => {
+    el.addEventListener("click", () => {
+      const id = el.getAttribute("data-pref");
+      dashFiltro.pref = dashFiltro.pref === id ? "todos" : id;
+      desenhar();
+    });
+  });
 }
 
 function telaControle() {
@@ -641,6 +687,11 @@ function telaControle() {
   const espera = lista.filter((s) => !s.hora_atendimento).length;
   const feitas = total - espera;
   const prefs = lista.filter((s) => s.preferencial).length;
+  const porPref = PREF_TIPOS.map((p) => ({
+    p,
+    n: lista.filter((s) => s.preferencial_tipo === p.id).length,
+  }));
+  const prefSemTipo = lista.filter((s) => s.preferencial && !s.preferencial_tipo).length;
   const esperas = lista.map((s) => minutosEntre(s.hora_recepcao, s.hora_atendimento)).filter((n) => n != null);
   const mediaEspera = esperas.length ? esperas.reduce((a, b) => a + b, 0) / esperas.length : null;
   const agora = Date.now();
@@ -724,8 +775,8 @@ function telaControle() {
       <label>Preferencial
         <select id="dash-pref">
           <option value="todos" ${dashFiltro.pref === "todos" ? "selected" : ""}>Todas</option>
-          <option value="sim" ${dashFiltro.pref === "sim" ? "selected" : ""}>Só preferencial</option>
           <option value="nao" ${dashFiltro.pref === "nao" ? "selected" : ""}>Sem preferencial</option>
+          ${PREF_TIPOS.map((p) => `<option value="${p.id}" ${dashFiltro.pref === p.id ? "selected" : ""}>${escapar(p.nome)}</option>`).join("")}
         </select>
       </label>
       <label>Pessoa
@@ -739,7 +790,26 @@ function telaControle() {
       <div class="kpi"><span>Senhas</span><strong>${total}</strong><small>${senhas.length === total ? "no dia" : `de ${senhas.length} no dia`}</small></div>
       <div class="kpi fila"><span>Na fila</span><strong>${espera}</strong><small>${maisAntiga == null ? "ninguém esperando" : "mais antiga " + fmtMin(maisAntiga)}</small></div>
       <div class="kpi ok"><span>Atendidas</span><strong>${feitas}</strong><small>${total ? Math.round((feitas / total) * 100) + "% do recorte" : "—"}</small></div>
-      <div class="kpi pref"><span>Preferencial</span><strong>${prefs}</strong><small>espera média ${fmtMin(mediaEspera)}</small></div>
+      <div class="kpi pref"><span>Preferencial</span><strong>${prefs}</strong><small>${total ? Math.round((prefs / total) * 100) + "% do recorte" : "—"}</small></div>
+    </div>
+    <div class="pref-motivos" aria-label="Preferencial por motivo">
+      ${porPref
+        .map(
+          (x) => `<button type="button" class="pref-motivo${dashFiltro.pref === x.p.id ? " on" : ""}${x.p.id === "autismo" ? " colorido" : ""}" data-pref="${x.p.id}">
+            ${iconePref(x.p.id)}
+            <span>${escapar(x.p.nome)}</span>
+            <strong>${x.n}</strong>
+          </button>`
+        )
+        .join("")}
+      ${
+        prefSemTipo
+          ? `<div class="pref-motivo">
+              <span>Outros</span>
+              <strong>${prefSemTipo}</strong>
+            </div>`
+          : ""
+      }
     </div>
   </section>
   <div class="dash-grid">
@@ -893,7 +963,7 @@ function desenhar() {
     app.innerHTML = telaGeral();
     document.getElementById("form-chegada")?.addEventListener("submit", onChegada);
     document.getElementById("form-chegada")?.addEventListener("change", onChegadaCampos);
-    document.getElementById("form-chegada")?.addEventListener("input", onChegadaCampos);
+    document.getElementById("form-chegada")?.addEventListener("click", onPrefTipoClick);
     document.getElementById("btn-chamar-recepcao")?.addEventListener("click", onChamarRecepcao);
     document.getElementById("btn-nao-respondeu-recepcao")?.addEventListener("click", onNaoRespondeuRecepcao);
     ligarFiltro(senhas, { chamar: false });
@@ -951,7 +1021,7 @@ function limparRascunho() {
   rascunhoChegada = {
     chamado: false,
     horaIso: null,
-    preferencial: false,
+    preferencialTipo: "",
     nome: "",
     tipoId: "",
     processo: "",
@@ -959,7 +1029,6 @@ function limparRascunho() {
 }
 
 function guardarRascunho() {
-  rascunhoChegada.preferencial = !!document.getElementById("campo-pref")?.checked;
   rascunhoChegada.nome = document.getElementById("campo-nome")?.value || "";
   rascunhoChegada.processo = document.getElementById("campo-processo")?.value || "";
   rascunhoChegada.tipoId = tipoChegadaSelecionado() || rascunhoChegada.tipoId;
@@ -1000,6 +1069,7 @@ function onNaoRespondeuRecepcao() {
   });
   const rotulo = document.getElementById("campo-senha-rotulo");
   if (rotulo) rotulo.textContent = rotuloProxima(false);
+  pintarPrefBotoes();
   aplicarEstadoChegada();
 }
 
@@ -1008,7 +1078,17 @@ function atualizarChegada() {
   const hidden = document.getElementById("campo-tipo");
   const rotulo = document.getElementById("campo-senha-rotulo");
   if (hidden) hidden.value = rascunhoChegada.tipoId;
-  if (rotulo) rotulo.textContent = rotuloProxima(rascunhoChegada.preferencial);
+  if (rotulo) rotulo.textContent = rotuloProxima(rascunhoEhPref());
+}
+
+function onPrefTipoClick(ev) {
+  const btn = ev.target.closest("[data-pref]");
+  if (!btn) return;
+  ev.preventDefault();
+  const id = btn.getAttribute("data-pref");
+  rascunhoChegada.preferencialTipo = rascunhoChegada.preferencialTipo === id ? "" : id;
+  pintarPrefBotoes();
+  atualizarChegada();
 }
 
 function onChegadaCampos(ev) {
@@ -1022,7 +1102,7 @@ function onChegadaCampos(ev) {
     atualizarChegada();
     return;
   }
-  if (el.id === "campo-pref" || el.id === "campo-nome" || el.id === "campo-processo") {
+  if (el.id === "campo-nome" || el.id === "campo-processo") {
     atualizarChegada();
   }
 }
@@ -1040,7 +1120,8 @@ async function onChegada(ev) {
   guardarRascunho();
   const nome = rascunhoChegada.nome.trim();
   const tipoId = rascunhoChegada.tipoId;
-  const preferencial = rascunhoChegada.preferencial;
+  const preferencialTipo = rascunhoChegada.preferencialTipo || null;
+  const preferencial = !!preferencialTipo;
   const processo = rascunhoChegada.processo.trim();
   if (!tipoId) {
     erro.textContent = "Marca o tipo de atendimento para gerar a senha.";
@@ -1060,6 +1141,7 @@ async function onChegada(ev) {
     nome,
     tipo_id: tipoId,
     preferencial,
+    preferencial_tipo: preferencialTipo,
     processo,
     hora_recepcao: rascunhoChegada.horaIso,
     status: "na_fila",
