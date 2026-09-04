@@ -90,6 +90,7 @@ h2 { font-size: 18px; color: var(--ink); }
   flex-wrap: wrap;
   margin-left: auto;
 }
+.top-actions.hidden ~ .top-dia { display: none; }
 
 .quem {
   display: grid;
@@ -282,6 +283,8 @@ textarea {
   cursor: pointer;
   font-weight: 600;
   line-height: 1;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .btn.primary { background: var(--amarelo); color: var(--dark); }
@@ -325,8 +328,14 @@ textarea {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  margin: 0;
+  padding: 10px 20px 12px;
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
 }
+.tabs:empty { display: none; }
 
 .tab {
   border: 1px solid var(--line);
@@ -731,8 +740,17 @@ textarea {
   width: 100%;
 }
 
-.n-passo,
-.dica-mobile,
+.lab-narrow, .tab-lab-narrow { display: none; }
+
+.chegada-chamada,
+.chegada-acoes {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.chegada-chamada .campo-hora { flex: 1 1 7rem; min-width: 7rem; }
+.chegada-chamada .btn { flex: 0 0 auto; }
 .pref-longo { display: none; }
 
 .table {
@@ -1063,8 +1081,18 @@ textarea {
   background: var(--bg);
   display: grid;
   place-items: center;
-  padding: 96px 20px 20px;
-  z-index: 20;
+  padding: 28px 20px 20px;
+  padding-top: max(28px, env(safe-area-inset-top));
+  z-index: 50;
+}
+.overlay:not(.overlay-aviso)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, #e63030 0%, #ffd32c 50%, #1a82b8 100%);
 }
 
 .setup-card, .login-card {
@@ -1362,6 +1390,7 @@ textarea {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex: none;
     width: 1.25rem;
     height: 1.25rem;
     margin-right: 6px;
@@ -1373,39 +1402,50 @@ textarea {
     vertical-align: middle;
   }
   .dica-web { display: none; }
-  .dica-mobile { display: block; }
+  .dica-mobile { display: block; line-height: 1.4; }
   .pref-curto { display: none; }
   .pref-longo { display: inline; }
   .foot { display: none; }
+  .lab-wide, .tab-lab-wide { display: none; }
+  .lab-narrow, .tab-lab-narrow { display: inline; }
   .top .eyebrow { display: none; }
 
   .overlay {
-    z-index: 40;
     padding: 16px;
-    padding-top: max(16px, env(safe-area-inset-top));
+    padding-top: max(20px, env(safe-area-inset-top));
     align-items: start;
   }
   .overlay-aviso {
     align-items: center;
     padding: 20px;
     padding-top: max(20px, env(safe-area-inset-top));
-    z-index: 80;
   }
   .login-card, .setup-card { width: 100%; }
+  .login-body, .setup-card { padding: 20px 16px; }
+  .login-body h1, .setup-card h1 { font-size: 22px; }
+  .login-body .btn,
+  .setup-card .btn,
+  .aviso-card .btn { height: 48px; min-height: 48px; width: 100%; }
 
   .top {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand actions"
+      "dia dia";
     align-items: center;
-    gap: 8px 10px;
+    gap: 8px 8px;
     padding: 8px 12px 10px;
   }
-  .brand { grid-column: 1; min-width: 0; }
+  .brand { grid-area: brand; min-width: 0; }
+  .brand h1 { font-size: 18px; }
   .live {
-    grid-column: 2;
-    grid-row: 1;
+    grid-area: brand;
+    justify-self: end;
+    align-self: center;
     width: 10px;
     height: 10px;
+    margin-right: 8px;
     padding: 0;
     border-radius: 99px;
     background: #19a88b;
@@ -1414,19 +1454,18 @@ textarea {
   }
   .live.off { background: #9bb4c8; }
   .top-actions {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: 8px;
+    grid-area: actions;
+    display: flex;
+    flex-wrap: nowrap;
     align-items: center;
+    gap: 8px;
+    margin-left: 0;
   }
-  .quem {
-    grid-column: 1 / -1;
-    margin: 0;
-  }
-  .quem-nome { font-size: 11px; }
+  .quem { display: none; }
   .top-dia {
-    grid-column: 1;
+    grid-area: dia;
+    width: 100%;
+    max-width: none;
     min-width: 0;
     position: static;
     transform: none;
@@ -1434,7 +1473,7 @@ textarea {
     top: auto;
   }
   .date-wrap {
-    flex: 1;
+    width: 100%;
     min-width: 0;
     height: 40px;
   }
@@ -1444,28 +1483,41 @@ textarea {
     height: 40px;
     min-height: 40px;
     font-size: 16px;
+    padding: 0 36px 0 12px;
+    text-align: left;
+    background: #fff;
   }
+  .cfg-wrap { flex: none; }
   .top-dia .btn,
   #btn-sair,
   #btn-cfg {
     height: 40px;
     min-height: 40px;
   }
-  #btn-sair { grid-column: auto; }
-  #btn-cfg { padding: 0 10px; font-size: 13px; }
-  .cfg-menu { right: auto; left: 0; }
+  #btn-cfg { padding: 0 12px; font-size: 14px; }
+  #btn-sair, #btn-cfg { white-space: nowrap; }
+  .cfg-menu {
+    right: 0;
+    left: auto;
+    min-width: 200px;
+  }
+  .cfg-menu button { height: 44px; }
 
-  .shell { padding: 10px 12px 96px; }
+  .shell { padding: 12px 12px 80px; }
   h1 { font-size: 18px; }
-  h2 { font-size: 16px; }
+  h2 { font-size: 17px; }
+  .card { padding: 14px; }
   .topo-acoes { width: 100%; }
   .topo-acoes .btn.primary { width: 100%; height: 48px; min-height: 48px; }
+  .topo-acoes .sigla.grande { display: none; }
+  .card-fila .legenda { display: none; }
   .kpis { grid-template-columns: 1fr 1fr; }
   .dash-grid { grid-template-columns: 1fr; }
-  .pref-motivos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pref-motivos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .espera-faixas { grid-template-columns: 1fr 1fr; }
-  .card-topo { margin-bottom: 10px; }
-  .legenda { font-size: 12px; }
+  .card-topo { margin-bottom: 10px; flex-direction: column; align-items: stretch; }
+  .dash-filtros label { flex: 1 1 calc(50% - 10px); min-width: 0; }
+  .form-dica { font-size: 13px; margin-bottom: 10px; }
 
   .tabs {
     display: flex;
@@ -1473,13 +1525,9 @@ textarea {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     gap: 8px;
-    margin: 0 -12px 14px;
-    padding: 4px 12px 10px;
+    margin: 0;
+    padding: 0 12px 10px;
     scrollbar-width: none;
-    position: relative;
-    top: auto;
-    z-index: 1;
-    background: var(--bg);
   }
   .tabs::-webkit-scrollbar { display: none; }
   .tab {
@@ -1487,25 +1535,27 @@ textarea {
     white-space: nowrap;
     padding: 10px 14px;
     min-height: 44px;
+    font-size: 15px;
   }
 
   .tipo-checks {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
   }
+  .form-chegada .tipo-nome { display: none; }
   .form-chegada {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
     padding: 12px;
   }
+  .form-chegada .senha-com-pref,
+  .form-chegada .chegada-chamada,
   .form-chegada .campo-nome,
   .form-chegada .campo-tipos,
   .form-chegada .campo-processo,
-  .form-chegada .form-submit,
-  .form-chegada #btn-chamar-recepcao,
-  .form-chegada #btn-nao-respondeu-recepcao {
+  .form-chegada .chegada-acoes {
     grid-column: 1 / -1;
   }
   .form-chegada .campo-nome,
@@ -1513,36 +1563,54 @@ textarea {
     width: 100%;
     max-width: none;
   }
+  .chegada-chamada,
+  .chegada-acoes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    align-items: end;
+  }
+  .chegada-chamada .btn,
+  .chegada-acoes .btn {
+    width: 100%;
+  }
   .chip-check .chip-check-ui {
     width: 100%;
   }
   .form-chegada .senha-com-pref {
-    grid-column: 1 / -1;
     width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: end;
   }
   .form-chegada .pref-tipos {
-    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    flex: none;
     min-width: 0;
+    justify-content: stretch;
   }
   .form-chegada .btn-pref {
-    flex: 1 1 0;
-    width: auto;
-    min-width: 40px;
-    max-width: 52px;
+    flex: none;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
     height: 44px;
     min-height: 44px;
   }
+  .chegada-acoes {
+    margin: 4px 0 0;
+    padding: 0;
+    background: none;
+  }
   .form-submit {
-    position: sticky;
-    bottom: max(12px, env(safe-area-inset-bottom));
-    z-index: 6;
+    position: static;
     width: 100%;
     height: 52px;
     min-height: 52px;
     font-size: 17px;
-    box-shadow: 0 8px 24px rgba(13, 59, 94, 0.18);
   }
-  body.com-pwa .form-submit { bottom: 84px; }
 
   .form-grid { flex-direction: column; }
   .form-grid label, .form-grid .btn { flex: 1 1 auto; width: 100%; }
@@ -1564,39 +1632,38 @@ textarea {
     min-height: 52px;
     font-size: 17px;
   }
-  .top-actions { margin-left: 0; }
+  .chegada-chamada .btn,
+  .chegada-acoes .btn {
+    height: 48px;
+    min-height: 48px;
+    font-size: 16px;
+  }
   #btn-sair,
   #btn-cfg {
     height: 40px;
     min-height: 40px;
     font-size: 14px;
   }
-  .date-wrap input[type="date"] {
-    height: 40px;
-    min-height: 40px;
-    font-size: 16px;
-  }
 
   .planilha-wrap { overflow: visible; }
   .planilha { min-width: 0; width: 100%; }
   .planilha thead { display: none; }
   .planilha, .planilha tbody { display: block; width: 100%; }
-  .planilha tbody { display: grid; gap: 12px; }
+  .planilha tbody { display: grid; gap: 10px; }
   .planilha tr {
     display: grid;
     grid-template-columns: 1fr auto;
     grid-template-areas:
-      "senha senha"
-      "rec atend"
+      "senha tipo"
       "nome nome"
-      "tipo tipo"
+      "rec atend"
       "proc proc"
       "acao acao";
     margin: 0;
     border-radius: var(--radius-card);
     overflow: hidden;
     border: 1px solid var(--line);
-    padding: 4px 0 8px;
+    padding: 2px 0 8px;
   }
   .planilha tr.aguardando,
   .planilha tr.aguardando td { background: #fde8ec; }
@@ -1608,30 +1675,106 @@ textarea {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 4px;
+    gap: 2px;
     width: auto;
     padding: 8px 12px;
     border: 0;
   }
   .planilha td::before {
     content: attr(data-label);
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
     color: var(--muted);
   }
   .cel-num { grid-area: senha; }
-  .cel-tipo { grid-area: tipo; }
+  .cel-tipo { grid-area: tipo; justify-content: center; align-items: flex-end; }
+  .cel-tipo::before { display: none; }
   .cel-nome { grid-area: nome; }
+  .cel-nome .hora-lida { font-size: 16px; font-weight: 700; color: var(--dark); }
   .cel-rec { grid-area: rec; }
   .cel-atend { grid-area: atend; }
   .cel-proc { grid-area: proc; }
   .cel-acao { grid-area: acao; }
   .cel-acao::before { display: none; }
   .planilha .col-num { width: auto; }
-  .senha-num { font-size: 22px; }
-  .cel-acao .btn { width: 100%; height: 44px; min-height: 44px; }
+  .senha-num { font-size: 26px; }
+  .hist-lista { display: none; }
+  .cel-acao {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    flex-direction: unset;
+    align-items: stretch;
+    white-space: normal;
+  }
+  .cel-acao .btn,
+  .cel-acao .com-quem {
+    width: 100%;
+    height: 44px;
+    min-height: 44px;
+  }
+  .cel-acao .btn:only-child,
+  .cel-acao .com-quem,
+  .cel-acao .btn-rechamada {
+    grid-column: 1 / -1;
+  }
+  .minha-chamada-acoes {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .minha-chamada-acoes .btn { width: 100%; height: 44px; }
+  .minha-chamada-acoes .btn-rechamada { grid-column: 1 / -1; }
+  .minha-chamada-item { flex-direction: column; align-items: stretch; }
+  .minha-chamada { padding: 14px; font-size: 15px; }
+  .dash-split { flex-direction: column; }
+  .donut { width: 112px; height: 112px; flex: none; }
+  .chart-hours {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .chart-col { min-width: 28px; flex: 1 0 28px; }
+  .filtro-tudo { width: 100%; }
+  .filtro-tudo .chip-check-ui { width: 100%; min-width: 0; height: 44px; }
+  .table-cartoes thead { display: none; }
+  .table-cartoes, .table-cartoes tbody { display: block; width: 100%; }
+  .table-cartoes tbody { display: grid; gap: 10px; }
+  .table-cartoes tr {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: #f8fafc;
+  }
+  .table-cartoes td {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    padding: 4px 0;
+    border: 0;
+  }
+  .table-cartoes td[data-label]::before {
+    content: attr(data-label);
+    flex: 0 0 5.5rem;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .table-cartoes .cel-botoes,
+  .table-cartoes .cel-barra { display: flex; }
+  .table-cartoes .cel-botoes .btn { flex: 1 1 calc(50% - 4px); height: 44px; min-height: 44px; }
+  .table-cartoes .cel-barra { padding-top: 8px; }
+  .table-cartoes .prod-bar { width: 100%; }
   .tipo-mini { width: 100%; }
   .chip-check.mini { flex: 1; }
   .chip-check.mini .chip-check-ui {
@@ -1691,5 +1834,5 @@ textarea {
 }
 
 @media (max-width: 720px) {
-  .table { display: block; overflow-x: auto; }
+  .table:not(.table-cartoes) { display: block; overflow-x: auto; }
 }

@@ -381,13 +381,14 @@ function desenharAbas() {
   const nav = document.getElementById("tabs");
   const abas = [];
   if (ehAdmin()) {
-    abas.push({ id: "controle", label: "Dashboard", count: senhas.length });
+    abas.push({ id: "controle", label: "Dashboard", curto: "Painel", count: senhas.length });
   }
-  abas.push({ id: "geral", label: "Senha geral", count: naFila() });
+  abas.push({ id: "geral", label: "Senha geral", curto: "Geral", count: naFila() });
   abas.push(
     ...tipos.filter((t) => t.ativo).map((t) => ({
       id: "tipo-" + t.id,
       label: t.nome,
+      curto: t.sigla,
       count: contarTipo(t.id),
       cor: t.cor,
     }))
@@ -397,7 +398,9 @@ function desenharAbas() {
       (item) =>
         `<button type="button" class="tab ${item.id === aba ? "active" : ""}" data-aba="${item.id}">
           ${item.cor ? `<span class="tab-dot" style="background:${escapar(item.cor)}"></span>` : ""}
-          ${escapar(item.label)} <span class="count">${item.count}</span>
+          <span class="tab-lab-wide">${escapar(item.label)}</span>
+          <span class="tab-lab-narrow">${escapar(item.curto || item.label)}</span>
+          <span class="count">${item.count}</span>
         </button>`
     )
     .join("");
@@ -445,9 +448,9 @@ function botoesAcaoTipo(senha) {
     return `<span class="com-quem">Com ${escapar(nomeOperador(senha.atendido_por))}</span>`;
   }
   if (minha) {
-    return `<button type="button" class="btn primary small" data-acao="chamar-senha" data-id="${senha.id}">Chamar de novo</button>
-      <button type="button" class="btn ok small" data-acao="finalizar-senha" data-id="${senha.id}">Finalizar</button>
-      <button type="button" class="btn stamp small" data-acao="nao-respondeu" data-id="${senha.id}">Não respondeu</button>`;
+    return `<button type="button" class="btn ok small" data-acao="finalizar-senha" data-id="${senha.id}">Finalizar</button>
+      <button type="button" class="btn stamp small" data-acao="nao-respondeu" data-id="${senha.id}"><span class="lab-wide">Não respondeu</span><span class="lab-narrow">Não veio</span></button>
+      <button type="button" class="btn ghost small btn-rechamada" data-acao="chamar-senha" data-id="${senha.id}">Chamar de novo</button>`;
   }
   return `<button type="button" class="btn primary small" data-acao="chamar-senha" data-id="${senha.id}">Chamar</button>`;
 }
@@ -460,11 +463,11 @@ function linhaSenha(senha, { chamar = false } = {}) {
   const acao = chamar ? `<td class="cel-acao" data-label="Ação">${botoesAcaoTipo(senha)}</td>` : "";
   return `<tr class="${classe} ${senha.preferencial ? "pref" : ""} ${faltou && !finalizada && !emAtend ? "faltou" : ""}">
     <td class="cel-num col-num" data-label="Senha"><span class="senha-com-ico"><span class="senha-num">${escapar(rotuloSenha(senha))}</span>${iconePref(senha.preferencial_tipo, "pref-ico-planilha")}</span>${faltou ? `<span class="chip ausente">${senha.nao_respondeu}x não resp.</span>` : ""}${emAtend ? `<span class="chip em-atendimento">em atendimento</span>` : ""}</td>
-    <td class="cel-rec" data-label="Hora da recepção"><span class="hora-lida">${escapar(hora(senha.hora_recepcao) || "—")}</span></td>
-    <td class="cel-atend" data-label="Hora do atendimento">${htmlHistorico(senha)}</td>
+    <td class="cel-rec" data-label="Recepção"><span class="hora-lida">${escapar(hora(senha.hora_recepcao) || "—")}</span></td>
+    <td class="cel-atend" data-label="Atendimento">${htmlHistorico(senha)}</td>
     <td class="cel-nome" data-label="Nome"><span class="hora-lida">${escapar(senha.nome || "—")}</span></td>
     <td class="cel-tipo" data-label="Tipo">${badgeTipo(senha)}</td>
-    <td class="cel-proc" data-label="Nº processo"><span class="hora-lida">${escapar(senha.processo || "—")}</span></td>
+    <td class="cel-proc" data-label="Processo"><span class="hora-lida">${escapar(senha.processo || "—")}</span></td>
     ${acao}
   </tr>`;
 }
@@ -533,12 +536,14 @@ function telaGeral() {
           </div>
           ${botoesPrefForm()}
         </div>
-        <button type="button" class="btn primary" id="btn-chamar-recepcao">Chamar</button>
-        <div class="campo campo-hora">
-          <span>Hora recepção</span>
-          <strong id="campo-hora-rotulo" class="senha-valor senha-hora-dica">${rascunhoChegada.horaIso ? escapar(hora(rascunhoChegada.horaIso)) : "—"}</strong>
+        <div class="chegada-chamada">
+          <button type="button" class="btn primary" id="btn-chamar-recepcao"><span class="n-passo">1</span>Chamar</button>
+          <div class="campo campo-hora">
+            <span>Hora recepção</span>
+            <strong id="campo-hora-rotulo" class="senha-valor senha-hora-dica">${rascunhoChegada.horaIso ? escapar(hora(rascunhoChegada.horaIso)) : "—"}</strong>
+          </div>
         </div>
-        <label class="campo campo-nome">Nome
+        <label class="campo campo-nome"><span class="n-passo">2</span>Nome
           <input id="campo-nome" type="text" placeholder="Nome" required autocomplete="off" ${travado ? "disabled" : ""} value="${escapar(rascunhoChegada.nome)}">
         </label>
         <fieldset class="campo campo-tipos">
@@ -548,8 +553,10 @@ function telaGeral() {
         <label class="campo campo-processo">Nº processo
           <input id="campo-processo" type="text" placeholder="Nº processo" autocomplete="off" ${travado ? "disabled" : ""} value="${escapar(rascunhoChegada.processo)}">
         </label>
-        <button class="btn primary form-submit" id="btn-registrar" type="submit" ${travado ? "disabled" : ""}>Registrar</button>
-        <button type="button" class="btn stamp" id="btn-nao-respondeu-recepcao" ${travado ? "disabled" : ""}>Não respondeu</button>
+        <div class="chegada-acoes">
+          <button class="btn primary form-submit" id="btn-registrar" type="submit" ${travado ? "disabled" : ""}><span class="n-passo">3</span>Registrar</button>
+          <button type="button" class="btn stamp" id="btn-nao-respondeu-recepcao" ${travado ? "disabled" : ""}><span class="lab-wide">Não respondeu</span><span class="lab-narrow">Não veio</span></button>
+        </div>
       </form>
       <p id="form-erro" class="erro hidden"></p>`
     : `<p class="muted form-dica">Consultando ${dataLegivel(diaAtual())}. Para registrar senha, volta a data para hoje.</p>`;
@@ -558,7 +565,8 @@ function telaGeral() {
       <div class="card-topo">
         <div>
           <h2>Senha geral</h2>
-          <p class="muted form-dica">${ehHoje() ? "Chamar anota a hora. Se a pessoa não aparecer, Não respondeu. Se aparecer, preenche e registra." : "Fila de outro dia. Só consulta."}</p>
+          <p class="muted form-dica dica-web">${ehHoje() ? "Chamar anota a hora. Se a pessoa não aparecer, Não respondeu. Se aparecer, preenche e registra." : "Fila de outro dia. Só consulta."}</p>
+          <p class="muted form-dica dica-mobile">${ehHoje() ? "1 chama · 2 preenche · 3 registra. Rosa espera · amarelo em atendimento." : "Só consulta."}</p>
         </div>
         <div class="topo-acoes">
           ${legendaTipos()}
@@ -581,9 +589,9 @@ function telaTipo(tipo) {
             ${
               ehHoje()
                 ? `<span class="minha-chamada-acoes">
-                    <button type="button" class="btn ghost small" data-acao="chamar-senha" data-id="${s.id}">Chamar de novo</button>
                     <button type="button" class="btn ok small" data-acao="finalizar-senha" data-id="${s.id}">Finalizar</button>
-                    <button type="button" class="btn stamp small" data-acao="nao-respondeu" data-id="${s.id}">Não respondeu</button>
+                    <button type="button" class="btn stamp small" data-acao="nao-respondeu" data-id="${s.id}"><span class="lab-wide">Não respondeu</span><span class="lab-narrow">Não veio</span></button>
+                    <button type="button" class="btn ghost small btn-rechamada" data-acao="chamar-senha" data-id="${s.id}">Chamar de novo</button>
                   </span>`
                 : ""
             }
@@ -595,8 +603,9 @@ function telaTipo(tipo) {
     <div class="card-topo">
       <div>
         <h2>${escapar(tipo.nome)}</h2>
-        <p class="muted form-dica">${ehHoje() ? "Chamar coloca em atendimento. <strong>Finalizar</strong> encerra. <strong>Não respondeu</strong> devolve pra fila e chama a próxima." : `Consultando ${dataLegivel(diaAtual())}. Chamada só no dia de hoje.`}</p>
-        <p id="fila-dica" class="muted form-dica">${verTudo ? "Inclui quem já foi finalizado." : "Só quem ainda está na fila ou em atendimento."}</p>
+        <p class="muted form-dica dica-web">${ehHoje() ? "Chamar coloca em atendimento. <strong>Finalizar</strong> encerra. <strong>Não respondeu</strong> devolve pra fila e chama a próxima." : `Consultando ${dataLegivel(diaAtual())}. Chamada só no dia de hoje.`}</p>
+        <p class="muted form-dica dica-mobile">${ehHoje() ? "Chamar → atender. Finalizar quando acabar. Não respondeu devolve pra fila." : "Só consulta."}</p>
+        <p id="fila-dica" class="muted form-dica dica-web">${verTudo ? "Inclui quem já foi finalizado." : "Só quem ainda está na fila ou em atendimento."}</p>
       </div>
       <div class="topo-acoes">
         ${ehHoje() ? `<button type="button" class="btn primary" data-acao="chamar-proxima" data-tipo="${tipo.id}">Chamar próxima</button>` : ""}
@@ -629,7 +638,7 @@ function telaTipos() {
       ${editando ? `<button type="button" class="btn ghost" data-acao="cancelar-tipo">Cancelar</button>` : ""}
     </form>
     <p id="tipo-erro" class="erro hidden"></p>
-    <table class="table">
+    <table class="table table-cartoes">
       <thead><tr><th>Tipo</th><th>Quando</th><th></th></tr></thead>
       <tbody>
         ${
@@ -637,9 +646,9 @@ function telaTipos() {
             ? tipos
                 .map(
                   (t) => `<tr class="${t.id === tipoEditandoId ? "editando" : ""}">
-                    <td><span class="sigla" style="background:${escapar(t.cor)}">${escapar(t.sigla)}</span> <strong>${escapar(t.nome)}</strong>${t.ativo ? "" : " · inativo"}</td>
-                    <td class="meta">${auditoria(t)}</td>
-                    <td>
+                    <td data-label="Tipo"><span class="sigla" style="background:${escapar(t.cor)}">${escapar(t.sigla)}</span> <strong>${escapar(t.nome)}</strong>${t.ativo ? "" : " · inativo"}</td>
+                    <td class="meta" data-label="Quando">${auditoria(t)}</td>
+                    <td class="cel-botoes">
                       <button type="button" class="btn ghost small" data-acao="editar-tipo" data-id="${t.id}">Editar</button>
                       <button type="button" class="btn ghost small" data-acao="toggle-tipo" data-id="${t.id}" data-ativo="${t.ativo ? "1" : "0"}">${t.ativo ? "Desativar" : "Ativar"}</button>
                     </td>
@@ -948,7 +957,7 @@ function telaControle() {
   </section>
   <section class="card">
     <h2>Por pessoa</h2>
-    <table class="table">
+    <table class="table table-cartoes">
       <thead><tr><th>Pessoa</th><th>Perfil</th><th>Registrou</th><th>Chamou</th><th></th></tr></thead>
       <tbody>
         ${
@@ -956,11 +965,11 @@ function telaControle() {
             ? porPessoa
                 .map(
                   (x) => `<tr>
-                    <td><strong>${escapar(x.o.nome)}</strong><div class="meta">${escapar(x.o.usuario || "")}${x.o.ativo ? "" : " · inativo"}</div></td>
-                    <td><span class="papel-badge ${x.o.papel}">${rotuloPapel(x.o.papel)}</span></td>
-                    <td>${x.registrou}</td>
-                    <td>${x.chamou}</td>
-                    <td><div class="prod-bar"><i style="width:${(x.total / maxPessoa) * 100}%"></i></div></td>
+                    <td data-label="Pessoa"><strong>${escapar(x.o.nome)}</strong><div class="meta">${escapar(x.o.usuario || "")}${x.o.ativo ? "" : " · inativo"}</div></td>
+                    <td data-label="Perfil"><span class="papel-badge ${x.o.papel}">${rotuloPapel(x.o.papel)}</span></td>
+                    <td data-label="Registrou">${x.registrou}</td>
+                    <td data-label="Chamou">${x.chamou}</td>
+                    <td class="cel-barra"><div class="prod-bar"><i style="width:${(x.total / maxPessoa) * 100}%"></i></div></td>
                   </tr>`
                 )
                 .join("")
@@ -994,17 +1003,17 @@ function telaOperadores() {
       <button class="btn primary" type="submit">Incluir</button>
     </form>
     <p id="op-erro" class="erro hidden"></p>
-    <table class="table">
+    <table class="table table-cartoes">
       <thead><tr><th>Pessoa</th><th>Perfil</th><th>Acesso</th><th>Quando</th><th></th></tr></thead>
       <tbody>
         ${operadores
           .map(
             (o) => `<tr>
-              <td><strong>${escapar(o.nome)}</strong><div class="meta">${escapar(o.usuario)}${o.ativo ? "" : " · inativo"}</div></td>
-              <td><span class="papel-badge ${escapar(o.papel)}">${rotuloPapel(o.papel)}</span></td>
-              <td class="meta">${o.ultimo_acesso ? dataHora(o.ultimo_acesso) : "ainda não entrou"}</td>
-              <td class="meta">${auditoria(o)}</td>
-              <td>
+              <td data-label="Pessoa"><strong>${escapar(o.nome)}</strong><div class="meta">${escapar(o.usuario)}${o.ativo ? "" : " · inativo"}</div></td>
+              <td data-label="Perfil"><span class="papel-badge ${escapar(o.papel)}">${rotuloPapel(o.papel)}</span></td>
+              <td class="meta" data-label="Acesso">${o.ultimo_acesso ? dataHora(o.ultimo_acesso) : "ainda não entrou"}</td>
+              <td class="meta" data-label="Quando">${auditoria(o)}</td>
+              <td class="cel-botoes">
                 <button type="button" class="btn ghost small" data-acao="papel-op" data-id="${o.id}" data-papel="${escapar(o.papel)}">${o.papel === "admin" ? "Virar operador" : "Virar admin"}</button>
                 <button type="button" class="btn ghost small" data-acao="toggle-op" data-id="${o.id}" data-ativo="${o.ativo ? "1" : "0"}">${o.ativo ? "Desativar" : "Ativar"}</button>
                 <button type="button" class="btn ghost small" data-acao="senha-op" data-id="${o.id}">Trocar senha</button>
