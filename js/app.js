@@ -210,7 +210,8 @@ function ordenarFila(lista) {
 
 function estaEditando() {
   const el = document.activeElement;
-  return el && el.closest(".planilha-wrap") && (el.matches("input, select, textarea"));
+  if (!el || !el.matches("input, select, textarea")) return false;
+  return !!(el.closest(".planilha-wrap") || el.closest("#form-chegada"));
 }
 
 async function conectar() {
@@ -323,9 +324,9 @@ function checksTipoForm() {
   const ativos = tipos.filter((t) => t.ativo);
   if (!ativos.length) return `<p class="muted">${ehAdmin() ? "Cadastre um tipo primeiro, em Configurações → Tipos." : "Peça a um administrador para cadastrar um tipo."}</p>`;
   return ativos.map((t) => `
-    <label class="chip-check">
+    <label class="chip-check mini" title="${escapar(t.nome)}" style="--tipo:${escapar(t.cor)}">
       <input type="checkbox" name="tipo-chegada" value="${t.id}">
-      <span class="chip-check-ui"><i class="tab-dot" style="background:${escapar(t.cor)}"></i>${escapar(t.sigla)} · ${escapar(t.nome)}</span>
+      <span class="chip-check-ui"><i class="tab-dot" style="background:${escapar(t.cor)}"></i>${escapar(t.sigla)}<span class="tipo-nome"> · ${escapar(t.nome)}</span></span>
     </label>`).join("");
 }
 
@@ -422,57 +423,45 @@ function telaGeral() {
   const form = ehHoje()
     ? `<form id="form-chegada" class="form-chegada">
         <input type="hidden" id="campo-tipo" value="">
-        <div class="form-linha form-linha-campos">
-          <div class="campo campo-senha">
-            <span>Senha</span>
-            <strong id="campo-senha-rotulo" class="senha-valor">${rotuloProxima(false)}</strong>
-          </div>
-          <div class="campo campo-hora">
-            <span>Hora da recepção</span>
-            <strong class="senha-valor senha-hora-dica">ao registrar</strong>
-          </div>
-          <label class="campo campo-nome">Nome da pessoa
-            <input id="campo-nome" type="text" placeholder="Quem está sendo atendido" required autocomplete="off">
-          </label>
+        <div class="campo campo-senha">
+          <span>Senha</span>
+          <strong id="campo-senha-rotulo" class="senha-valor">${rotuloProxima(false)}</strong>
         </div>
-        <div class="form-linha">
-          <fieldset class="campo campo-tipos">
-            <legend>Tipo de atendimento</legend>
-            <div class="tipo-checks">${checksTipoForm()}</div>
-          </fieldset>
-          <label class="chip-check pref-chegada">
-            <input id="campo-pref" type="checkbox">
-            <span class="chip-check-ui">Preferencial</span>
-          </label>
+        <div class="campo campo-hora">
+          <span>Recepção</span>
+          <strong class="senha-valor senha-hora-dica">agora</strong>
         </div>
-        <div class="form-linha form-linha-campos">
-          <label class="campo campo-processo">Nº processo
-            <input id="campo-processo" type="text" placeholder="Número, CPF, voltou…" autocomplete="off">
-          </label>
-          <button class="btn primary form-submit" type="submit">Registrar senha</button>
-        </div>
+        <label class="campo campo-nome">Nome
+          <input id="campo-nome" type="text" placeholder="Nome da pessoa" required autocomplete="off">
+        </label>
+        <fieldset class="campo campo-tipos">
+          <legend>Tipo</legend>
+          <div class="tipo-checks">${checksTipoForm()}</div>
+        </fieldset>
+        <label class="chip-check pref-chegada" title="Preferencial">
+          <input id="campo-pref" type="checkbox">
+          <span class="chip-check-ui"><span class="pref-curto">P</span><span class="pref-longo">Preferencial</span></span>
+        </label>
+        <label class="campo campo-processo">Nº processo
+          <input id="campo-processo" type="text" placeholder="Nº, CPF, voltou…" autocomplete="off">
+        </label>
+        <button class="btn primary form-submit" type="submit">Registrar</button>
       </form>
       <p id="form-erro" class="erro hidden"></p>`
-    : `<p class="muted form-dica">Consultando ${dataLegivel(diaAtual())}. Para registrar senha, volta em <strong>Hoje</strong>.</p>`;
+    : `<p class="muted form-dica">Consultando ${dataLegivel(diaAtual())}. Para registrar senha, volta a data para hoje.</p>`;
   return `
-    <section class="card">
+    <section class="card card-fila">
       <div class="card-topo">
         <div>
           <h2>Senha geral</h2>
-          <p class="muted form-dica">${ehHoje() ? "Preenche nome e tipo e clica em Registrar senha — o número e a hora da recepção saem na hora. Preferencial vira P01. Para chamar, usa a aba do tipo." : "Fila de outro dia. Só consulta."}</p>
+          <p class="muted form-dica">${ehHoje() ? "Preenche a linha e registra. Senha e hora saem na hora. Para chamar, usa a aba do tipo." : "Fila de outro dia. Só consulta."}</p>
         </div>
-        ${legendaTipos()}
+        <div class="topo-acoes">
+          ${legendaTipos()}
+          ${barraFiltro()}
+        </div>
       </div>
       ${form}
-    </section>
-    <section class="card">
-      <div class="card-topo">
-        <div>
-          <h2>Fila ${ehHoje() ? "do dia" : "de " + dataLegivel(diaAtual())}</h2>
-          <p id="fila-dica" class="muted form-dica">${verTudo ? "Inclui quem já foi atendido." : "Só quem ainda está na fila."}</p>
-        </div>
-        ${barraFiltro()}
-      </div>
       <div id="fila-lista">${tabelaFila(senhas, { chamar: false })}</div>
     </section>`;
 }
@@ -990,10 +979,8 @@ async function onChegada(ev) {
     erro.classList.remove("hidden");
     return;
   }
-  ev.target.reset();
-  document.getElementById("campo-tipo").value = "";
-  document.getElementById("campo-senha-rotulo").textContent = rotuloProxima(false);
   await carregar();
+  document.getElementById("campo-nome")?.focus();
 }
 
 async function onTipo(ev) {

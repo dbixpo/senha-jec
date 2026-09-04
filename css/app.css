@@ -384,8 +384,24 @@ textarea {
 
 .form-chegada {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.form-chegada .campo,
+.form-chegada .campo-tipos {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
 }
 
 .form-linha {
@@ -408,13 +424,13 @@ textarea {
   margin: 0;
   padding: 0;
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
 }
 
 .campo-tipos legend {
   padding: 0;
-  margin: 0 0 6px;
-  font-size: 12px;
+  margin: 0 0 4px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--muted);
 }
@@ -470,7 +486,12 @@ textarea {
   outline-offset: 2px;
 }
 
-.pref-chegada .chip-check-ui { min-width: 132px; }
+.pref-chegada .chip-check-ui { min-width: 40px; padding: 0 10px; }
+.pref-chegada input:checked + .chip-check-ui {
+  background: var(--amarelo);
+  border-color: var(--amarelo);
+  color: var(--dark);
+}
 .pref-chegada input:checked + .chip-check-ui {
   background: var(--amarelo);
   border-color: var(--amarelo);
@@ -497,10 +518,11 @@ textarea {
   gap: 6px;
 }
 
-.campo-senha { flex: 0 0 88px; }
-.campo-hora { flex: 0 0 140px; }
-.campo-nome { flex: 1 1 220px; }
-.campo-processo { flex: 1 1 180px; }
+.campo-senha { flex: 0 0 56px; }
+.campo-hora { flex: 0 0 64px; }
+.campo-nome { flex: 1 1 200px; }
+.campo-processo { flex: 0 1 150px; }
+.form-chegada .form-submit { flex: 0 0 auto; }
 
 .senha-valor {
   height: var(--control-h);
@@ -1029,6 +1051,31 @@ textarea {
 
 @media (min-width: 801px) {
   .pwa-bar { display: none !important; }
+  .form-chegada {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+  .form-chegada .tipo-nome { display: none; }
+  .form-chegada .tab-dot { margin-right: 0; }
+  .form-chegada .chip-check-ui,
+  .form-chegada .form-submit,
+  .form-chegada input[type="text"] {
+    height: 36px;
+    min-height: 36px;
+  }
+  .form-chegada .senha-valor {
+    height: 36px;
+    min-height: 36px;
+    font-size: 20px;
+  }
+  .form-chegada .senha-hora-dica {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+  .form-chegada .form-submit { padding: 0 14px; }
+  .card-fila .form-dica { margin-bottom: 0; }
 }
 
 @media (max-width: 800px) {
@@ -1158,28 +1205,24 @@ textarea {
     grid-template-columns: 1fr;
     gap: 8px;
   }
+  .form-chegada {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 12px;
+  }
+  .form-chegada .campo-nome,
+  .form-chegada .campo-tipos,
+  .form-chegada .campo-processo,
+  .form-chegada .form-submit,
+  .form-chegada .pref-chegada {
+    grid-column: 1 / -1;
+  }
   .chip-check,
   .chip-check-ui,
   .pref-chegada,
   .pref-chegada .chip-check-ui {
     width: 100%;
-  }
-  .form-linha { align-items: stretch; }
-  .form-linha-campos {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .campo-senha, .campo-hora, .campo-nome, .campo-processo, .form-submit {
-    flex: none;
-    width: 100%;
-  }
-  .campo-senha .senha-valor {
-    font-size: 28px;
-    justify-content: flex-start;
-  }
-  .campo-nome, .campo-processo, .form-submit {
-    grid-column: 1 / -1;
   }
   .form-submit {
     position: sticky;
