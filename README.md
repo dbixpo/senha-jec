@@ -1,6 +1,10 @@
 # Senha JEC
 
-Sisteminha interno de fila (não é oficial do Tribunal). Recepção anota **senha de papel + nome + serviço**, encaminha para 4 setores, cada um registra o que se resolveu. Tem cadastro de serviços, gestão de operadores e data/hora em tudo que salva.
+Sisteminha interno de fila (não é oficial do Tribunal), no mesmo jeito da planilha: **Senha geral** vê todo mundo; **Triagem**, **Consulta** e **Ajuizamento** são abas. Tipo com sigla e cor, preferencial sobe, hora com botão **Agora** ou digitada.
+
+- Site: https://dbixpo.github.io/senha-jec/
+- Código: https://github.com/dbixpo/senha-jec
+- Banco: projeto Supabase **Senha JEC** (organização DBixpo)
 
 - Site: https://dbixpo.github.io/senha-jec/
 - Código: https://github.com/dbixpo/senha-jec

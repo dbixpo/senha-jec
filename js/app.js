@@ -2,22 +2,12 @@ const STORAGE_KEY = "fila-supabase";
 const SESSAO_KEY = "senha-jec-sessao";
 const TZ = "America/Sao_Paulo";
 
-const STATUS = {
-  recepcao: "Na recepção",
-  na_fila: "Na fila",
-  em_atendimento: "Em atendimento",
-  resolvido: "Resolvido",
-  cancelado: "Cancelado",
-};
-
 let sb = null;
 let sessao = null;
-let setores = [];
-let servicos = [];
+let tipos = [];
 let operadores = [];
 let senhas = [];
-let aba = "recepcao";
-let resolvendoId = null;
+let aba = "geral";
 let canal = null;
 
 function hojeISO() {
@@ -42,12 +32,29 @@ function dataHora(ts) {
 }
 
 function hora(ts) {
-  if (!ts) return "—";
+  if (!ts) return "";
   return new Date(ts).toLocaleTimeString("pt-BR", {
     timeZone: TZ,
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
   });
+}
+
+function agoraHHMM() {
+  return new Date().toLocaleTimeString("pt-BR", {
+    timeZone: TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+function isoDoDia(hhmm) {
+  if (!hhmm) return null;
+  const [h, m] = hhmm.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return new Date(`${diaAtual()}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`).toISOString();
 }
 
 function diaAtual() {
@@ -89,12 +96,29 @@ function mostrarErro(msg) {
   window.alert(msg);
 }
 
-function nomeServico(id) {
-  return servicos.find((s) => s.id === id)?.nome || "sem serviço";
+function tipoDe(id) {
+  return tipos.find((t) => t.id === id) || null;
 }
 
 function auditoria(row) {
   return `reg. ${dataHora(row.created_at)}${row.updated_at && row.updated_at !== row.created_at ? " · atual. " + dataHora(row.updated_at) : ""}`;
+}
+
+function proximoNumero() {
+  const usados = senhas.map((s) => Number(s.numero) || 0);
+  return (usados.length ? Math.max(...usados) : 0) + 1;
+}
+
+function ordenarFila(lista) {
+  return [...lista].sort((a, b) => {
+    if (!!a.preferencial !== !!b.preferencial) return a.preferencial ? -1 : 1;
+    return (a.numero || 0) - (b.numero || 0);
+  });
+}
+
+function estaEditando() {
+  const el = document.activeElement;
+  return el && el.closest(".planilha") && (el.matches("input, select, textarea"));
 }
 
 async function conectar() {
@@ -129,9 +153,8 @@ async function carregar() {
   if (!sessao) return;
   const data = diaAtual();
   const ops = [
-    sb.from("setores").select("*").order("ordem"),
-    sb.from("servicos").select("*").order("nome"),
-    sb.from("senhas").select("*").eq("data", data).order("hora_chegada"),
+    sb.from("tipos_atendimento").select("*").order("ordem"),
+    sb.from("senhas").select("*").eq("data", data).order("numero"),
   ];
   if (ehAdmin()) {
     ops.push(
@@ -144,11 +167,10 @@ async function carregar() {
     mostrarErro(erro.message);
     return;
   }
-  setores = resultados[0].data || [];
-  servicos = resultados[1].data || [];
-  senhas = resultados[2].data || [];
-  operadores = resultados[3]?.data || [];
-  desenhar();
+  tipos = resultados[0].data || [];
+  senhas = resultados[1].data || [];
+  operadores = resultados[2]?.data || [];
+  if (!estaEditando()) desenhar();
 }
 
 function escutar() {
@@ -156,205 +178,205 @@ function escutar() {
   canal = sb
     .channel("senha-jec-ao-vivo")
     .on("postgres_changes", { event: "*", schema: "public", table: "senhas" }, () => carregar())
-    .on("postgres_changes", { event: "*", schema: "public", table: "setores" }, () => carregar())
-    .on("postgres_changes", { event: "*", schema: "public", table: "servicos" }, () => carregar())
+    .on("postgres_changes", { event: "*", schema: "public", table: "tipos_atendimento" }, () => carregar())
     .subscribe((status) => {
       document.getElementById("live").classList.toggle("off", status !== "SUBSCRIBED");
     });
 }
 
-function contar(filtro) {
-  return senhas.filter(filtro).length;
+function contarTipo(tipoId) {
+  return senhas.filter((s) => s.tipo_id === tipoId && !s.hora_atendimento).length;
 }
 
 function desenharAbas() {
   const nav = document.getElementById("tabs");
   const abas = [
-    { id: "recepcao", label: "Recepção", count: contar((s) => s.status === "recepcao") },
-    ...setores.map((setor) => ({
-      id: "setor-" + setor.id,
-      label: setor.nome,
-      count: contar((s) => s.setor_id === setor.id && (s.status === "na_fila" || s.status === "em_atendimento")),
+    { id: "geral", label: "Senha geral", count: senhas.length },
+    ...tipos.filter((t) => t.ativo).map((t) => ({
+      id: "tipo-" + t.id,
+      label: t.nome,
+      count: contarTipo(t.id),
+      cor: t.cor,
     })),
-    { id: "servicos", label: "Serviços", count: servicos.filter((s) => s.ativo).length },
+    { id: "tipos", label: "Tipos", count: tipos.filter((t) => t.ativo).length },
   ];
   if (ehAdmin()) abas.push({ id: "operadores", label: "Operadores", count: operadores.filter((o) => o.ativo).length });
   nav.innerHTML = abas
     .map(
       (item) =>
         `<button type="button" class="tab ${item.id === aba ? "active" : ""}" data-aba="${item.id}">
+          ${item.cor ? `<span class="tab-dot" style="background:${escapar(item.cor)}"></span>` : ""}
           ${escapar(item.label)} <span class="count">${item.count}</span>
         </button>`
     )
     .join("");
 }
 
-function botoesSetor(senha, prefixo) {
-  return setores
-    .map(
-      (setor) =>
-        `<button type="button" class="setor-btn" style="background:${escapar(setor.cor)}" data-acao="${prefixo}" data-id="${senha.id}" data-setor="${setor.id}">${escapar(setor.nome)}</button>`
-    )
-    .join("");
-}
-
-function cardSenha(senha, acoesHtml) {
-  const nome = senha.nome?.trim() ? senha.nome : "sem nome";
-  return `<article class="ticket">
-    <div class="num" title="Clique para corrigir o número">
-      <button type="button" class="btn ghost small" data-acao="corrigir" data-id="${senha.id}">${String(senha.numero).padStart(2, "0")}</button>
-    </div>
-    <div>
-      <div class="nome">${escapar(nome)}</div>
-      <div class="meta">${escapar(nomeServico(senha.servico_id))}</div>
-      <div class="meta">chegou ${hora(senha.hora_chegada)}${senha.hora_encaminhamento ? " · encaminhada " + hora(senha.hora_encaminhamento) : ""}${senha.hora_inicio ? " · início " + hora(senha.hora_inicio) : ""}${senha.hora_fim ? " · fim " + hora(senha.hora_fim) : ""}</div>
-      <div class="meta">${auditoria(senha)}</div>
-      ${senha.resolucao ? `<div class="meta">${escapar(senha.resolucao)}</div>` : ""}
-    </div>
-    <div class="acoes">${acoesHtml}</div>
-  </article>`;
-}
-
-function lista(titulo, itens, vazio, renderer) {
-  return `<section class="card">
-    <h3 class="col-title">${escapar(titulo)}</h3>
-    <div class="lista">
-      ${itens.length ? itens.map(renderer).join("") : `<p class="empty">${escapar(vazio)}</p>`}
-    </div>
-  </section>`;
-}
-
-function opcoesServico(selected) {
-  const ativos = servicos.filter((s) => s.ativo);
-  if (!ativos.length) return `<option value="">Cadastre um serviço primeiro</option>`;
-  return `<option value="">Escolher serviço</option>` + ativos.map((s) =>
-    `<option value="${s.id}" ${s.id === selected ? "selected" : ""}>${escapar(s.nome)}</option>`
+function opcoesTipo(selected) {
+  const ativos = tipos.filter((t) => t.ativo);
+  if (!ativos.length) return `<option value="">Cadastre um tipo primeiro</option>`;
+  return `<option value="">Tipo</option>` + ativos.map((t) =>
+    `<option value="${t.id}" ${t.id === selected ? "selected" : ""}>${escapar(t.sigla)} — ${escapar(t.nome)}</option>`
   ).join("");
 }
 
-function proximoNumero() {
-  const usados = senhas.map((s) => Number(s.numero) || 0);
-  return (usados.length ? Math.max(...usados) : 0) + 1;
+function badgeTipo(senha) {
+  const t = tipoDe(senha.tipo_id);
+  if (!t) return `<span class="sigla">—</span>`;
+  return `<span class="sigla" style="background:${escapar(t.cor)}">${escapar(t.sigla)}</span>`;
 }
 
-function telaRecepcao() {
-  const naRecepcao = senhas.filter((s) => s.status === "recepcao");
-  const encaminhadas = senhas.filter((s) => s.status !== "recepcao" && s.status !== "cancelado");
+function celulaHora(senha, campo, comCheck) {
+  const valor = hora(senha[campo]);
+  const check = comCheck
+    ? `<label class="check-hora"><input type="checkbox" data-acao="toggle-atendimento" data-id="${senha.id}" ${senha.hora_atendimento ? "checked" : ""}> Chamou</label>`
+    : "";
+  return `<div class="hora-cell">
+    ${check}
+    <input type="time" data-campo="${campo}" data-id="${senha.id}" value="${escapar(valor)}">
+    <button type="button" class="btn ghost small" data-acao="agora" data-campo="${campo}" data-id="${senha.id}">Agora</button>
+  </div>`;
+}
+
+function linhaSenha(senha, { setor = false } = {}) {
+  const atendida = !!senha.hora_atendimento;
+  return `<tr class="${atendida ? "atendida" : "aguardando"} ${senha.preferencial ? "pref" : ""}">
+    <td>${setor ? badgeTipo(senha) : `<select class="sel-tipo" data-campo="tipo_id" data-id="${senha.id}">${opcoesTipo(senha.tipo_id)}</select>`}</td>
+    <td class="col-num">
+      <button type="button" class="btn ghost small num-btn" data-acao="corrigir" data-id="${senha.id}">${String(senha.numero).padStart(2, "0")}</button>
+    </td>
+    <td class="col-pref">
+      <label class="pref-lab"><input type="checkbox" data-campo="preferencial" data-id="${senha.id}" ${senha.preferencial ? "checked" : ""}> P</label>
+    </td>
+    <td>${celulaHora(senha, "hora_recepcao", false)}</td>
+    <td>${celulaHora(senha, "hora_atendimento", setor)}</td>
+    <td><input type="text" data-campo="nome" data-id="${senha.id}" value="${escapar(senha.nome || "")}" placeholder="Nome de quem está sendo atendido"></td>
+    <td><input type="text" data-campo="processo" data-id="${senha.id}" value="${escapar(senha.processo || "")}" placeholder="nº processo ou observação"></td>
+  </tr>`;
+}
+
+function tabelaFila(lista, { setor = false } = {}) {
+  const linhas = ordenarFila(lista);
+  if (!linhas.length) return `<p class="empty">Ninguém nesta fila hoje.</p>`;
+  return `<div class="planilha-wrap">
+    <table class="planilha">
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Nº senha</th>
+          <th>Pref.</th>
+          <th>Hora recepção</th>
+          <th>Hora atendimento</th>
+          <th>Nome</th>
+          <th>Nº processo</th>
+        </tr>
+      </thead>
+      <tbody>${linhas.map((s) => linhaSenha(s, { setor })).join("")}</tbody>
+    </table>
+  </div>`;
+}
+
+function legendaTipos() {
+  return `<ul class="legenda">
+    ${tipos.filter((t) => t.ativo).map((t) => `<li><span class="sigla" style="background:${escapar(t.cor)}">${escapar(t.sigla)}</span> ${escapar(t.nome)}</li>`).join("")}
+    <li><span class="chip aguardando">espera</span></li>
+    <li><span class="chip atendida">já atendido</span></li>
+    <li><span class="chip pref">P = preferencial (sobe)</span></li>
+  </ul>`;
+}
+
+function telaGeral() {
   const proxima = String(proximoNumero()).padStart(2, "0");
   return `
     <section class="card">
-      <h2>Quem chegou</h2>
-      <p class="muted form-dica">A senha sai sozinha. Se precisar ajustar, clique no número do cartão.</p>
+      <div class="card-topo">
+        <div>
+          <h2>Senha geral</h2>
+          <p class="muted form-dica">A senha sai sozinha. Preferencial sobe na fila. Rosa = esperando · azul = já chamaram lá dentro.</p>
+        </div>
+        ${legendaTipos()}
+      </div>
       <form id="form-chegada" class="form-grid form-chegada">
         <div class="proxima">
           <span class="eyebrow">Próxima</span>
           <strong>${proxima}</strong>
         </div>
+        <label>Tipo de atendimento
+          <select id="campo-tipo" required>${opcoesTipo()}</select>
+        </label>
+        <label class="check-wrap">Preferencial
+          <span><input id="campo-pref" type="checkbox"> P — vai para cima</span>
+        </label>
+        <label>Hora da recepção
+          <span class="hora-cell">
+            <input id="campo-hora-rec" type="time" value="${escapar(agoraHHMM())}">
+            <button type="button" class="btn ghost small" id="btn-hora-rec-agora">Agora</button>
+          </span>
+        </label>
         <label>Nome da pessoa
-          <input id="campo-nome" type="text" placeholder="Nome de quem está sendo atendido" required autocomplete="off">
+          <input id="campo-nome" type="text" placeholder="Quem está sendo atendido" required autocomplete="off">
         </label>
-        <label>Serviço
-          <select id="campo-servico" required>${opcoesServico()}</select>
-        </label>
-        <label>Setor
-          <select id="campo-setor" required>
-            <option value="">Escolher setor</option>
-            ${setores.map((s) => `<option value="${s.id}">${escapar(s.nome)}</option>`).join("")}
-          </select>
+        <label>Nº processo
+          <input id="campo-processo" type="text" placeholder="Pode ser número, CPF, voltou…" autocomplete="off">
         </label>
         <button class="btn primary form-submit" type="submit">Registrar</button>
       </form>
       <p id="form-erro" class="erro hidden"></p>
     </section>
-    ${lista(
-      "Aguardando encaminhamento",
-      naRecepcao,
-      "Ninguém esperando na recepção.",
-      (s) =>
-        cardSenha(
-          s,
-          `${botoesSetor(s, "encaminhar")}<button type="button" class="btn ghost small" data-acao="cancelar" data-id="${s.id}">Saiu</button>`
-        )
-    )}
-    ${lista(
-      "Já encaminhadas hoje",
-      encaminhadas,
-      "Ainda não encaminhou ninguém hoje.",
-      (s) => {
-        const setor = setores.find((x) => x.id === s.setor_id);
-        return cardSenha(s, `<span class="meta">${escapar(setor?.nome || "—")} · ${STATUS[s.status]}</span>`);
-      }
-    )}`;
+    <section class="card">
+      <h2>Fila do dia</h2>
+      ${tabelaFila(senhas, { setor: false })}
+    </section>`;
 }
 
-function telaSetor(setor) {
-  const fila = senhas.filter((s) => s.setor_id === setor.id && s.status === "na_fila");
-  const agora = senhas.filter((s) => s.setor_id === setor.id && s.status === "em_atendimento");
-  const feitos = senhas.filter((s) => s.setor_id === setor.id && s.status === "resolvido");
-  return `<div class="cols">
-    ${lista(
-      "Fila",
-      fila,
-      "Fila vazia.",
-      (s) =>
-        cardSenha(
-          s,
-          `<button type="button" class="btn primary small" data-acao="chamar" data-id="${s.id}">Chamar</button>
-           ${botoesSetor(s, "mover")}
-           <button type="button" class="btn ghost small" data-acao="cancelar" data-id="${s.id}">Saiu</button>`
-        )
-    )}
-    ${lista(
-      "Em atendimento",
-      agora,
-      "Ninguém sendo atendido.",
-      (s) =>
-        cardSenha(
-          s,
-          `<button type="button" class="btn stamp small" data-acao="resolver" data-id="${s.id}">Resolver</button>
-           <button type="button" class="btn ghost small" data-acao="voltar-fila" data-id="${s.id}">Voltar à fila</button>`
-        )
-    )}
-    ${lista(
-      "Resolvidos no dia",
-      feitos,
-      "Nada resolvido ainda.",
-      (s) => cardSenha(s, `<span class="meta">fim ${hora(s.hora_fim)}</span>`)
-    )}
-  </div>`;
-}
-
-function telaServicos() {
+function telaTipo(tipo) {
+  const lista = senhas.filter((s) => s.tipo_id === tipo.id);
   return `<section class="card">
-    <h2>Cadastro de serviços</h2>
-    <form id="form-servico" class="form-grid cadastro">
+    <div class="card-topo">
+      <div>
+        <h2>${escapar(tipo.nome)}</h2>
+        <p class="muted form-dica">Marca <strong>Chamou</strong> na hora que chamar a pessoa — isso aparece na senha geral e a linha fica azul.</p>
+      </div>
+      <span class="sigla grande" style="background:${escapar(tipo.cor)}">${escapar(tipo.sigla)}</span>
+    </div>
+    ${tabelaFila(lista, { setor: true })}
+  </section>`;
+}
+
+function telaTipos() {
+  return `<section class="card">
+    <h2>Tipos de atendimento</h2>
+    <p class="muted form-dica">Cada tipo vira uma aba. Sigla e cor identificam na planilha.</p>
+    <form id="form-tipo" class="form-grid cadastro">
       <label>Nome
-        <input id="servico-nome" required placeholder="Ex.: atendimento, certidão...">
+        <input id="tipo-nome" required placeholder="Ex.: Triagem">
       </label>
-      <label>Descrição
-        <input id="servico-desc" placeholder="Opcional">
+      <label>Sigla
+        <input id="tipo-sigla" required maxlength="3" placeholder="T">
       </label>
-      <span></span>
-      <button class="btn primary" type="submit">Incluir serviço</button>
+      <label>Cor
+        <input id="tipo-cor" type="color" value="#6B3FA0">
+      </label>
+      <button class="btn primary" type="submit">Incluir tipo</button>
     </form>
-    <p id="servico-erro" class="erro hidden"></p>
+    <p id="tipo-erro" class="erro hidden"></p>
     <table class="table">
-      <thead><tr><th>Serviço</th><th>Quando</th><th></th></tr></thead>
+      <thead><tr><th>Tipo</th><th>Quando</th><th></th></tr></thead>
       <tbody>
         ${
-          servicos.length
-            ? servicos
+          tipos.length
+            ? tipos
                 .map(
-                  (s) => `<tr>
-                    <td><strong>${escapar(s.nome)}</strong><div class="meta">${escapar(s.descricao || "")}${s.ativo ? "" : " · inativo"}</div></td>
-                    <td class="meta">${auditoria(s)}</td>
+                  (t) => `<tr>
+                    <td><span class="sigla" style="background:${escapar(t.cor)}">${escapar(t.sigla)}</span> <strong>${escapar(t.nome)}</strong>${t.ativo ? "" : " · inativo"}</td>
+                    <td class="meta">${auditoria(t)}</td>
                     <td>
-                      <button type="button" class="btn ghost small" data-acao="toggle-servico" data-id="${s.id}" data-ativo="${s.ativo ? "1" : "0"}">${s.ativo ? "Desativar" : "Ativar"}</button>
+                      <button type="button" class="btn ghost small" data-acao="toggle-tipo" data-id="${t.id}" data-ativo="${t.ativo ? "1" : "0"}">${t.ativo ? "Desativar" : "Ativar"}</button>
                     </td>
                   </tr>`
                 )
                 .join("")
-            : `<tr><td colspan="3" class="empty">Nenhum serviço ainda. A recepção precisa disso para registrar a pessoa.</td></tr>`
+            : `<tr><td colspan="3" class="empty">Nenhum tipo ainda.</td></tr>`
         }
       </tbody>
     </table>
@@ -401,20 +423,23 @@ function telaOperadores() {
 function desenhar() {
   desenharAbas();
   const app = document.getElementById("app");
-  if (aba === "recepcao") {
-    app.innerHTML = telaRecepcao();
+  if (aba === "geral") {
+    app.innerHTML = telaGeral();
     document.getElementById("form-chegada")?.addEventListener("submit", onChegada);
+    document.getElementById("btn-hora-rec-agora")?.addEventListener("click", () => {
+      document.getElementById("campo-hora-rec").value = agoraHHMM();
+    });
     document.getElementById("campo-nome")?.focus();
     return;
   }
-  if (aba === "servicos") {
-    app.innerHTML = telaServicos();
-    document.getElementById("form-servico")?.addEventListener("submit", onServico);
+  if (aba === "tipos") {
+    app.innerHTML = telaTipos();
+    document.getElementById("form-tipo")?.addEventListener("submit", onTipo);
     return;
   }
   if (aba === "operadores") {
     if (!ehAdmin()) {
-      aba = "recepcao";
+      aba = "geral";
       desenhar();
       return;
     }
@@ -422,9 +447,13 @@ function desenhar() {
     document.getElementById("form-operador")?.addEventListener("submit", onOperador);
     return;
   }
-  const id = Number(aba.replace("setor-", ""));
-  const setor = setores.find((s) => s.id === id);
-  app.innerHTML = setor ? telaSetor(setor) : "<p>Setor não encontrado.</p>";
+  if (aba.startsWith("tipo-")) {
+    const tipo = tipos.find((t) => t.id === aba.slice(5));
+    app.innerHTML = tipo ? telaTipo(tipo) : "<p>Tipo não encontrado.</p>";
+    return;
+  }
+  aba = "geral";
+  desenhar();
 }
 
 function carimbo() {
@@ -436,47 +465,47 @@ async function onChegada(ev) {
   const erro = document.getElementById("form-erro");
   erro.classList.add("hidden");
   const nome = document.getElementById("campo-nome").value.trim();
-  const servicoId = document.getElementById("campo-servico").value;
-  const setorId = document.getElementById("campo-setor").value;
-  if (!nome || !servicoId || !setorId) {
-    erro.textContent = "Nome, serviço e setor são obrigatórios.";
+  const tipoId = document.getElementById("campo-tipo").value;
+  const preferencial = document.getElementById("campo-pref").checked;
+  const horaRec = document.getElementById("campo-hora-rec").value;
+  const processo = document.getElementById("campo-processo").value.trim();
+  if (!nome || !tipoId) {
+    erro.textContent = "Nome e tipo de atendimento são obrigatórios.";
     erro.classList.remove("hidden");
     return;
   }
-
   const payload = {
     data: diaAtual(),
     nome,
-    servico_id: servicoId,
+    tipo_id: tipoId,
+    preferencial,
+    processo,
+    hora_recepcao: isoDoDia(horaRec) || new Date().toISOString(),
     status: "na_fila",
-    setor_id: Number(setorId),
-    hora_encaminhamento: new Date().toISOString(),
     created_by: sessao.id,
     updated_by: sessao.id,
   };
-
   const { error } = await sb.from("senhas").insert(payload);
   if (error) {
-    erro.textContent = error.code === "23505" ? "Esse número já está neste dia. Ajusta pelo número no cartão." : error.message;
+    erro.textContent = error.message;
     erro.classList.remove("hidden");
     return;
   }
   ev.target.reset();
+  document.getElementById("campo-hora-rec").value = agoraHHMM();
   document.getElementById("campo-nome").focus();
   await carregar();
 }
 
-async function onServico(ev) {
+async function onTipo(ev) {
   ev.preventDefault();
-  const erro = document.getElementById("servico-erro");
+  const erro = document.getElementById("tipo-erro");
   erro.classList.add("hidden");
-  const nome = document.getElementById("servico-nome").value.trim();
-  const descricao = document.getElementById("servico-desc").value.trim();
-  const { error } = await sb.from("servicos").insert({
-    nome,
-    descricao,
-    created_by: sessao.id,
-    updated_by: sessao.id,
+  const { error } = await sb.from("tipos_atendimento").insert({
+    nome: document.getElementById("tipo-nome").value.trim(),
+    sigla: document.getElementById("tipo-sigla").value.trim().toUpperCase(),
+    cor: document.getElementById("tipo-cor").value,
+    ordem: tipos.length + 1,
   });
   if (error) {
     erro.textContent = error.message;
@@ -491,22 +520,14 @@ async function onOperador(ev) {
   ev.preventDefault();
   const erro = document.getElementById("op-erro");
   erro.classList.add("hidden");
-  const usuario = document.getElementById("op-usuario").value.trim().toLowerCase();
-  const nome = document.getElementById("op-nome").value.trim();
-  const senha = document.getElementById("op-senha").value.trim();
   const { data, error } = await sb.rpc("criar_operador", {
-    p_usuario: usuario,
-    p_nome: nome,
-    p_senha: senha,
+    p_usuario: document.getElementById("op-usuario").value.trim().toLowerCase(),
+    p_nome: document.getElementById("op-nome").value.trim(),
+    p_senha: document.getElementById("op-senha").value.trim(),
     p_papel: "operador",
   });
-  if (error) {
-    erro.textContent = error.message;
-    erro.classList.remove("hidden");
-    return;
-  }
-  if (!data) {
-    erro.textContent = "Não deu para criar. Confere se o usuário já existe.";
+  if (error || !data) {
+    erro.textContent = error?.message || "Não deu para criar. Confere se o usuário já existe.";
     erro.classList.remove("hidden");
     return;
   }
@@ -514,13 +535,15 @@ async function onOperador(ev) {
   await carregar();
 }
 
-async function patch(id, valores) {
+async function patch(id, valores, redesenhar = true) {
   const { error } = await sb.from("senhas").update({ ...valores, ...carimbo() }).eq("id", id);
   if (error) {
     mostrarErro(error.code === "23505" ? "Esse número de senha já existe neste dia." : error.message);
     return;
   }
-  await carregar();
+  const idx = senhas.findIndex((s) => s.id === id);
+  if (idx >= 0) Object.assign(senhas[idx], valores);
+  if (redesenhar) await carregar();
 }
 
 async function onAcao(ev) {
@@ -528,39 +551,23 @@ async function onAcao(ev) {
   if (!btn) return;
   const id = btn.dataset.id;
   const acao = btn.dataset.acao;
-  const agora = new Date().toISOString();
 
-  if (acao === "encaminhar" || acao === "mover") {
-    await patch(id, {
-      setor_id: Number(btn.dataset.setor),
-      status: "na_fila",
-      hora_encaminhamento: agora,
-      hora_inicio: null,
-      hora_fim: null,
-      resolucao: null,
-    });
+  if (acao === "agora") {
+    const campo = btn.dataset.campo;
+    const hhmm = agoraHHMM();
+    const input = btn.parentElement.querySelector("input[type=time]");
+    if (input) input.value = hhmm;
+    const extra = campo === "hora_atendimento" ? { status: "em_atendimento" } : {};
+    await patch(id, { [campo]: isoDoDia(hhmm), ...extra });
     return;
   }
-  if (acao === "chamar") {
-    await patch(id, { status: "em_atendimento", hora_inicio: agora });
-    return;
-  }
-  if (acao === "voltar-fila") {
-    await patch(id, { status: "na_fila", hora_inicio: null });
-    return;
-  }
-  if (acao === "cancelar") {
-    if (!confirm("Marcar que a pessoa saiu?")) return;
-    await patch(id, { status: "cancelado", hora_fim: agora });
-    return;
-  }
-  if (acao === "resolver") {
-    resolvendoId = id;
-    const senha = senhas.find((s) => s.id === id);
-    document.getElementById("dlg-resolucao-meta").textContent =
-      `Senha ${senha?.numero ?? ""} · ${senha?.nome || "sem nome"} · ${nomeServico(senha?.servico_id)}`;
-    document.getElementById("resolucao-texto").value = senha?.resolucao || "";
-    document.getElementById("dlg-resolucao").showModal();
+  if (acao === "toggle-atendimento") {
+    if (btn.checked) {
+      const hhmm = agoraHHMM();
+      await patch(id, { hora_atendimento: isoDoDia(hhmm), status: "em_atendimento" });
+    } else {
+      await patch(id, { hora_atendimento: null, status: "na_fila" });
+    }
     return;
   }
   if (acao === "corrigir") {
@@ -575,11 +582,8 @@ async function onAcao(ev) {
     await patch(id, { numero });
     return;
   }
-  if (acao === "toggle-servico") {
-    const { error } = await sb
-      .from("servicos")
-      .update({ ativo: btn.dataset.ativo !== "1", updated_by: sessao.id })
-      .eq("id", id);
+  if (acao === "toggle-tipo") {
+    const { error } = await sb.from("tipos_atendimento").update({ ativo: btn.dataset.ativo !== "1" }).eq("id", id);
     if (error) mostrarErro(error.message);
     else await carregar();
     return;
@@ -599,51 +603,28 @@ async function onAcao(ev) {
   }
 }
 
-async function salvarResolucao(ev) {
-  ev.preventDefault();
-  const id = resolvendoId;
-  const texto = document.getElementById("resolucao-texto").value.trim();
-  document.getElementById("dlg-resolucao").close();
-  if (!id) return;
-  await patch(id, {
-    status: "resolvido",
-    resolucao: texto,
-    hora_fim: new Date().toISOString(),
-  });
-  resolvendoId = null;
-}
-
-function abrirSetores() {
-  document.getElementById("setores-campos").innerHTML = setores
-    .map(
-      (s) => `<label>${escapar("Setor " + s.id)}
-        <input name="setor-${s.id}" value="${escapar(s.nome)}" required>
-      </label>`
-    )
-    .join("");
-  document.getElementById("dlg-setores").showModal();
-}
-
-async function salvarSetores(ev) {
-  ev.preventDefault();
-  const form = ev.target;
-  await Promise.all(
-    setores.map((s) => {
-      const nome = form.querySelector(`[name="setor-${s.id}"]`).value.trim();
-      return sb.from("setores").update({ nome }).eq("id", s.id);
-    })
-  );
-  document.getElementById("dlg-setores").close();
-  await carregar();
+async function onCampo(ev) {
+  const el = ev.target.closest("[data-campo]");
+  if (!el || !el.dataset.id) return;
+  const id = el.dataset.id;
+  const campo = el.dataset.campo;
+  let valor;
+  if (el.type === "checkbox") valor = el.checked;
+  else if (el.type === "time") valor = isoDoDia(el.value);
+  else valor = el.value;
+  const extra = {};
+  if (campo === "hora_atendimento") extra.status = valor ? "em_atendimento" : "na_fila";
+  await patch(id, { [campo]: valor, ...extra }, ev.type !== "blur");
 }
 
 async function onLogin(ev) {
   ev.preventDefault();
   const erro = document.getElementById("login-erro");
   erro.classList.add("hidden");
-  const usuario = document.getElementById("login-usuario").value.trim().toLowerCase();
-  const senha = document.getElementById("login-senha").value.trim();
-  const { data, error } = await sb.rpc("login_operador", { p_usuario: usuario, p_senha: senha });
+  const { data, error } = await sb.rpc("login_operador", {
+    p_usuario: document.getElementById("login-usuario").value.trim().toLowerCase(),
+    p_senha: document.getElementById("login-senha").value.trim(),
+  });
   if (error || !data) {
     erro.textContent = "Usuário ou senha não conferem.";
     erro.classList.remove("hidden");
@@ -686,18 +667,18 @@ function ligarEventos() {
     aba = tab.dataset.aba;
     desenhar();
   });
-  document.getElementById("app").addEventListener("click", onAcao);
+  const app = document.getElementById("app");
+  app.addEventListener("click", onAcao);
+  app.addEventListener("change", onCampo);
+  app.addEventListener("blur", (ev) => {
+    if (ev.target.matches("input[data-campo=nome], input[data-campo=processo]")) onCampo(ev);
+  }, true);
   document.getElementById("dia").addEventListener("change", carregar);
   document.getElementById("btn-hoje").addEventListener("click", () => {
     document.getElementById("dia").value = hojeISO();
     carregar();
   });
-  document.getElementById("btn-setores").addEventListener("click", abrirSetores);
   document.getElementById("btn-sair").addEventListener("click", sair);
-  document.getElementById("form-setores").addEventListener("submit", salvarSetores);
-  document.getElementById("dlg-setores-fechar").addEventListener("click", () => document.getElementById("dlg-setores").close());
-  document.getElementById("form-resolucao").addEventListener("submit", salvarResolucao);
-  document.getElementById("dlg-resolucao-fechar").addEventListener("click", () => document.getElementById("dlg-resolucao").close());
   document.getElementById("setup-salvar").addEventListener("click", salvarSetup);
   document.getElementById("form-login").addEventListener("submit", onLogin);
 }

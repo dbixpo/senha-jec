@@ -51,8 +51,8 @@
   <header class="top">
     <div class="brand">
       <div>
-        <p class="eyebrow">Fila do dia</p>
-        <h1>Senha JEC</h1>
+      <p class="eyebrow">Controle de senhas</p>
+      <h1>Senha JEC</h1>
       </div>
     </div>
     <div class="top-actions">
@@ -61,7 +61,6 @@
         <input type="date" id="dia">
       </label>
       <button type="button" class="btn ghost" id="btn-hoje">Hoje</button>
-      <button type="button" class="btn ghost" id="btn-setores" title="Renomear setores">Setores</button>
       <button type="button" class="btn ghost" id="btn-sair">Sair</button>
       <span id="live" class="live" title="Atualização ao vivo">ao vivo</span>
     </div>
@@ -70,30 +69,6 @@
   <nav id="tabs" class="tabs"></nav>
   <main id="app" class="app"></main>
   <p class="disclaimer foot">Sisteminha interno de fila · não é um sistema oficial do Tribunal de Justiça</p>
-
-  <dialog id="dlg-setores" class="dlg">
-    <form method="dialog" id="form-setores">
-      <h2>Nomes dos setores</h2>
-      <p class="muted">Dá para trocar sem perder o histórico.</p>
-      <div id="setores-campos"></div>
-      <menu>
-        <button type="submit" class="btn primary" value="ok">Salvar</button>
-        <button type="button" class="btn ghost" id="dlg-setores-fechar">Fechar</button>
-      </menu>
-    </form>
-  </dialog>
-
-  <dialog id="dlg-resolucao" class="dlg">
-    <form method="dialog" id="form-resolucao">
-      <h2>O que se resolveu?</h2>
-      <p id="dlg-resolucao-meta" class="muted"></p>
-      <textarea id="resolucao-texto" rows="4" placeholder="Anotação rápida do atendimento"></textarea>
-      <menu>
-        <button type="submit" class="btn primary">Registrar</button>
-        <button type="button" class="btn ghost" id="dlg-resolucao-fechar">Cancelar</button>
-      </menu>
-    </form>
-  </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
   <script src="js/config.js"></script>

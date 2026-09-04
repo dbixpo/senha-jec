@@ -44,11 +44,33 @@ create table if not exists servicos (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists tipos_atendimento (
+  id uuid primary key default gen_random_uuid(),
+  nome text not null,
+  sigla text not null unique,
+  cor text not null default '#6B3FA0',
+  ordem smallint not null default 1,
+  ativo boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+insert into tipos_atendimento (nome, sigla, cor, ordem) values
+  ('Triagem', 'T', '#6B3FA0', 1),
+  ('Consulta', 'C', '#7BA83D', 2),
+  ('Ajuizamento', 'A', '#D97A9A', 3)
+on conflict (sigla) do nothing;
+
 create table if not exists senhas (
   id uuid primary key default gen_random_uuid(),
   data date not null default (timezone('America/Sao_Paulo', now()))::date,
   numero integer not null,
   nome text not null default '',
+  tipo_id uuid references tipos_atendimento (id),
+  preferencial boolean not null default false,
+  hora_recepcao timestamptz,
+  hora_atendimento timestamptz,
+  processo text not null default '',
   servico_id uuid references servicos (id),
   setor_id smallint references setores (id),
   status text not null default 'recepcao'
@@ -203,6 +225,7 @@ alter table setores enable row level security;
 alter table senhas enable row level security;
 alter table operadores enable row level security;
 alter table servicos enable row level security;
+alter table tipos_atendimento enable row level security;
 
 drop policy if exists setores_publico on setores;
 create policy setores_publico on setores for all using (true) with check (true);
@@ -216,10 +239,14 @@ create policy operadores_publico on operadores for all using (true) with check (
 drop policy if exists servicos_publico on servicos;
 create policy servicos_publico on servicos for all using (true) with check (true);
 
+drop policy if exists tipos_publico on tipos_atendimento;
+create policy tipos_publico on tipos_atendimento for all using (true) with check (true);
+
 alter table senhas replica identity full;
 alter table setores replica identity full;
 alter table servicos replica identity full;
 alter table operadores replica identity full;
+alter table tipos_atendimento replica identity full;
 
 do $$
 begin
@@ -233,6 +260,10 @@ begin
   end;
   begin
     alter publication supabase_realtime add table servicos;
+  exception when duplicate_object then null;
+  end;
+  begin
+    alter publication supabase_realtime add table tipos_atendimento;
   exception when duplicate_object then null;
   end;
 end;
