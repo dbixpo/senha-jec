@@ -103,7 +103,7 @@ create or replace function login_operador(p_usuario text, p_senha text)
 returns json
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   op operadores%rowtype;
@@ -138,7 +138,7 @@ create or replace function criar_operador(p_usuario text, p_nome text, p_senha t
 returns json
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   novo operadores%rowtype;
@@ -162,7 +162,7 @@ create or replace function definir_senha_operador(p_id uuid, p_senha text)
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   update operadores
