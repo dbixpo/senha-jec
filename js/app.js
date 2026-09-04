@@ -179,8 +179,23 @@ function escapar(texto) {
     .replaceAll('"', "&quot;");
 }
 
+function abrirAviso({ titulo = "Atenção", texto }) {
+  const box = document.getElementById("aviso");
+  const tit = document.getElementById("aviso-titulo");
+  const p = document.getElementById("aviso-texto");
+  if (!box || !tit || !p) return;
+  tit.textContent = titulo;
+  p.textContent = texto;
+  box.classList.remove("hidden");
+  document.getElementById("aviso-ok")?.focus();
+}
+
+function fecharAviso() {
+  document.getElementById("aviso")?.classList.add("hidden");
+}
+
 function mostrarErro(msg) {
-  window.alert(msg);
+  abrirAviso({ titulo: "Atenção", texto: msg });
 }
 
 function tipoDe(id) {
@@ -1265,16 +1280,34 @@ async function patch(id, valores, redesenhar = true) {
   if (redesenhar) await carregar();
 }
 
-function avisoChamada(res) {
+function avisoChamada(res, senha) {
   if (res?.ok) return true;
-  if (res?.motivo === "ja_chamada") mostrarErro(`Essa senha já está com ${res.com}.`);
-  else if (res?.motivo === "ja_finalizada") mostrarErro("Essa senha já foi finalizada.");
-  else if (res?.motivo === "nao_em_atendimento") mostrarErro("Chama a senha antes de finalizar.");
-  else if (res?.motivo === "nao_e_sua") mostrarErro("Essa senha está com outra pessoa.");
-  else if (res?.motivo === "fila_vazia") mostrarErro("Não tem ninguém esperando neste tipo.");
-  else if (res?.motivo === "nao_chamada") mostrarErro("Chama a senha antes. Não respondeu só vale em atendimento.");
-  else if (res?.motivo === "outro_dia") mostrarErro("Chamada só no dia de hoje. Volta a data no topo.");
-  else mostrarErro("Não deu para pegar essa senha. Atualiza a tela.");
+  if (res?.motivo === "ja_chamada") {
+    const rotulo = senha ? rotuloSenha(senha) : "Essa senha";
+    abrirAviso({
+      titulo: "Já está em atendimento",
+      texto: `${rotulo} já foi chamada por ${res.com || "outra pessoa"}.`,
+    });
+  } else if (res?.motivo === "ja_finalizada") {
+    abrirAviso({ titulo: "Já finalizada", texto: "Essa senha já foi finalizada." });
+  } else if (res?.motivo === "nao_em_atendimento") {
+    abrirAviso({ titulo: "Ainda na fila", texto: "Chama a senha antes de finalizar." });
+  } else if (res?.motivo === "nao_e_sua") {
+    abrirAviso({
+      titulo: "Já está em atendimento",
+      texto: senha?.atendido_por
+        ? `${rotuloSenha(senha)} já está com ${nomeOperador(senha.atendido_por)}.`
+        : "Essa senha está com outra pessoa.",
+    });
+  } else if (res?.motivo === "fila_vazia") {
+    abrirAviso({ titulo: "Fila vazia", texto: "Não tem ninguém esperando neste tipo." });
+  } else if (res?.motivo === "nao_chamada") {
+    abrirAviso({ titulo: "Ainda na fila", texto: "Chama a senha antes. Não respondeu só vale em atendimento." });
+  } else if (res?.motivo === "outro_dia") {
+    abrirAviso({ titulo: "Outro dia", texto: "Chamada só no dia de hoje. Volta a data no topo." });
+  } else {
+    abrirAviso({ titulo: "Não deu", texto: "Não deu para pegar essa senha. Atualiza a tela." });
+  }
   return false;
 }
 
@@ -1287,7 +1320,7 @@ async function rpcChamar(id, horaIso) {
     await carregar();
     return false;
   }
-  const ok = avisoChamada(data);
+  const ok = avisoChamada(data, senhas.find((s) => s.id === id) || data?.senha);
   await carregar();
   return ok;
 }
@@ -1299,7 +1332,7 @@ async function rpcLiberar(id) {
     await carregar();
     return false;
   }
-  const ok = avisoChamada(data);
+  const ok = avisoChamada(data, senhas.find((s) => s.id === id));
   await carregar();
   return ok;
 }
@@ -1320,15 +1353,7 @@ async function onAcao(ev) {
     const { data, error } = await sb.rpc("chamar_senha", { p_id: id, p_operador: sessao.id });
     btn.disabled = false;
     if (error) mostrarErro(error.message);
-    else if (avisoChamada(data) && data.senha) {
-      const n = rotuloSenha(data.senha);
-      const nome = data.senha.nome || "";
-      if (data.primeira) {
-        mostrarErro(`Chamou a senha ${n}${nome ? " — " + nome : ""}.`);
-      } else {
-        mostrarErro(`Chamada de novo registrada: senha ${n}${nome ? " — " + nome : ""}.`);
-      }
-    }
+    else avisoChamada(data, senhas.find((s) => s.id === id) || data.senha);
     await carregar();
     return;
   }
@@ -1343,11 +1368,7 @@ async function onAcao(ev) {
     });
     btn.disabled = false;
     if (error) mostrarErro(error.message);
-    else if (avisoChamada(data) && data.senha) {
-      const n = rotuloSenha(data.senha);
-      const nome = data.senha.nome || "";
-      mostrarErro(`Você pegou a senha ${n}${nome ? " — " + nome : ""}.`);
-    }
+    else avisoChamada(data, data?.senha);
     await carregar();
     return;
   }
@@ -1358,11 +1379,7 @@ async function onAcao(ev) {
     const { data, error } = await sb.rpc("finalizar_senha", { p_id: id, p_operador: sessao.id });
     btn.disabled = false;
     if (error) mostrarErro(error.message);
-    else if (avisoChamada(data) && data.senha) {
-      const n = rotuloSenha(data.senha);
-      const nome = data.senha.nome || "";
-      mostrarErro(`Finalizou a senha ${n}${nome ? " — " + nome : ""}.`);
-    }
+    else avisoChamada(data, senhas.find((s) => s.id === id) || data.senha);
     await carregar();
     return;
   }
@@ -1373,18 +1390,7 @@ async function onAcao(ev) {
     const { data, error } = await sb.rpc("nao_respondeu_senha", { p_id: id, p_operador: sessao.id });
     btn.disabled = false;
     if (error) mostrarErro(error.message);
-    else if (data?.ok) {
-      const pulada = data.pulada;
-      const n = pulada ? rotuloSenha(pulada) : "";
-      const prox = data.proxima;
-      if (prox?.ok && prox.senha) {
-        const pn = rotuloSenha(prox.senha);
-        const nome = prox.senha.nome || "";
-        mostrarErro(`Senha ${n} não respondeu. Chamou a ${pn}${nome ? " — " + nome : ""}.`);
-      } else {
-        mostrarErro(`Senha ${n} não respondeu. Não tem mais ninguém esperando.`);
-      }
-    } else avisoChamada(data);
+    else if (!data?.ok) avisoChamada(data, senhas.find((s) => s.id === id));
     await carregar();
     return;
   }
@@ -1477,7 +1483,7 @@ async function onAcao(ev) {
     if (!nova) return;
     const { error } = await sb.rpc("definir_senha_operador", { p_id: id, p_senha: nova });
     if (error) mostrarErro(error.message);
-    else window.alert("Senha atualizada.");
+    else mostrarErro("Senha atualizada.");
   }
 }
 
@@ -1583,6 +1589,13 @@ function ligarEventos() {
   document.getElementById("btn-sair").addEventListener("click", sair);
   document.getElementById("setup-salvar").addEventListener("click", salvarSetup);
   document.getElementById("form-login").addEventListener("submit", onLogin);
+  document.getElementById("aviso-ok")?.addEventListener("click", fecharAviso);
+  document.getElementById("aviso")?.addEventListener("click", (ev) => {
+    if (ev.target.id === "aviso") fecharAviso();
+  });
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") fecharAviso();
+  });
 }
 
 async function init() {

@@ -1081,6 +1081,34 @@ textarea {
 .setup-card h1, .login-body h1 { color: var(--dark); font-size: 24px; }
 .login-body form { display: grid; gap: 10px; }
 
+.overlay-aviso {
+  background: rgba(13, 59, 94, 0.48);
+  padding: 20px;
+  z-index: 80;
+}
+.aviso-card {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 10px;
+  padding: 24px;
+  background: #fff;
+  border-radius: var(--radius-card);
+  border-top: 3px solid var(--amarelo);
+  box-shadow: var(--shadow);
+}
+.aviso-card h2 {
+  color: var(--dark);
+  font-size: 22px;
+}
+.aviso-card p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.45;
+}
+.aviso-card .eyebrow { color: var(--muted); }
+.aviso-card .btn { width: 100%; }
+
 .disclaimer {
   color: var(--muted);
   font-size: 12px;
@@ -1356,6 +1384,12 @@ textarea {
     padding: 16px;
     padding-top: max(16px, env(safe-area-inset-top));
     align-items: start;
+  }
+  .overlay-aviso {
+    align-items: center;
+    padding: 20px;
+    padding-top: max(20px, env(safe-area-inset-top));
+    z-index: 80;
   }
   .login-card, .setup-card { width: 100%; }
 
