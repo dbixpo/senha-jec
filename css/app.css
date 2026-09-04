@@ -303,6 +303,8 @@ textarea {
 .app .btn.ghost:hover { background: #f4f6f9; }
 .btn.stamp { background: var(--stamp); color: #fff; }
 .btn.stamp:hover { background: #c41f1f; }
+.btn.ok { background: #19a88b; color: #fff; }
+.btn.ok:hover { background: #148a72; }
 .btn.small {
   height: 36px;
   min-height: 36px;
@@ -1032,9 +1034,19 @@ textarea {
   justify-content: space-between;
   gap: 8px;
 }
-.minha-chamada .btn-ausente {
+.minha-chamada-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.minha-chamada .btn.ok,
+.minha-chamada .btn.stamp,
+.minha-chamada .btn.ghost {
   background: #fff;
 }
+.minha-chamada .btn.ok { color: #148a72; border: 1px solid #19a88b; }
+.minha-chamada .btn.stamp { color: #e63030; border: 1px solid #e63030; }
 .com-quem {
   font-size: 12px;
   color: var(--muted);
@@ -1128,6 +1140,7 @@ textarea {
 }
 
 .chip.aguardando { background: #f8d0d8; }
+.chip.em-atendimento { background: #fff0a8; color: var(--dark); margin-left: 6px; font-weight: 600; }
 .chip.atendida { background: #c5ddf0; }
 .chip.pref { background: var(--amarelo); }
 .chip.ausente { background: #fde8ec; color: #e63030; margin-left: 6px; font-weight: 600; }
@@ -1172,6 +1185,7 @@ textarea {
 }
 
 .planilha tr.aguardando td { background: #fde8ec; }
+.planilha tr.em-atendimento td { background: #fff8d6; }
 .planilha tr.atendida td { background: #e7f2fa; }
 
 .planilha input[type="text"],
@@ -1552,6 +1566,8 @@ textarea {
   }
   .planilha tr.aguardando,
   .planilha tr.aguardando td { background: #fde8ec; }
+  .planilha tr.em-atendimento,
+  .planilha tr.em-atendimento td { background: #fff8d6; }
   .planilha tr.atendida,
   .planilha tr.atendida td { background: #e7f2fa; }
   .planilha td {

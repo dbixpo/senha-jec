@@ -243,17 +243,32 @@ function pintarPrefBotoes() {
   });
 }
 
+function estaFinalizada(s) {
+  return s.status === "resolvido" || !!s.hora_fim;
+}
+
+function estaEmAtendimento(s) {
+  return s.status === "em_atendimento" && !estaFinalizada(s);
+}
+
+function estaNaFila(s) {
+  return !estaEmAtendimento(s) && !estaFinalizada(s);
+}
+
 function filtrarLista(lista) {
   if (verTudo) return lista;
-  return lista.filter((s) => !s.hora_atendimento);
+  return lista.filter((s) => !estaFinalizada(s));
 }
 
 function naFila(lista = senhas) {
-  return lista.filter((s) => !s.hora_atendimento).length;
+  return lista.filter(estaNaFila).length;
 }
 
 function ordenarFila(lista) {
   return [...lista].sort((a, b) => {
+    const ea = estaEmAtendimento(a) ? 0 : estaFinalizada(a) ? 2 : 1;
+    const eb = estaEmAtendimento(b) ? 0 : estaFinalizada(b) ? 2 : 1;
+    if (ea !== eb) return ea - eb;
     const sa = Number(a.nao_respondeu) || 0;
     const sb = Number(b.nao_respondeu) || 0;
     if (sa !== sb) return sa - sb;
@@ -344,7 +359,7 @@ function escutar() {
 }
 
 function contarTipo(tipoId) {
-  return senhas.filter((s) => s.tipo_id === tipoId && !s.hora_atendimento).length;
+  return senhas.filter((s) => s.tipo_id === tipoId && estaNaFila(s)).length;
 }
 
 function desenharAbas() {
@@ -406,18 +421,30 @@ function htmlHistorico(senha) {
   </div>`;
 }
 
+function botoesAcaoTipo(senha) {
+  if (!ehHoje()) return "";
+  const minha = estaEmAtendimento(senha) && senha.atendido_por === sessao.id;
+  const deOutro = estaEmAtendimento(senha) && senha.atendido_por && senha.atendido_por !== sessao.id;
+  if (estaFinalizada(senha)) return "";
+  if (deOutro) {
+    return `<span class="com-quem">Com ${escapar(nomeOperador(senha.atendido_por))}</span>`;
+  }
+  if (minha) {
+    return `<button type="button" class="btn primary small" data-acao="chamar-senha" data-id="${senha.id}">Chamar de novo</button>
+      <button type="button" class="btn ok small" data-acao="finalizar-senha" data-id="${senha.id}">Finalizar</button>
+      <button type="button" class="btn stamp small" data-acao="nao-respondeu" data-id="${senha.id}">Não respondeu</button>`;
+  }
+  return `<button type="button" class="btn primary small" data-acao="chamar-senha" data-id="${senha.id}">Chamar</button>`;
+}
+
 function linhaSenha(senha, { chamar = false } = {}) {
-  const atendida = !!senha.hora_atendimento;
-  const minha = atendida && senha.atendido_por === sessao.id;
+  const finalizada = estaFinalizada(senha);
+  const emAtend = estaEmAtendimento(senha);
   const faltou = Number(senha.nao_respondeu) > 0;
-  const acao = chamar
-    ? `<td class="cel-acao" data-label="Chamar">
-        <button type="button" class="btn primary small" data-acao="chamar-senha" data-id="${senha.id}">${atendida ? "Chamar de novo" : "Chamar"}</button>
-        ${minha ? `<button type="button" class="btn ghost small btn-ausente" data-acao="nao-respondeu" data-id="${senha.id}">Não respondeu</button>` : ""}
-      </td>`
-    : "";
-  return `<tr class="${atendida ? "atendida" : "aguardando"} ${senha.preferencial ? "pref" : ""} ${faltou && !atendida ? "faltou" : ""}">
-    <td class="cel-num col-num" data-label="Senha"><span class="senha-com-ico"><span class="senha-num">${escapar(rotuloSenha(senha))}</span>${iconePref(senha.preferencial_tipo, "pref-ico-planilha")}</span>${faltou ? `<span class="chip ausente">${senha.nao_respondeu}x não resp.</span>` : ""}</td>
+  const classe = finalizada ? "atendida" : emAtend ? "em-atendimento" : "aguardando";
+  const acao = chamar ? `<td class="cel-acao" data-label="Ação">${botoesAcaoTipo(senha)}</td>` : "";
+  return `<tr class="${classe} ${senha.preferencial ? "pref" : ""} ${faltou && !finalizada && !emAtend ? "faltou" : ""}">
+    <td class="cel-num col-num" data-label="Senha"><span class="senha-com-ico"><span class="senha-num">${escapar(rotuloSenha(senha))}</span>${iconePref(senha.preferencial_tipo, "pref-ico-planilha")}</span>${faltou ? `<span class="chip ausente">${senha.nao_respondeu}x não resp.</span>` : ""}${emAtend ? `<span class="chip em-atendimento">em atendimento</span>` : ""}</td>
     <td class="cel-rec" data-label="Hora da recepção"><span class="hora-lida">${escapar(hora(senha.hora_recepcao) || "—")}</span></td>
     <td class="cel-atend" data-label="Hora do atendimento">${htmlHistorico(senha)}</td>
     <td class="cel-nome" data-label="Nome"><span class="hora-lida">${escapar(senha.nome || "—")}</span></td>
@@ -437,7 +464,7 @@ function barraFiltro() {
 function tabelaFila(lista, { chamar = false } = {}) {
   const linhas = ordenarFila(filtrarLista(lista));
   if (!linhas.length) {
-    return `<p class="empty">${verTudo ? "Ninguém nesta fila hoje." : "Ninguém na fila agora. Marca Ver tudo para incluir os já atendidos."}</p>`;
+    return `<p class="empty">${verTudo ? "Ninguém nesta fila hoje." : "Ninguém na fila agora. Marca Ver tudo para incluir os já finalizados."}</p>`;
   }
   return `<div class="planilha-wrap">
     <table class="planilha">
@@ -463,7 +490,7 @@ function ligarFiltro(lista, opts) {
     const box = document.getElementById("fila-lista");
     const dica = document.getElementById("fila-dica");
     if (box) box.innerHTML = tabelaFila(lista, opts);
-    if (dica) dica.textContent = verTudo ? "Inclui quem já foi atendido." : "Só quem ainda está na fila.";
+    if (dica) dica.textContent = verTudo ? "Inclui quem já foi finalizado." : "Só quem ainda está na fila ou em atendimento.";
     desenharAbas();
   });
 }
@@ -472,7 +499,8 @@ function legendaTipos() {
   return `<ul class="legenda">
     ${tipos.filter((t) => t.ativo).map((t) => `<li><span class="sigla" style="background:${escapar(t.cor)}">${escapar(t.sigla)}</span> ${escapar(t.nome)}</li>`).join("")}
     <li><span class="chip aguardando">espera</span></li>
-    <li><span class="chip atendida">já atendido</span></li>
+    <li><span class="chip em-atendimento">em atendimento</span></li>
+    <li><span class="chip atendida">finalizado</span></li>
     <li><span class="chip pref">P = preferencial (sobe · senha P01)</span></li>
     <li><span class="chip ausente">não respondeu</span></li>
   </ul>`;
@@ -529,16 +557,31 @@ function telaGeral() {
 
 function telaTipo(tipo) {
   const lista = senhas.filter((s) => s.tipo_id === tipo.id);
-  const comigo = lista.filter((s) => s.atendido_por === sessao.id && s.hora_atendimento);
+  const comigo = lista.filter((s) => estaEmAtendimento(s) && s.atendido_por === sessao.id);
   const banner = comigo.length
-    ? `<div class="minha-chamada">${comigo.map((s) => `<div class="minha-chamada-item"><span>Com você agora: <strong>${escapar(rotuloSenha(s))}</strong> ${escapar(s.nome || "")}</span>${ehHoje() ? `<button type="button" class="btn ghost small btn-ausente" data-acao="nao-respondeu" data-id="${s.id}">Não respondeu</button>` : ""}</div>`).join("")}</div>`
+    ? `<div class="minha-chamada">${comigo
+        .map(
+          (s) => `<div class="minha-chamada-item">
+            <span>Em atendimento: <strong>${escapar(rotuloSenha(s))}</strong> ${escapar(s.nome || "")}</span>
+            ${
+              ehHoje()
+                ? `<span class="minha-chamada-acoes">
+                    <button type="button" class="btn ghost small" data-acao="chamar-senha" data-id="${s.id}">Chamar de novo</button>
+                    <button type="button" class="btn ok small" data-acao="finalizar-senha" data-id="${s.id}">Finalizar</button>
+                    <button type="button" class="btn stamp small" data-acao="nao-respondeu" data-id="${s.id}">Não respondeu</button>
+                  </span>`
+                : ""
+            }
+          </div>`
+        )
+        .join("")}</div>`
     : "";
   return `<section class="card">
     <div class="card-topo">
       <div>
         <h2>${escapar(tipo.nome)}</h2>
-        <p class="muted form-dica">${ehHoje() ? "Chamar grava a hora. Se a pessoa não aparecer, <strong>Não respondeu</strong> segue para a próxima. Se não ouviu, chama de novo." : `Consultando ${dataLegivel(diaAtual())}. Chamada só no dia de hoje.`}</p>
-        <p id="fila-dica" class="muted form-dica">${verTudo ? "Inclui quem já foi atendido." : "Só quem ainda está na fila."}</p>
+        <p class="muted form-dica">${ehHoje() ? "Chamar coloca em atendimento. <strong>Finalizar</strong> encerra. <strong>Não respondeu</strong> devolve pra fila e chama a próxima." : `Consultando ${dataLegivel(diaAtual())}. Chamada só no dia de hoje.`}</p>
+        <p id="fila-dica" class="muted form-dica">${verTudo ? "Inclui quem já foi finalizado." : "Só quem ainda está na fila ou em atendimento."}</p>
       </div>
       <div class="topo-acoes">
         ${ehHoje() ? `<button type="button" class="btn primary" data-acao="chamar-proxima" data-tipo="${tipo.id}">Chamar próxima</button>` : ""}
@@ -627,8 +670,9 @@ function fmtMin(n) {
 function senhasDash() {
   return senhas.filter((s) => {
     if (dashFiltro.tipo && s.tipo_id !== dashFiltro.tipo) return false;
-    if (dashFiltro.status === "fila" && s.hora_atendimento) return false;
-    if (dashFiltro.status === "atendidas" && !s.hora_atendimento) return false;
+    if (dashFiltro.status === "fila" && !estaNaFila(s)) return false;
+    if (dashFiltro.status === "atendimento" && !estaEmAtendimento(s)) return false;
+    if (dashFiltro.status === "atendidas" && !estaFinalizada(s)) return false;
     if (dashFiltro.pref === "nao" && s.preferencial) return false;
     if (dashFiltro.pref !== "todos" && dashFiltro.pref !== "nao") {
       if (s.preferencial_tipo !== dashFiltro.pref) return false;
@@ -684,8 +728,9 @@ function ligarDash() {
 function telaControle() {
   const lista = senhasDash();
   const total = lista.length;
-  const espera = lista.filter((s) => !s.hora_atendimento).length;
-  const feitas = total - espera;
+  const espera = lista.filter(estaNaFila).length;
+  const emAtend = lista.filter(estaEmAtendimento).length;
+  const feitas = lista.filter(estaFinalizada).length;
   const prefs = lista.filter((s) => s.preferencial).length;
   const porPref = PREF_TIPOS.map((p) => ({
     p,
@@ -696,7 +741,7 @@ function telaControle() {
   const mediaEspera = esperas.length ? esperas.reduce((a, b) => a + b, 0) / esperas.length : null;
   const agora = Date.now();
   const naFilaMin = lista
-    .filter((s) => !s.hora_atendimento && s.hora_recepcao)
+    .filter((s) => estaNaFila(s) && s.hora_recepcao)
     .map((s) => Math.max(0, (agora - new Date(s.hora_recepcao)) / 60000));
   const maisAntiga = naFilaMin.length ? Math.max(...naFilaMin) : null;
 
@@ -705,8 +750,8 @@ function telaControle() {
     return {
       t,
       total: doTipo.length,
-      espera: doTipo.filter((s) => !s.hora_atendimento).length,
-      feitas: doTipo.filter((s) => s.hora_atendimento).length,
+      espera: doTipo.filter(estaNaFila).length,
+      feitas: doTipo.filter(estaFinalizada).length,
     };
   });
   const maxTipo = Math.max(1, ...porTipo.map((x) => x.total));
@@ -769,7 +814,8 @@ function telaControle() {
         <select id="dash-status">
           <option value="todos" ${dashFiltro.status === "todos" ? "selected" : ""}>Todas</option>
           <option value="fila" ${dashFiltro.status === "fila" ? "selected" : ""}>Na fila</option>
-          <option value="atendidas" ${dashFiltro.status === "atendidas" ? "selected" : ""}>Atendidas</option>
+          <option value="atendimento" ${dashFiltro.status === "atendimento" ? "selected" : ""}>Em atendimento</option>
+          <option value="atendidas" ${dashFiltro.status === "atendidas" ? "selected" : ""}>Finalizadas</option>
         </select>
       </label>
       <label>Preferencial
@@ -788,8 +834,8 @@ function telaControle() {
     </div>
     <div class="kpis">
       <div class="kpi"><span>Senhas</span><strong>${total}</strong><small>${senhas.length === total ? "no dia" : `de ${senhas.length} no dia`}</small></div>
-      <div class="kpi fila"><span>Na fila</span><strong>${espera}</strong><small>${maisAntiga == null ? "ninguém esperando" : "mais antiga " + fmtMin(maisAntiga)}</small></div>
-      <div class="kpi ok"><span>Atendidas</span><strong>${feitas}</strong><small>${total ? Math.round((feitas / total) * 100) + "% do recorte" : "—"}</small></div>
+      <div class="kpi fila"><span>Na fila</span><strong>${espera}</strong><small>${emAtend ? emAtend + " em atendimento" : maisAntiga == null ? "ninguém esperando" : "mais antiga " + fmtMin(maisAntiga)}</small></div>
+      <div class="kpi ok"><span>Finalizadas</span><strong>${feitas}</strong><small>${total ? Math.round((feitas / total) * 100) + "% do recorte" : "—"}</small></div>
       <div class="kpi pref"><span>Preferencial</span><strong>${prefs}</strong><small>${total ? Math.round((prefs / total) * 100) + "% do recorte" : "—"}</small></div>
     </div>
     <div class="pref-motivos" aria-label="Preferencial por motivo">
@@ -1222,8 +1268,11 @@ async function patch(id, valores, redesenhar = true) {
 function avisoChamada(res) {
   if (res?.ok) return true;
   if (res?.motivo === "ja_chamada") mostrarErro(`Essa senha já está com ${res.com}.`);
+  else if (res?.motivo === "ja_finalizada") mostrarErro("Essa senha já foi finalizada.");
+  else if (res?.motivo === "nao_em_atendimento") mostrarErro("Chama a senha antes de finalizar.");
+  else if (res?.motivo === "nao_e_sua") mostrarErro("Essa senha está com outra pessoa.");
   else if (res?.motivo === "fila_vazia") mostrarErro("Não tem ninguém esperando neste tipo.");
-  else if (res?.motivo === "nao_chamada") mostrarErro("Chama a senha antes. Não respondeu só vale depois da chamada.");
+  else if (res?.motivo === "nao_chamada") mostrarErro("Chama a senha antes. Não respondeu só vale em atendimento.");
   else if (res?.motivo === "outro_dia") mostrarErro("Chamada só no dia de hoje. Volta a data no topo.");
   else mostrarErro("Não deu para pegar essa senha. Atualiza a tela.");
   return false;
@@ -1298,6 +1347,21 @@ async function onAcao(ev) {
       const n = rotuloSenha(data.senha);
       const nome = data.senha.nome || "";
       mostrarErro(`Você pegou a senha ${n}${nome ? " — " + nome : ""}.`);
+    }
+    await carregar();
+    return;
+  }
+
+  if (acao === "finalizar-senha") {
+    if (!podeChamar()) return;
+    btn.disabled = true;
+    const { data, error } = await sb.rpc("finalizar_senha", { p_id: id, p_operador: sessao.id });
+    btn.disabled = false;
+    if (error) mostrarErro(error.message);
+    else if (avisoChamada(data) && data.senha) {
+      const n = rotuloSenha(data.senha);
+      const nome = data.senha.nome || "";
+      mostrarErro(`Finalizou a senha ${n}${nome ? " — " + nome : ""}.`);
     }
     await carregar();
     return;
