@@ -387,6 +387,7 @@ textarea {
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 8px;
+  width: 100%;
   margin: 0 0 12px;
   padding: 10px 12px;
   background: #f8fafc;
@@ -523,9 +524,9 @@ textarea {
 .campo-hora { flex: 0 0 64px; }
 .campo-nome,
 .campo-processo {
-  flex: 0 0 140px;
-  width: 140px;
-  max-width: 140px;
+  flex: 1 1 0;
+  width: auto;
+  max-width: none;
 }
 .form-chegada .form-submit,
 .form-chegada #btn-chamar-recepcao {
@@ -1069,6 +1070,7 @@ textarea {
   .form-chegada {
     flex-wrap: nowrap;
     gap: 8px;
+    width: 100%;
     padding: 8px 10px;
   }
   .form-chegada .tipo-nome { display: none; }
