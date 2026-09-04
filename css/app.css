@@ -488,28 +488,51 @@ textarea {
   outline-offset: 2px;
 }
 
+.pref-chegada {
+  position: relative;
+}
 .pref-chegada .chip-check-ui {
   min-width: 0;
-  height: 26px;
-  min-height: 26px;
-  padding: 0 7px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  height: var(--control-h);
+  min-height: var(--control-h);
+  padding: 0 8px;
   background: #ffd4b8;
   border-color: #f0a36a;
   color: #9a4a12;
 }
+.pref-chegada .chip-check-ui img {
+  display: block;
+  height: 22px;
+  width: auto;
+  pointer-events: none;
+}
 .pref-chegada:hover .chip-check-ui {
   background: #ffb066;
   border-color: #ee7a28;
-  color: #7a3208;
 }
 .pref-chegada input:checked + .chip-check-ui,
 .pref-chegada:hover input:checked + .chip-check-ui {
   background: #e56a17;
   border-color: #c44f0a;
+}
+.pref-chegada:hover::after,
+.pref-chegada:focus-within::after {
+  content: "Preferencial";
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 6px);
+  transform: translateX(-50%);
+  z-index: 40;
+  padding: 5px 8px;
+  background: #0d3b5e;
   color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: var(--shadow);
 }
 
 .chip-check.mini .chip-check-ui {
@@ -1117,17 +1140,13 @@ textarea {
   }
   .form-chegada .tipo-nome { display: none; }
   .form-chegada .tab-dot { margin-right: 0; }
-  .form-chegada .chip-check:not(.pref-chegada) .chip-check-ui,
+  .form-chegada .chip-check-ui,
   .form-chegada .form-submit,
   .form-chegada #btn-chamar-recepcao,
   .form-chegada #btn-nao-respondeu-recepcao,
   .form-chegada input[type="text"] {
     height: 36px;
     min-height: 36px;
-  }
-  .form-chegada .pref-chegada .chip-check-ui {
-    height: 26px;
-    min-height: 26px;
   }
   .form-chegada .senha-valor {
     height: 36px;
@@ -1318,9 +1337,11 @@ textarea {
   }
   .pref-chegada .chip-check-ui {
     width: auto;
-    height: 28px;
-    min-height: 28px;
-    font-size: 11px;
+    height: 44px;
+    min-height: 44px;
+  }
+  .pref-chegada .chip-check-ui img {
+    height: 26px;
   }
   textarea { height: auto; min-height: 88px; }
   .senha-valor { height: 44px; min-height: 44px; }

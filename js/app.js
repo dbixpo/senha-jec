@@ -445,9 +445,11 @@ function telaGeral() {
           <span>Senha</span>
           <div class="senha-com-pref">
             <strong id="campo-senha-rotulo" class="senha-valor">${rotuloProxima(rascunhoChegada.preferencial)}</strong>
-            <label class="chip-check pref-chegada">
+            <label class="chip-check pref-chegada" title="Preferencial">
               <input id="campo-pref" type="checkbox" ${rascunhoChegada.preferencial ? "checked" : ""}>
-              <span class="chip-check-ui">Preferencial</span>
+              <span class="chip-check-ui" aria-label="Preferencial">
+                <img src="img/preferencial.png" alt="" width="104" height="28">
+              </span>
             </label>
           </div>
         </div>

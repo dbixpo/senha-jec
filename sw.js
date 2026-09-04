@@ -1,4 +1,4 @@
-const CACHE = "senha-jec-v22";
+const CACHE = "senha-jec-v23";
 const SHELL = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const SHELL = [
   "./js/config.js",
   "./js/pwa.js",
   "./img/favicon.svg",
+  "./img/preferencial.png",
   "./img/icon-192.png",
   "./img/icon-512.png",
   "./manifest.json"
