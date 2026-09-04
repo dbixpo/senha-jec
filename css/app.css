@@ -153,27 +153,25 @@ h2 { font-size: 18px; color: var(--ink); }
 }
 
 .date-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  position: relative;
+  display: block;
   margin: 0;
   height: 36px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--dark);
 }
 
 .date-wrap input[type="date"] {
-  width: 10.6rem;
+  display: block;
+  width: 11.2rem;
   height: 36px;
   min-height: 36px;
-  padding: 0 10px;
-  background: #fff;
-  color: var(--ink);
+  padding: 0 32px;
+  background: #f5c500;
+  color: var(--dark);
   border: 1px solid rgba(13, 59, 94, 0.22);
   border-radius: var(--radius);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
+  text-align: center;
   color-scheme: light;
   appearance: none;
   -webkit-appearance: none;
@@ -182,12 +180,14 @@ h2 { font-size: 18px; color: var(--ink); }
 .date-wrap input[type="date"]:focus {
   outline: 2px solid var(--dark);
   outline-offset: 1px;
+  background: #ffd84a;
 }
 
 .date-wrap input[type="date"]:disabled {
-  opacity: 0.9;
+  opacity: 1;
   cursor: not-allowed;
-  background: rgba(255, 255, 255, 0.72);
+  background: #f5c500;
+  color: var(--dark);
 }
 
 .date-wrap input[type="date"]:disabled::-webkit-calendar-picker-indicator {
@@ -196,12 +196,26 @@ h2 { font-size: 18px; color: var(--ink); }
 }
 
 .date-wrap input[type="date"]::-webkit-datetime-edit {
+  width: 100%;
   padding: 0;
+  text-align: center;
+}
+
+.date-wrap input[type="date"]::-webkit-date-and-time-value {
+  text-align: center;
+}
+
+.date-wrap input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  justify-content: center;
 }
 
 .date-wrap input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   cursor: pointer;
-  opacity: 0.7;
+  opacity: 0.65;
   filter: none;
 }
 
@@ -1233,6 +1247,16 @@ textarea {
   gap: 8px;
 }
 
+@media (min-width: 801px) {
+  .top-dia {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+  }
+}
+
 .n-passo, .dica-mobile, .pref-longo { display: none; }
 
 .pwa-bar.hidden { display: none !important; }
@@ -1356,13 +1380,16 @@ textarea {
   .top-dia {
     grid-column: 1;
     min-width: 0;
+    position: static;
+    transform: none;
+    left: auto;
+    top: auto;
   }
   .date-wrap {
     flex: 1;
     min-width: 0;
     height: 40px;
   }
-  .date-wrap span { display: none; }
   .date-wrap input[type="date"] {
     width: 100%;
     min-width: 0;
