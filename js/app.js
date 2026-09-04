@@ -10,6 +10,7 @@ let senhas = [];
 let aba = "geral";
 let canal = null;
 let verTudo = false;
+let enviandoChegada = false;
 
 function hojeISO() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -193,12 +194,10 @@ async function carregar() {
   const ops = [
     sb.from("tipos_atendimento").select("*").order("ordem"),
     sb.from("senhas").select("*").eq("data", data).order("numero"),
+    sb.from("operadores").select(ehAdmin()
+      ? "id, usuario, nome, papel, ativo, ultimo_acesso, created_at, updated_at"
+      : "id, nome").order("nome"),
   ];
-  if (ehAdmin()) {
-    ops.push(
-      sb.from("operadores").select("id, usuario, nome, papel, ativo, ultimo_acesso, created_at, updated_at").order("nome")
-    );
-  }
   const resultados = await Promise.all(ops);
   const erro = resultados.find((r) => r.error)?.error;
   if (erro) {
@@ -280,14 +279,24 @@ function badgeTipo(senha) {
 
 function celulaHora(senha, campo, { editar = false, chamou = false } = {}) {
   const valor = hora(senha[campo]);
-  if (!editar) return `<span class="hora-lida">${valor || "—"}</span>`;
+  if (!editar) {
+    const quem = senha.atendido_por && campo === "hora_atendimento"
+      ? ` <span class="com-quem">${senha.atendido_por === sessao.id ? "com você" : "com " + escapar(nomeOperador(senha.atendido_por))}</span>`
+      : "";
+    return `<span class="hora-lida">${valor || "—"}${quem}</span>`;
+  }
+  const deOutro = campo === "hora_atendimento" && senha.hora_atendimento && senha.atendido_por && senha.atendido_por !== sessao.id && !ehAdmin();
   const check = chamou
-    ? `<label class="check-hora"><input type="checkbox" data-acao="toggle-atendimento" data-id="${senha.id}" ${senha.hora_atendimento ? "checked" : ""}> Chamou</label>`
+    ? `<label class="check-hora ${deOutro ? "travado" : ""}"><input type="checkbox" data-acao="toggle-atendimento" data-id="${senha.id}" ${senha.hora_atendimento ? "checked" : ""} ${deOutro ? "disabled" : ""}> Chamou${
+        senha.atendido_por
+          ? ` <span class="com-quem">${senha.atendido_por === sessao.id ? "com você" : "com " + escapar(nomeOperador(senha.atendido_por))}</span>`
+          : ""
+      }</label>`
     : "";
   return `<div class="hora-cell">
     ${check}
-    <input type="time" data-campo="${campo}" data-id="${senha.id}" value="${escapar(valor)}">
-    <button type="button" class="btn ghost small" data-acao="agora" data-campo="${campo}" data-id="${senha.id}">Agora</button>
+    <input type="time" data-campo="${campo}" data-id="${senha.id}" value="${escapar(valor)}" ${deOutro ? "disabled" : ""}>
+    <button type="button" class="btn ghost small" data-acao="agora" data-campo="${campo}" data-id="${senha.id}" ${deOutro ? "disabled" : ""}>Agora</button>
   </div>`;
 }
 
@@ -414,18 +423,24 @@ function telaGeral() {
 
 function telaTipo(tipo) {
   const lista = senhas.filter((s) => s.tipo_id === tipo.id);
+  const comigo = lista.filter((s) => s.atendido_por === sessao.id && s.hora_atendimento);
+  const banner = comigo.length
+    ? `<div class="minha-chamada">Com você agora: ${comigo.map((s) => `<strong>${escapar(rotuloSenha(s))}</strong> ${escapar(s.nome || "")}`).join(" · ")}</div>`
+    : "";
   return `<section class="card">
     <div class="card-topo">
       <div>
         <h2>${escapar(tipo.nome)}</h2>
-        <p class="muted form-dica">Marca <strong>Chamou</strong> quando atender. A senha geral só mostra a hora.</p>
+        <p class="muted form-dica">Use <strong>Chamar próxima</strong> para pegar a primeira da fila. Se duas pessoas clicarem juntas, cada uma leva uma senha diferente.</p>
         <p id="fila-dica" class="muted form-dica">${verTudo ? "Inclui quem já foi atendido." : "Só quem ainda está na fila."}</p>
       </div>
       <div class="topo-acoes">
+        <button type="button" class="btn primary" data-acao="chamar-proxima" data-tipo="${tipo.id}">Chamar próxima</button>
         ${barraFiltro()}
         <span class="sigla grande" style="background:${escapar(tipo.cor)}">${escapar(tipo.sigla)}</span>
       </div>
     </div>
+    ${banner}
     <div id="fila-lista">${tabelaFila(lista, { chamar: true })}</div>
   </section>`;
 }
@@ -686,6 +701,7 @@ function onChegadaCampos(ev) {
 
 async function onChegada(ev) {
   ev.preventDefault();
+  if (enviandoChegada) return;
   const erro = document.getElementById("form-erro");
   erro.classList.add("hidden");
   const nome = document.getElementById("campo-nome").value.trim();
@@ -703,6 +719,9 @@ async function onChegada(ev) {
     erro.classList.remove("hidden");
     return;
   }
+  enviandoChegada = true;
+  const btn = ev.target.querySelector("[type=submit]");
+  if (btn) btn.disabled = true;
   const payload = {
     data: diaAtual(),
     nome,
@@ -715,8 +734,10 @@ async function onChegada(ev) {
     updated_by: sessao.id,
   };
   const { error } = await sb.from("senhas").insert(payload);
+  enviandoChegada = false;
+  if (btn) btn.disabled = false;
   if (error) {
-    erro.textContent = error.message;
+    erro.textContent = error.code === "23505" ? "Esse número bateu com outra senha. Tenta de novo." : error.message;
     erro.classList.remove("hidden");
     return;
   }
@@ -776,34 +797,87 @@ async function patch(id, valores, redesenhar = true) {
   if (redesenhar) await carregar();
 }
 
+function avisoChamada(res) {
+  if (res?.ok) return true;
+  if (res?.motivo === "ja_chamada") mostrarErro(`Essa senha já está com ${res.com}.`);
+  else if (res?.motivo === "fila_vazia") mostrarErro("Não tem ninguém esperando neste tipo.");
+  else if (res?.motivo === "nao_e_sua") mostrarErro("Essa senha está com outra pessoa.");
+  else mostrarErro("Não deu para pegar essa senha. Atualiza a tela.");
+  return false;
+}
+
+async function rpcChamar(id, horaIso) {
+  const args = { p_id: id, p_operador: sessao.id };
+  if (horaIso) args.p_hora = horaIso;
+  const { data, error } = await sb.rpc("chamar_senha", args);
+  if (error) {
+    mostrarErro(error.message);
+    await carregar();
+    return false;
+  }
+  const ok = avisoChamada(data);
+  await carregar();
+  return ok;
+}
+
+async function rpcLiberar(id) {
+  const { data, error } = await sb.rpc("liberar_senha", { p_id: id, p_operador: sessao.id });
+  if (error) {
+    mostrarErro(error.message);
+    await carregar();
+    return false;
+  }
+  const ok = avisoChamada(data);
+  await carregar();
+  return ok;
+}
+
 function podeChamar() {
   return String(aba).startsWith("tipo-");
 }
 
 async function onAcao(ev) {
   const btn = ev.target.closest("[data-acao]");
-  if (!btn) return;
+  if (!btn || btn.disabled) return;
   const id = btn.dataset.id;
   const acao = btn.dataset.acao;
 
+  if (acao === "chamar-proxima") {
+    if (!podeChamar()) return;
+    btn.disabled = true;
+    const { data, error } = await sb.rpc("chamar_proxima", {
+      p_tipo_id: btn.dataset.tipo,
+      p_operador: sessao.id,
+      p_data: diaAtual(),
+    });
+    btn.disabled = false;
+    if (error) mostrarErro(error.message);
+    else if (avisoChamada(data) && data.senha) {
+      const n = rotuloSenha(data.senha);
+      const nome = data.senha.nome || "";
+      mostrarErro(`Você pegou a senha ${n}${nome ? " — " + nome : ""}.`);
+    }
+    await carregar();
+    return;
+  }
+
   if (acao === "agora") {
     const campo = btn.dataset.campo;
-    if (campo === "hora_atendimento" && !podeChamar()) return;
+    if (campo === "hora_atendimento") {
+      if (!podeChamar()) return;
+      await rpcChamar(id, isoDoDia(agoraHHMM()));
+      return;
+    }
     const hhmm = agoraHHMM();
     const input = btn.parentElement.querySelector("input[type=time]");
     if (input) input.value = hhmm;
-    const extra = campo === "hora_atendimento" ? { status: "em_atendimento", atendido_por: sessao.id } : {};
-    await patch(id, { [campo]: isoDoDia(hhmm), ...extra });
+    await patch(id, { [campo]: isoDoDia(hhmm) });
     return;
   }
   if (acao === "toggle-atendimento") {
     if (!podeChamar()) return;
-    if (btn.checked) {
-      const hhmm = agoraHHMM();
-      await patch(id, { hora_atendimento: isoDoDia(hhmm), status: "em_atendimento", atendido_por: sessao.id });
-    } else {
-      await patch(id, { hora_atendimento: null, status: "na_fila", atendido_por: null });
-    }
+    if (btn.checked) await rpcChamar(id);
+    else await rpcLiberar(id);
     return;
   }
   if (acao === "corrigir") {
@@ -875,13 +949,13 @@ async function onCampo(ev) {
   if (el.type === "checkbox") valor = el.checked;
   else if (el.type === "time") valor = isoDoDia(el.value);
   else valor = el.value;
-  const extra = {};
   if (campo === "hora_atendimento") {
     if (!podeChamar()) return;
-    extra.status = valor ? "em_atendimento" : "na_fila";
-    extra.atendido_por = valor ? sessao.id : null;
+    if (!valor) await rpcLiberar(id);
+    else await rpcChamar(id, valor);
+    return;
   }
-  await patch(id, { [campo]: valor, ...extra }, ev.type !== "blur");
+  await patch(id, { [campo]: valor }, ev.type !== "blur");
 }
 
 async function onLogin(ev) {

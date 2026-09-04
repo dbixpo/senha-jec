@@ -507,6 +507,21 @@ textarea {
 }
 .papel-badge.admin { background: var(--amarelo); color: var(--dark); }
 .papel-badge.operador { background: #e2e8f0; color: var(--ink); }
+
+.minha-chamada {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  background: var(--amarelo);
+  color: var(--dark);
+  border-radius: var(--radius);
+  font-weight: 600;
+}
+.com-quem {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.check-hora.travado { opacity: 0.75; }
 .erro { color: var(--stamp); font-size: 14px; margin: 0; }
 .hidden { display: none !important; }
 .meta { font-size: 13px; color: var(--muted); }
