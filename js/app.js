@@ -109,6 +109,25 @@ function proximoNumero() {
   return (usados.length ? Math.max(...usados) : 0) + 1;
 }
 
+function padSenha(n) {
+  return String(n).padStart(2, "0");
+}
+
+function rotuloSenha(senha) {
+  const n = padSenha(senha.numero);
+  if (senha.preferencial) return "P" + n;
+  const t = tipoDe(senha.tipo_id);
+  return (t?.sigla || "") + n;
+}
+
+function rotuloProxima(tipoId, preferencial) {
+  if (!tipoId) return "—";
+  const n = padSenha(proximoNumero());
+  if (preferencial) return "P" + n;
+  const t = tipoDe(tipoId);
+  return (t?.sigla || "") + n;
+}
+
 function ordenarFila(lista) {
   return [...lista].sort((a, b) => {
     if (!!a.preferencial !== !!b.preferencial) return a.preferencial ? -1 : 1;
@@ -212,12 +231,23 @@ function desenharAbas() {
     .join("");
 }
 
-function opcoesTipo(selected) {
+function checksTipoForm() {
   const ativos = tipos.filter((t) => t.ativo);
-  if (!ativos.length) return `<option value="">Cadastre um tipo primeiro</option>`;
-  return `<option value="">Tipo</option>` + ativos.map((t) =>
-    `<option value="${t.id}" ${t.id === selected ? "selected" : ""}>${escapar(t.sigla)} — ${escapar(t.nome)}</option>`
-  ).join("");
+  if (!ativos.length) return `<p class="muted">Cadastre um tipo primeiro, na aba Tipos.</p>`;
+  return ativos.map((t) => `
+    <label class="chip-check">
+      <input type="checkbox" name="tipo-chegada" value="${t.id}">
+      <span class="chip-check-ui"><i class="tab-dot" style="background:${escapar(t.cor)}"></i>${escapar(t.sigla)} · ${escapar(t.nome)}</span>
+    </label>`).join("");
+}
+
+function checksTipoLinha(senha) {
+  const ativos = tipos.filter((t) => t.ativo || t.id === senha.tipo_id);
+  return `<div class="tipo-mini">${ativos.map((t) => `
+    <label class="chip-check mini">
+      <input type="radio" name="tipo-${senha.id}" data-campo="tipo_id" data-id="${senha.id}" value="${t.id}" ${t.id === senha.tipo_id ? "checked" : ""}>
+      <span class="chip-check-ui" title="${escapar(t.nome)}" style="--tipo:${escapar(t.cor)}">${escapar(t.sigla)}</span>
+    </label>`).join("")}</div>`;
 }
 
 function badgeTipo(senha) {
@@ -241,9 +271,9 @@ function celulaHora(senha, campo, comCheck) {
 function linhaSenha(senha, { setor = false } = {}) {
   const atendida = !!senha.hora_atendimento;
   return `<tr class="${atendida ? "atendida" : "aguardando"} ${senha.preferencial ? "pref" : ""}">
-    <td data-label="Tipo">${setor ? badgeTipo(senha) : `<select class="sel-tipo" data-campo="tipo_id" data-id="${senha.id}">${opcoesTipo(senha.tipo_id)}</select>`}</td>
+    <td data-label="Tipo">${setor ? badgeTipo(senha) : checksTipoLinha(senha)}</td>
     <td class="col-num" data-label="Nº senha">
-      <button type="button" class="btn ghost small num-btn" data-acao="corrigir" data-id="${senha.id}">${String(senha.numero).padStart(2, "0")}</button>
+      <button type="button" class="btn ghost small num-btn" data-acao="corrigir" data-id="${senha.id}">${escapar(rotuloSenha(senha))}</button>
     </td>
     <td class="col-pref" data-label="Preferencial">
       <label class="pref-lab"><input type="checkbox" data-campo="preferencial" data-id="${senha.id}" ${senha.preferencial ? "checked" : ""}> P</label>
@@ -286,40 +316,43 @@ function legendaTipos() {
 }
 
 function telaGeral() {
-  const proxima = String(proximoNumero()).padStart(2, "0");
   return `
     <section class="card">
       <div class="card-topo">
         <div>
           <h2>Senha geral</h2>
-          <p class="muted form-dica">A senha sai sozinha. Preferencial sobe na fila. Rosa = esperando · azul = já chamaram lá dentro.</p>
+          <p class="muted form-dica">Marca o tipo: sai o número e a hora. Preferencial vira P01, P02… Rosa = esperando · azul = já chamaram.</p>
         </div>
         ${legendaTipos()}
       </div>
-      <form id="form-chegada" class="form-grid form-chegada">
-        <div class="proxima">
-          <span class="eyebrow">Próxima</span>
-          <strong>${proxima}</strong>
+      <form id="form-chegada" class="form-chegada">
+        <input type="hidden" id="campo-tipo" value="">
+        <div class="form-linha">
+          <fieldset class="campo campo-tipos">
+            <legend>Tipo de atendimento</legend>
+            <div class="tipo-checks">${checksTipoForm()}</div>
+          </fieldset>
+          <label class="chip-check pref-chegada">
+            <input id="campo-pref" type="checkbox">
+            <span class="chip-check-ui">Preferencial</span>
+          </label>
         </div>
-        <label>Tipo de atendimento
-          <select id="campo-tipo" required>${opcoesTipo()}</select>
-        </label>
-        <label class="check-wrap">Preferencial
-          <span><input id="campo-pref" type="checkbox"> P — vai para cima</span>
-        </label>
-        <label>Hora da recepção
-          <span class="hora-cell">
-            <input id="campo-hora-rec" type="time" value="${escapar(agoraHHMM())}">
-            <button type="button" class="btn ghost small" id="btn-hora-rec-agora">Agora</button>
-          </span>
-        </label>
-        <label>Nome da pessoa
-          <input id="campo-nome" type="text" placeholder="Quem está sendo atendido" required autocomplete="off">
-        </label>
-        <label>Nº processo
-          <input id="campo-processo" type="text" placeholder="Pode ser número, CPF, voltou…" autocomplete="off">
-        </label>
-        <button class="btn primary form-submit" type="submit">Registrar</button>
+        <div class="form-linha form-linha-campos">
+          <div class="campo campo-senha">
+            <span>Senha</span>
+            <strong id="campo-senha-rotulo" class="senha-valor">—</strong>
+          </div>
+          <label class="campo campo-hora">Hora da recepção
+            <input id="campo-hora-rec" type="time" value="">
+          </label>
+          <label class="campo campo-nome">Nome da pessoa
+            <input id="campo-nome" type="text" placeholder="Quem está sendo atendido" required autocomplete="off">
+          </label>
+          <label class="campo campo-processo">Nº processo
+            <input id="campo-processo" type="text" placeholder="Número, CPF, voltou…" autocomplete="off">
+          </label>
+          <button class="btn primary form-submit" type="submit">Registrar</button>
+        </div>
       </form>
       <p id="form-erro" class="erro hidden"></p>
     </section>
@@ -426,10 +459,7 @@ function desenhar() {
   if (aba === "geral") {
     app.innerHTML = telaGeral();
     document.getElementById("form-chegada")?.addEventListener("submit", onChegada);
-    document.getElementById("btn-hora-rec-agora")?.addEventListener("click", () => {
-      document.getElementById("campo-hora-rec").value = agoraHHMM();
-    });
-    document.getElementById("campo-nome")?.focus();
+    document.getElementById("form-chegada")?.addEventListener("change", onChegadaCampos);
     return;
   }
   if (aba === "tipos") {
@@ -460,17 +490,55 @@ function carimbo() {
   return { updated_by: sessao.id };
 }
 
+function tipoChegadaSelecionado() {
+  return document.querySelector("#form-chegada input[name=tipo-chegada]:checked")?.value || "";
+}
+
+function atualizarChegada(preencherHora) {
+  const tipoId = tipoChegadaSelecionado();
+  const pref = document.getElementById("campo-pref")?.checked;
+  const hidden = document.getElementById("campo-tipo");
+  const rotulo = document.getElementById("campo-senha-rotulo");
+  const horaEl = document.getElementById("campo-hora-rec");
+  if (hidden) hidden.value = tipoId;
+  if (rotulo) rotulo.textContent = rotuloProxima(tipoId, pref);
+  if (tipoId && horaEl && (preencherHora || !horaEl.value)) {
+    horaEl.value = agoraHHMM();
+  }
+  if (!tipoId && horaEl && preencherHora) horaEl.value = "";
+}
+
+function onChegadaCampos(ev) {
+  const el = ev.target;
+  if (el.name === "tipo-chegada") {
+    const escolhido = el.value;
+    document.querySelectorAll("#form-chegada input[name=tipo-chegada]").forEach((box) => {
+      box.checked = box.value === escolhido;
+    });
+    atualizarChegada(true);
+    const nome = document.getElementById("campo-nome");
+    if (nome && !nome.value) nome.focus();
+    return;
+  }
+  if (el.id === "campo-pref") atualizarChegada(false);
+}
+
 async function onChegada(ev) {
   ev.preventDefault();
   const erro = document.getElementById("form-erro");
   erro.classList.add("hidden");
   const nome = document.getElementById("campo-nome").value.trim();
-  const tipoId = document.getElementById("campo-tipo").value;
+  const tipoId = tipoChegadaSelecionado() || document.getElementById("campo-tipo").value;
   const preferencial = document.getElementById("campo-pref").checked;
   const horaRec = document.getElementById("campo-hora-rec").value;
   const processo = document.getElementById("campo-processo").value.trim();
-  if (!nome || !tipoId) {
-    erro.textContent = "Nome e tipo de atendimento são obrigatórios.";
+  if (!tipoId) {
+    erro.textContent = "Marca o tipo de atendimento para gerar a senha.";
+    erro.classList.remove("hidden");
+    return;
+  }
+  if (!nome) {
+    erro.textContent = "Coloca o nome de quem está sendo atendido.";
     erro.classList.remove("hidden");
     return;
   }
@@ -492,8 +560,9 @@ async function onChegada(ev) {
     return;
   }
   ev.target.reset();
-  document.getElementById("campo-hora-rec").value = agoraHHMM();
-  document.getElementById("campo-nome").focus();
+  document.getElementById("campo-tipo").value = "";
+  document.getElementById("campo-senha-rotulo").textContent = "—";
+  document.getElementById("campo-hora-rec").value = "";
   await carregar();
 }
 
@@ -574,7 +643,8 @@ async function onAcao(ev) {
     const senha = senhas.find((s) => s.id === id);
     const novo = window.prompt("Corrigir número da senha:", senha?.numero ?? "");
     if (novo == null || novo === "") return;
-    const numero = Number(novo);
+    const bruto = String(novo).replace(/^[A-Za-z]+/, "").trim();
+    const numero = Number(bruto);
     if (!numero) {
       mostrarErro("Número inválido.");
       return;
