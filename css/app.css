@@ -1014,21 +1014,22 @@ textarea {
 }
 .senha-hora-dica { font-size: 15px !important; color: var(--muted) !important; font-weight: 600 !important; }
 
-.hist-chamadas { display: grid; gap: 4px; }
-.hist-chamadas strong { font-variant-numeric: tabular-nums; }
-.hist-lista {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--muted);
-  line-height: 1.45;
+.hist-chamadas {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
-.hist-lista time { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
-.cel-acao { white-space: nowrap; }
+.hist-chamadas .hora-lida { font-variant-numeric: tabular-nums; }
+.hist-lista { display: none; }
+.cel-acao {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  align-items: center;
+  white-space: nowrap;
+  width: 1%;
+}
 .cel-acao .btn { white-space: nowrap; }
-.cel-acao { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .btn-ausente {
   color: #e63030;
   border-color: #e63030;
@@ -1404,6 +1405,7 @@ textarea {
 
 @media (min-width: 801px) {
   .pwa-bar { display: none !important; }
+  .cel-num .chip { display: none; }
   .form-chegada {
     flex-wrap: wrap;
     gap: 8px;
@@ -1761,7 +1763,7 @@ textarea {
   .cel-rec { grid-area: rec; }
   .cel-atend { grid-area: atend; }
   .cel-proc { grid-area: proc; }
-  .cel-acao { grid-area: acao; }
+  .cel-acao { grid-area: acao; width: auto; }
   .cel-acao::before { display: none; }
   .planilha .col-num { width: auto; }
   .senha-num { font-size: 26px; }

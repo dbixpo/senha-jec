@@ -22,6 +22,8 @@ let rascunhoChegada = {
 };
 let dashFiltro = { tipo: "", status: "todos", pref: "todos", pessoa: "" };
 let tipoEditandoId = null;
+let carregarTimer = 0;
+let carregarSeq = 0;
 
 const PREF_TIPOS = [
   { id: "cadeira", nome: "Deficiência" },
@@ -328,45 +330,69 @@ function pedirLogin() {
   return true;
 }
 
-async function carregar() {
+async function carregar(opts = {}) {
   if (!sessao) return;
+  const seq = ++carregarSeq;
+  const soFila = !!opts.soFila && tipos.length;
   const data = diaAtual();
+  const inicioDia = new Date(`${data}T00:00:00-03:00`).toISOString();
   const ops = [
-    sb.from("tipos_atendimento").select("*").order("ordem"),
+    soFila
+      ? Promise.resolve({ data: tipos, error: null })
+      : sb.from("tipos_atendimento").select("*").order("ordem"),
     sb.from("senhas").select("*").eq("data", data).order("numero"),
-    sb.from("operadores").select(ehAdmin()
-      ? "id, usuario, nome, papel, ativo, ultimo_acesso, created_at, updated_at"
-      : "id, nome").order("nome"),
+    soFila
+      ? Promise.resolve({ data: operadores, error: null })
+      : sb.from("operadores").select(ehAdmin()
+        ? "id, usuario, nome, papel, ativo, ultimo_acesso, created_at, updated_at"
+        : "id, nome").order("nome"),
+    sb.from("historico_chamadas").select("*").gte("chamado_em", inicioDia).order("chamado_em"),
   ];
   const resultados = await Promise.all(ops);
+  if (seq !== carregarSeq) return;
   const erro = resultados.find((r) => r.error)?.error;
   if (erro) {
     mostrarErro(erro.message);
     return;
   }
-  tipos = resultados[0].data || [];
+  if (!soFila) {
+    tipos = resultados[0].data || [];
+    operadores = resultados[2]?.data || [];
+  }
   senhas = resultados[1].data || [];
-  operadores = resultados[2]?.data || [];
-  const ids = senhas.map((s) => s.id);
-  if (ids.length) {
-    const hist = await sb.from("historico_chamadas").select("*").in("senha_id", ids).order("chamado_em");
-    if (hist.error) mostrarErro(hist.error.message);
-    chamadas = hist.data || [];
-  } else {
-    chamadas = [];
+  chamadas = resultados[3].data || [];
+  const porSenha = new Map();
+  for (const c of chamadas) {
+    const lista = porSenha.get(c.senha_id) || [];
+    lista.push(c);
+    porSenha.set(c.senha_id, lista);
   }
   for (const s of senhas) {
-    s.chamadas = chamadas.filter((c) => c.senha_id === s.id);
+    s.chamadas = porSenha.get(s.id) || [];
   }
   if (!estaEditando()) desenhar();
+}
+
+function agendarCarregar() {
+  clearTimeout(carregarTimer);
+  carregarTimer = setTimeout(() => carregar({ soFila: true }), 220);
+}
+
+function mesclarSenha(row) {
+  if (!row || !row.id) return;
+  const idx = senhas.findIndex((s) => s.id === row.id);
+  const prev = idx >= 0 ? senhas[idx] : {};
+  const merged = { ...prev, ...row, chamadas: prev.chamadas || [] };
+  if (idx >= 0) senhas[idx] = merged;
+  else senhas.push(merged);
 }
 
 function escutar() {
   if (canal) sb.removeChannel(canal);
   canal = sb
     .channel("senha-jec-ao-vivo")
-    .on("postgres_changes", { event: "*", schema: "public", table: "senhas" }, () => carregar())
-    .on("postgres_changes", { event: "*", schema: "public", table: "historico_chamadas" }, () => carregar())
+    .on("postgres_changes", { event: "*", schema: "public", table: "senhas" }, () => agendarCarregar())
+    .on("postgres_changes", { event: "*", schema: "public", table: "historico_chamadas" }, () => agendarCarregar())
     .on("postgres_changes", { event: "*", schema: "public", table: "tipos_atendimento" }, () => carregar())
     .subscribe((status) => {
       document.getElementById("live").classList.toggle("off", status !== "SUBSCRIBED");
@@ -426,16 +452,16 @@ function badgeTipo(senha) {
 
 function htmlHistorico(senha) {
   const lista = senha.chamadas || [];
-  if (!lista.length) return `<span class="hora-lida">—</span>`;
-  const linhas = lista.map((c) => {
+  const quando = hora(senha.hora_atendimento) || hora(lista[0]?.chamado_em);
+  if (!quando) return `<span class="hora-lida">—</span>`;
+  const dica = lista.map((c) => {
     const quem = c.chamado_por === sessao.id ? "você" : nomeOperador(c.chamado_por);
     const onde = c.local || tipoDe(c.tipo_id)?.nome || "";
-    return `<li><time>${escapar(hora(c.chamado_em) || "—")}</time> · ${escapar(quem)}${onde ? " · " + escapar(onde) : ""}</li>`;
-  }).join("");
-  return `<div class="hist-chamadas">
-    <strong>${escapar(hora(senha.hora_atendimento) || hora(lista[0].chamado_em) || "—")}</strong>
+    return `${hora(c.chamado_em) || "—"} · ${quem}${onde ? " · " + onde : ""}`;
+  }).join("\n");
+  return `<div class="hist-chamadas"${dica ? ` title="${escapar(dica)}"` : ""}>
+    <span class="hora-lida">${escapar(quando)}</span>
     ${lista.length > 1 ? `<span class="chip pref">${lista.length}x</span>` : ""}
-    <ul class="hist-lista">${linhas}</ul>
   </div>`;
 }
 
@@ -580,25 +606,6 @@ function telaGeral() {
 
 function telaTipo(tipo) {
   const lista = senhas.filter((s) => s.tipo_id === tipo.id);
-  const comigo = lista.filter((s) => estaEmAtendimento(s) && s.atendido_por === sessao.id);
-  const banner = comigo.length
-    ? `<div class="minha-chamada">${comigo
-        .map(
-          (s) => `<div class="minha-chamada-item">
-            <span>Em atendimento: <strong>${escapar(rotuloSenha(s))}</strong> ${escapar(s.nome || "")}</span>
-            ${
-              ehHoje()
-                ? `<span class="minha-chamada-acoes">
-                    <button type="button" class="btn ok small" data-acao="finalizar-senha" data-id="${s.id}">Finalizar</button>
-                    <button type="button" class="btn stamp small" data-acao="nao-respondeu" data-id="${s.id}"><span class="lab-wide">Não respondeu</span><span class="lab-narrow">Não veio</span></button>
-                    <button type="button" class="btn ghost small btn-rechamada" data-acao="chamar-senha" data-id="${s.id}">Chamar de novo</button>
-                  </span>`
-                : ""
-            }
-          </div>`
-        )
-        .join("")}</div>`
-    : "";
   return `<section class="card">
     <div class="card-topo">
       <div>
@@ -613,7 +620,6 @@ function telaTipo(tipo) {
         <span class="sigla grande" style="background:${escapar(tipo.cor)}">${escapar(tipo.sigla)}</span>
       </div>
     </div>
-    ${ehHoje() ? banner : ""}
     <div id="fila-lista">${tabelaFila(lista, { chamar: ehHoje() })}</div>
   </section>`;
 }
@@ -1320,6 +1326,19 @@ function avisoChamada(res, senha) {
   return false;
 }
 
+function aplicarRespostaFila(data, senha) {
+  if (!data?.ok) {
+    avisoChamada(data, senha || data?.senha);
+    return false;
+  }
+  if (data.senha) mesclarSenha(data.senha);
+  if (data.pulada) mesclarSenha(data.pulada);
+  if (data.proxima?.senha) mesclarSenha(data.proxima.senha);
+  desenhar();
+  agendarCarregar();
+  return true;
+}
+
 async function rpcChamar(id, horaIso) {
   const args = { p_id: id, p_operador: sessao.id };
   if (horaIso) args.p_hora = horaIso;
@@ -1329,9 +1348,7 @@ async function rpcChamar(id, horaIso) {
     await carregar();
     return false;
   }
-  const ok = avisoChamada(data, senhas.find((s) => s.id === id) || data?.senha);
-  await carregar();
-  return ok;
+  return aplicarRespostaFila(data, senhas.find((s) => s.id === id) || data?.senha);
 }
 
 async function rpcLiberar(id) {
@@ -1341,9 +1358,7 @@ async function rpcLiberar(id) {
     await carregar();
     return false;
   }
-  const ok = avisoChamada(data, senhas.find((s) => s.id === id));
-  await carregar();
-  return ok;
+  return aplicarRespostaFila(data, senhas.find((s) => s.id === id));
 }
 
 function podeChamar() {
@@ -1361,9 +1376,12 @@ async function onAcao(ev) {
     btn.disabled = true;
     const { data, error } = await sb.rpc("chamar_senha", { p_id: id, p_operador: sessao.id });
     btn.disabled = false;
-    if (error) mostrarErro(error.message);
-    else avisoChamada(data, senhas.find((s) => s.id === id) || data.senha);
-    await carregar();
+    if (error) {
+      mostrarErro(error.message);
+      await carregar();
+      return;
+    }
+    aplicarRespostaFila(data, senhas.find((s) => s.id === id) || data?.senha);
     return;
   }
 
@@ -1376,9 +1394,12 @@ async function onAcao(ev) {
       p_data: diaAtual(),
     });
     btn.disabled = false;
-    if (error) mostrarErro(error.message);
-    else avisoChamada(data, data?.senha);
-    await carregar();
+    if (error) {
+      mostrarErro(error.message);
+      await carregar();
+      return;
+    }
+    aplicarRespostaFila(data, data?.senha);
     return;
   }
 
@@ -1387,9 +1408,12 @@ async function onAcao(ev) {
     btn.disabled = true;
     const { data, error } = await sb.rpc("finalizar_senha", { p_id: id, p_operador: sessao.id });
     btn.disabled = false;
-    if (error) mostrarErro(error.message);
-    else avisoChamada(data, senhas.find((s) => s.id === id) || data.senha);
-    await carregar();
+    if (error) {
+      mostrarErro(error.message);
+      await carregar();
+      return;
+    }
+    aplicarRespostaFila(data, senhas.find((s) => s.id === id) || data?.senha);
     return;
   }
 
@@ -1398,9 +1422,12 @@ async function onAcao(ev) {
     btn.disabled = true;
     const { data, error } = await sb.rpc("nao_respondeu_senha", { p_id: id, p_operador: sessao.id });
     btn.disabled = false;
-    if (error) mostrarErro(error.message);
-    else if (!data?.ok) avisoChamada(data, senhas.find((s) => s.id === id));
-    await carregar();
+    if (error) {
+      mostrarErro(error.message);
+      await carregar();
+      return;
+    }
+    aplicarRespostaFila(data, senhas.find((s) => s.id === id));
     return;
   }
 

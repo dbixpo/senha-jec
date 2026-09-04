@@ -1,37 +1,122 @@
 # Senha JEC
 
-Sisteminha interno de fila (não é oficial do Tribunal), no mesmo jeito da planilha: **Senha geral** vê todo mundo; **Triagem**, **Consulta** e **Ajuizamento** são abas. Tipo com sigla e cor, preferencial sobe, hora com botão **Agora** ou digitada.
+Fila de recepção para um balcão pequeno: senha de papel, nome, tipo de atendimento e quem está chamando. Feito para o Juizado Especial Cível de Sorocaba, **sem ser sistema oficial do Tribunal**.
 
 - Site: https://dbixpo.github.io/senha-jec/
 - Código: https://github.com/dbixpo/senha-jec
-- Banco: projeto Supabase **Senha JEC** (organização DBixpo)
+- Licença: [MIT](LICENSE)
 
-- Site: https://dbixpo.github.io/senha-jec/
-- Código: https://github.com/dbixpo/senha-jec
-- Banco: projeto Supabase **Senha JEC** (organização DBixpo)
+Qualquer núcleo, cartório ou recepção parecida pode copiar, hospedar o seu e adaptar os tipos.
 
-A senha do banco **não** vai neste repositório (ele é público). Fica em `manutencao.env` neste PC e no secret `SUPABASE_DB_PASSWORD` do GitHub.
+## O que isto não é
 
-## Ligar o banco
+Não é sistema do TJ, não substitui o SAJ/eSAJ, não emite senha oficial e não deve usar brasão nem identidade do Tribunal. É um painel interno de quem está na fila **hoje**, no mesmo espírito de uma planilha compartilhada.
 
-1. Espera o projeto **Senha JEC** ficar Ready.
-2. SQL Editor: cola `supabase/schema.sql` → Run.
-3. SQL Editor: cola `supabase/seed.sql` (arquivo só neste PC, no `.gitignore`) → Run. Isso cria os dois admins.
-4. Project Settings → API: copia **Project URL** e **anon public**.
-5. Abre o site, cola as duas chaves uma vez.
+## Como funciona
 
-Login: `diego.bispo` e `flavia.abes`. A senha de cada um é o CPF.
+Três papéis na prática:
 
-## No balcão
+1. **Recepção (Senha geral)** chama a pessoa na porta, anota e manda para um tipo.
+2. **Atendimento (Triagem, Consulta, Ajuizamento…)** chama a senha daquele tipo, atende e finaliza.
+3. **Admin** vê o dashboard do dia, cadastra tipos e operadores.
 
-- **Recepção:** número da senha, nome de quem está sendo atendido e o serviço. Encaminha na hora ou depois.
-- **Serviços:** cadastro do que se faz lá dentro. A primeira fila precisa disso para registrar a pessoa.
-- **Operadores:** só admin inclui gente no formato `primeiro.segundo`.
-- Cada registro guarda data/hora de criação e da última alteração.
-- O dia no topo é o histórico.
+Tudo é do **dia** escolhido no topo. Chamada, finalizar e não respondeu só valem **hoje**. Dia anterior é consulta.
 
-## Identidade
+### Recepção — Senha geral
 
-Amarelo **#FFD32C** nos botões. Layout e tipografia no jeito do SIGUS: Inter, barra #0D3B5E, fundo #F4F6F9, cards brancos.
+1. **Chamar** — anota a hora. Ainda não grava no banco.
+2. Preenche nome, tipo (T / C / A) e, se quiser, nº de processo. Preferencial acende o ícone (cadeira, idoso, gestante, colo, obesidade, autismo) e a senha vira P01, P02…
+3. **Registrar** — grava na fila daquele tipo.
+4. **Não veio** (na recepção) — descarta o rascunho, sem criar senha.
 
-No celular o site sugere **Instalar** (Android/Chrome) ou, no iPhone, Compartilhar → Adicionar à Tela de Início.
+A numeração é uma sequência só no dia: 01, 02, 03… Preferencial usa o mesmo número com prefixo P, e **sobe** na fila do tipo.
+
+### Atendimento — aba do tipo
+
+Cada linha da planilha é uma senha.
+
+| Botão | O que faz |
+|---|---|
+| **Chamar** / **Chamar próxima** | A senha fica *em atendimento* com você. A hora da primeira chamada é a hora de atendimento. |
+| **Finalizar** | Encerra. Sai da fila. |
+| **Não respondeu** / **Não veio** | Devolve para a fila (conta como não respondeu) e chama a próxima daquele tipo. |
+| **Chamar de novo** | Nova entrada no histórico, continua com você. |
+
+Se outra pessoa já chamou aquela senha, o sistema avisa e não deixa pegar.
+
+Cores da linha:
+
+- Rosa — esperando
+- Amarelo — em atendimento
+- Azul — finalizada
+
+## Regras da fila
+
+- **Uma senha, um atendente.** Quem chamou é dono até finalizar ou devolver.
+- **Preferencial primeiro**, na ordem do número. Quem não respondeu volta para o fim da prioridade daquele grupo.
+- **Chamada só no dia de hoje.** Trocar a data no topo é para olhar o histórico, não para chamar.
+- **Usuário** é sempre `primeiro.sobrenome` (ponto no meio). **Senha de acesso** nesta instalação é o CPF — no seu fork, use o que fizer sentido e **nunca** commite CPF nem hash no GitHub público.
+- Operador comum não cadastra tipo nem gente. Admin sim.
+
+## Telas
+
+| Aba | Quem usa | Para quê |
+|---|---|---|
+| Dashboard / Painel | Admin | Volume do dia, espera, preferencial, produção por pessoa |
+| Senha geral | Recepção | Registrar quem chegou |
+| T, C, A (ou os tipos que você cadastrar) | Quem atende | Chamar, finalizar, não respondeu |
+| Configurações → Tipos | Admin | Nome, sigla, cor, ativar/desativar |
+| Configurações → Operadores | Admin | Incluir, perfil, senha, ativar/desativar |
+
+No celular o site vira PWA: no Android o Chrome oferece **Instalar**; no iPhone é Compartilhar → Adicionar à Tela de Início. No computador o convite de instalar não aparece.
+
+## Subir o seu
+
+Precisa de um projeto [Supabase](https://supabase.com) (Postgres + Realtime) e de um lugar para o HTML estático (GitHub Pages serve).
+
+1. Crie o projeto no Supabase.
+2. SQL Editor: rode `supabase/schema.sql` inteiro (tabelas, RLS, RPCs).
+3. Crie **os seus** operadores no SQL Editor, por exemplo:
+
+```sql
+insert into operadores (usuario, nome, senha_hash, papel)
+values
+  ('maria.silva', 'Maria Silva', crypt('senha-que-voce-escolher', gen_salt('bf')), 'admin');
+```
+
+Não use o `seed.sql` de outra instalação. Esse arquivo, se existir, fica só na máquina local e está no `.gitignore` de propósito.
+
+4. Em **Project Settings → API**, copie a URL e a chave **anon** (pode ser a publishable). Elas são públicas: a segurança está no RLS e nas RPCs, não em esconder a chave.
+5. Copie `js/config.example.js` para `js/config.js` e cole URL + chave.
+6. Publique a pasta (GitHub Pages, Netlify, pasta num servidor). Abra o site e entre com o usuário criado.
+
+A senha do **Postgres** (Settings → Database) não vai para o repositório. Se for aplicar SQL por script, guarde num `manutencao.env` local, igual ao `.env.example`.
+
+Realtime: em Database → Replication, as tabelas `senhas`, `historico_chamadas` e `tipos_atendimento` precisam estar no publication `supabase_realtime` (o `schema.sql` já tenta ligar).
+
+## Stack
+
+- Front estático: HTML, CSS, JS (sem build)
+- [`@supabase/supabase-js`](https://supabase.com/docs) no CDN
+- Postgres no Supabase: `senhas`, `historico_chamadas`, `tipos_atendimento`, `operadores`
+- RPCs (`chamar_senha`, `chamar_proxima`, `finalizar_senha`, `nao_respondeu_senha`, `login_operador`…) com `FOR UPDATE` para dois atendentes não pegarem a mesma senha
+- Service worker + `manifest.json` para PWA
+- Fuso `America/Sao_Paulo`
+
+Identidade visual: Inter; topbar `#FFD32C`; texto e botões escuros `#0D3B5E`; fundo `#F4F6F9`; faixa no login `#E63030` → `#FFD32C` → `#1A82B8`.
+
+## Desenvolvimento
+
+```bash
+python -m http.server 8765
+```
+
+Abra `http://127.0.0.1:8765/`. Mudança de CSS/JS: suba o `?v=` no `index.html` e o nome do cache em `sw.js`, senão o PWA entrega arquivo velho.
+
+Migrações extras ficam em `supabase/migrations/`. O arquivo canônico para um banco novo é `supabase/schema.sql`.
+
+## Contribuir
+
+Issue e PR no GitHub são bem-vindos: fila, acessibilidade no celular, tipos, dashboard. Não abra PR com senha, CPF, `.env` ou `manutencao.env`.
+
+Se for usar em outro órgão, troque o nome na interface e os tipos — e deixe claro que **não é sistema oficial**.
