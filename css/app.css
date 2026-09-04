@@ -39,7 +39,7 @@ a { color: var(--dark); }
   position: sticky;
   top: 0;
   z-index: 40;
-  background: #ffd32c;
+  background: var(--bg);
 }
 
 .faixa {
@@ -1526,7 +1526,7 @@ textarea {
     -webkit-overflow-scrolling: touch;
     gap: 8px;
     margin: 0;
-    padding: 0 12px 10px;
+    padding: 12px 12px 10px;
     scrollbar-width: none;
   }
   .tabs::-webkit-scrollbar { display: none; }
