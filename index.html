@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Controle de fila</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div id="setup" class="setup hidden">
+    <div class="setup-card">
+      <p class="eyebrow">Primeiro uso</p>
+      <h1>Conectar no Supabase</h1>
+      <p>Cria um projeto grátis em <a href="https://supabase.com/dashboard" target="_blank" rel="noopener">supabase.com</a>, cola o SQL de <code>supabase/schema.sql</code> no SQL Editor e traz as duas chaves de <strong>Project Settings → API</strong>.</p>
+      <label>Project URL
+        <input id="setup-url" type="url" placeholder="https://xxxx.supabase.co" autocomplete="off">
+      </label>
+      <label>anon public key
+        <textarea id="setup-key" rows="4" placeholder="eyJ..." autocomplete="off"></textarea>
+      </label>
+      <p id="setup-erro" class="erro hidden"></p>
+      <button type="button" class="btn primary" id="setup-salvar">Salvar e abrir a fila</button>
+    </div>
+  </div>
+
+  <header class="top">
+    <div>
+      <p class="eyebrow">Fila do dia</p>
+      <h1>Controle de senhas</h1>
+    </div>
+    <div class="top-actions">
+      <label class="date-wrap">Dia
+        <input type="date" id="dia" >
+      </label>
+      <button type="button" class="btn ghost" id="btn-hoje">Hoje</button>
+      <button type="button" class="btn ghost" id="btn-setores" title="Renomear setores">Setores</button>
+      <span id="live" class="live" title="Atualização ao vivo">ao vivo</span>
+    </div>
+  </header>
+
+  <nav id="tabs" class="tabs"></nav>
+
+  <main id="app" class="app"></main>
+
+  <dialog id="dlg-setores" class="dlg">
+    <form method="dialog" id="form-setores">
+      <h2>Nomes dos setores</h2>
+      <p>Depois dá para trocar sem perder o histórico.</p>
+      <div id="setores-campos"></div>
+      <menu>
+        <button type="submit" class="btn primary" value="ok">Salvar</button>
+        <button type="button" class="btn ghost" id="dlg-setores-fechar">Fechar</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-resolucao" class="dlg">
+    <form method="dialog" id="form-resolucao">
+      <h2>O que se resolveu?</h2>
+      <p id="dlg-resolucao-meta" class="muted"></p>
+      <textarea id="resolucao-texto" rows="4" placeholder="Anotação rápida do atendimento"></textarea>
+      <menu>
+        <button type="submit" class="btn primary">Registrar</button>
+        <button type="button" class="btn ghost" id="dlg-resolucao-fechar">Cancelar</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
