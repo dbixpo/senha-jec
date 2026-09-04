@@ -37,7 +37,7 @@ a { color: var(--dark); }
 
 .faixa {
   height: 4px;
-  background: var(--amarelo);
+  background: linear-gradient(90deg, #e63030 0%, #ffd32c 50%, #1a82b8 100%);
 }
 
 .eyebrow {
@@ -52,7 +52,7 @@ a { color: var(--dark); }
 h1, h2 { margin: 0; font-weight: 700; }
 h1 { font-size: 20px; letter-spacing: -0.02em; }
 h2 { font-size: 18px; color: var(--ink); }
-.top h1 { color: #fff; }
+.top h1 { color: var(--dark); }
 .muted { color: var(--muted); margin: 0; }
 
 .top {
@@ -66,11 +66,13 @@ h2 { font-size: 18px; color: var(--ink); }
   padding-right: max(20px, env(safe-area-inset-right));
   position: relative;
   z-index: 30;
-  background: var(--dark);
-  border-bottom: 3px solid var(--amarelo);
+  background: var(--amarelo);
+  border-bottom: 3px solid var(--dark);
 }
 
-.brand h1 { padding: 0; border: 0; color: #fff; }
+.brand h1 { padding: 0; border: 0; color: var(--dark); }
+
+.top .eyebrow { color: #6b4e00; }
 
 .top-actions {
   display: flex;
@@ -84,7 +86,7 @@ h2 { font-size: 18px; color: var(--ink); }
   margin: 0 8px 0 0;
   font-weight: 600;
   font-size: 13px;
-  color: #c5d5e4;
+  color: var(--dark);
 }
 
 .date-wrap {
@@ -95,7 +97,7 @@ h2 { font-size: 18px; color: var(--ink); }
   height: 36px;
   font-size: 12px;
   font-weight: 600;
-  color: #9bb4c8;
+  color: var(--dark);
 }
 
 .date-wrap input[type="date"] {
@@ -103,19 +105,19 @@ h2 { font-size: 18px; color: var(--ink); }
   height: 36px;
   min-height: 36px;
   padding: 0 10px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid rgba(13, 59, 94, 0.22);
   border-radius: var(--radius);
   font-size: 13px;
   font-weight: 600;
-  color-scheme: dark;
+  color-scheme: light;
   appearance: none;
   -webkit-appearance: none;
 }
 
 .date-wrap input[type="date"]:focus {
-  outline: 2px solid var(--amarelo);
+  outline: 2px solid var(--dark);
   outline-offset: 1px;
 }
 
@@ -125,14 +127,20 @@ h2 { font-size: 18px; color: var(--ink); }
 
 .date-wrap input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
-  opacity: 0.75;
-  filter: invert(1);
+  opacity: 0.7;
+  filter: none;
 }
 
 .top .btn {
   height: 36px;
   min-height: 36px;
 }
+
+.top .btn.ghost {
+  color: var(--dark);
+  border-color: rgba(13, 59, 94, 0.28);
+}
+.top .btn.ghost:hover { background: rgba(13, 59, 94, 0.08); }
 
 .shell {
   padding: 16px 20px 32px;
