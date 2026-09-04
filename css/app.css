@@ -1,14 +1,13 @@
 :root {
-  --bg: #fbf3e4;
-  --ink: #4a3728;
-  --muted: #8a6f5a;
-  --paper: #fff9f0;
-  --line: #ead5bc;
-  --fusca: #e6c39a;
-  --fusca-deep: #c4895a;
-  --fusca-hover: #a87246;
+  --bg: #fff8dc;
+  --ink: #1f1a10;
+  --muted: #7a6a3a;
+  --paper: #fffdf3;
+  --line: #f3e19a;
+  --fusca: #ffd32c;
+  --fusca-hover: #e8bc18;
   --stamp: #b56a4a;
-  --shadow: 0 12px 32px rgba(74, 55, 40, 0.1);
+  --shadow: 0 12px 32px rgba(31, 26, 16, 0.1);
   --radius: 16px;
 }
 
@@ -18,7 +17,7 @@ html, body {
   margin: 0;
   min-height: 100%;
   background:
-    radial-gradient(1200px 500px at 10% -10%, #f3d7b0 0%, transparent 55%),
+    radial-gradient(1200px 500px at 10% -10%, #ffd32c 0%, transparent 42%),
     var(--bg);
   color: var(--ink);
   font-family: "Nunito", system-ui, sans-serif;
@@ -26,7 +25,7 @@ html, body {
 
 body { padding: 24px 28px 40px; }
 
-a { color: var(--fusca-deep); }
+a { color: #8a7010; }
 
 .eyebrow {
   margin: 0 0 4px;
@@ -52,8 +51,8 @@ h2 { font-size: 18px; font-weight: 800; }
   height: 56px;
   object-fit: cover;
   border-radius: 14px;
-  border: 1px solid var(--line);
-  background: var(--paper);
+  border: 2px solid var(--fusca);
+  background: var(--fusca);
 }
 
 .top {
@@ -105,7 +104,7 @@ textarea { resize: vertical; width: 100%; }
   font-weight: 800;
 }
 
-.btn.primary { background: var(--fusca-deep); color: #fff8ef; }
+.btn.primary { background: var(--fusca); color: var(--ink); }
 .btn.primary:hover { background: var(--fusca-hover); }
 .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
 .btn.ghost:hover { background: #fff; }
@@ -116,7 +115,7 @@ textarea { resize: vertical; width: 100%; }
 .live {
   font-size: 12px;
   font-weight: 800;
-  color: var(--fusca-deep);
+  color: #8a7010;
   padding: 8px 10px;
 }
 .live.off { color: var(--muted); }
@@ -133,9 +132,9 @@ textarea { resize: vertical; width: 100%; }
 }
 
 .tab.active {
-  background: var(--ink);
-  color: var(--paper);
-  border-color: var(--ink);
+  background: var(--fusca);
+  color: var(--ink);
+  border-color: var(--fusca);
 }
 
 .tab .count {
