@@ -352,14 +352,6 @@ textarea {
 }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.live {
-  font-size: 12px;
-  font-weight: 600;
-  color: #19a88b;
-  padding: 6px 8px;
-}
-.live.off { color: #9bb4c8; }
-
 .tabs {
   display: flex;
   gap: 6px;
@@ -1708,20 +1700,6 @@ textarea {
   }
   .brand { grid-area: brand; min-width: 0; }
   .logo-top { height: 34px; max-width: min(200px, 52vw); }
-  .live {
-    grid-area: brand;
-    justify-self: end;
-    align-self: center;
-    width: 10px;
-    height: 10px;
-    margin-right: 8px;
-    padding: 0;
-    border-radius: 99px;
-    background: #19a88b;
-    color: transparent;
-    overflow: hidden;
-  }
-  .live.off { background: #9bb4c8; }
   .top-actions {
     grid-area: actions;
     display: flex;

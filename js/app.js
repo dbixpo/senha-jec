@@ -123,17 +123,14 @@ function preencherQuem() {
 
 function aplicarTopoSessao() {
   const actions = document.querySelector(".top-actions");
-  const live = document.getElementById("live");
   if (!sessao) {
     actions?.classList.add("hidden");
-    live?.classList.add("hidden");
     const quem = document.getElementById("quem");
     if (quem) quem.innerHTML = "";
     document.getElementById("cfg-wrap")?.classList.add("hidden");
     return;
   }
   actions?.classList.remove("hidden");
-  live?.classList.remove("hidden");
   aplicarDiaSessao();
   preencherQuem();
   document.getElementById("cfg-wrap")?.classList.toggle("hidden", !ehAdmin());
@@ -405,9 +402,7 @@ function escutar() {
     .on("postgres_changes", { event: "*", schema: "public", table: "senhas" }, () => agendarCarregar())
     .on("postgres_changes", { event: "*", schema: "public", table: "historico_chamadas" }, () => agendarCarregar())
     .on("postgres_changes", { event: "*", schema: "public", table: "tipos_atendimento" }, () => carregar())
-    .subscribe((status) => {
-      document.getElementById("live").classList.toggle("off", status !== "SUBSCRIBED");
-    });
+    .subscribe();
 }
 
 function contarTipo(tipoId) {
