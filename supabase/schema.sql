@@ -70,6 +70,7 @@ create table if not exists senhas (
   preferencial boolean not null default false,
   hora_recepcao timestamptz,
   hora_atendimento timestamptz,
+  atendido_por uuid references operadores (id),
   processo text not null default '',
   servico_id uuid references servicos (id),
   setor_id smallint references setores (id),
@@ -90,6 +91,7 @@ create table if not exists senhas (
 create index if not exists senhas_dia_status_idx on senhas (data, status);
 create index if not exists senhas_dia_setor_idx on senhas (data, setor_id, status);
 create index if not exists senhas_dia_servico_idx on senhas (data, servico_id);
+create index if not exists senhas_dia_atendido_idx on senhas (data, atendido_por);
 
 create or replace function senhas_auto_numero()
 returns trigger

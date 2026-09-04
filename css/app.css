@@ -456,7 +456,57 @@ textarea {
   vertical-align: top;
 }
 
-.empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
+.hora-lida {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.filtro-tudo .chip-check-ui { min-width: 108px; }
+.topo-acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+.kpi {
+  background: #f4f6f9;
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+}
+.kpi span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.kpi strong {
+  font-size: 28px;
+  line-height: 1;
+  color: var(--dark);
+  font-variant-numeric: tabular-nums;
+}
+
+.papel-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 600;
+}
+.papel-badge.admin { background: var(--amarelo); color: var(--dark); }
+.papel-badge.operador { background: #e2e8f0; color: var(--ink); }
 .erro { color: var(--stamp); font-size: 14px; margin: 0; }
 .hidden { display: none !important; }
 .meta { font-size: 13px; color: var(--muted); }
@@ -769,6 +819,7 @@ textarea {
   h1 { font-size: 18px; }
   h2 { font-size: 16px; }
   .card { padding: 14px; border-radius: 12px; }
+  .kpis { grid-template-columns: 1fr 1fr; }
   .card-topo { margin-bottom: 10px; }
   .legenda { font-size: 12px; }
 

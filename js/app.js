@@ -9,6 +9,7 @@ let operadores = [];
 let senhas = [];
 let aba = "geral";
 let canal = null;
+let verTudo = false;
 
 function hojeISO() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -65,6 +66,19 @@ function ehAdmin() {
   return sessao?.papel === "admin";
 }
 
+function textoQuem() {
+  if (!sessao) return "";
+  return `${sessao.nome} · ${ehAdmin() ? "Administrador" : "Operador"}`;
+}
+
+function operadorDe(id) {
+  return operadores.find((o) => o.id === id) || null;
+}
+
+function nomeOperador(id) {
+  return operadorDe(id)?.nome || "—";
+}
+
 function lerConfig() {
   if (window.FILA_CONFIG?.supabaseUrl && !window.FILA_CONFIG.supabaseUrl.includes("xxxx")) {
     return window.FILA_CONFIG;
@@ -115,17 +129,22 @@ function padSenha(n) {
 
 function rotuloSenha(senha) {
   const n = padSenha(senha.numero);
-  if (senha.preferencial) return "P" + n;
-  const t = tipoDe(senha.tipo_id);
-  return (t?.sigla || "") + n;
+  return senha.preferencial ? "P" + n : n;
 }
 
 function rotuloProxima(tipoId, preferencial) {
   if (!tipoId) return "—";
   const n = padSenha(proximoNumero());
-  if (preferencial) return "P" + n;
-  const t = tipoDe(tipoId);
-  return (t?.sigla || "") + n;
+  return preferencial ? "P" + n : n;
+}
+
+function filtrarLista(lista) {
+  if (verTudo) return lista;
+  return lista.filter((s) => !s.hora_atendimento);
+}
+
+function naFila(lista = senhas) {
+  return lista.filter((s) => !s.hora_atendimento).length;
 }
 
 function ordenarFila(lista) {
@@ -164,7 +183,7 @@ function pedirLogin() {
     return false;
   }
   box.classList.add("hidden");
-  document.getElementById("quem").textContent = sessao.nome;
+  document.getElementById("quem").textContent = textoQuem();
   return true;
 }
 
@@ -210,16 +229,19 @@ function contarTipo(tipoId) {
 function desenharAbas() {
   const nav = document.getElementById("tabs");
   const abas = [
-    { id: "geral", label: "Senha geral", count: senhas.length },
+    { id: "geral", label: "Senha geral", count: naFila() },
     ...tipos.filter((t) => t.ativo).map((t) => ({
       id: "tipo-" + t.id,
       label: t.nome,
       count: contarTipo(t.id),
       cor: t.cor,
     })),
-    { id: "tipos", label: "Tipos", count: tipos.filter((t) => t.ativo).length },
   ];
-  if (ehAdmin()) abas.push({ id: "operadores", label: "Operadores", count: operadores.filter((o) => o.ativo).length });
+  if (ehAdmin()) {
+    abas.push({ id: "controle", label: "Controle", count: senhas.length });
+    abas.push({ id: "tipos", label: "Tipos", count: tipos.filter((t) => t.ativo).length });
+    abas.push({ id: "operadores", label: "Operadores", count: operadores.filter((o) => o.ativo).length });
+  }
   nav.innerHTML = abas
     .map(
       (item) =>
@@ -233,7 +255,7 @@ function desenharAbas() {
 
 function checksTipoForm() {
   const ativos = tipos.filter((t) => t.ativo);
-  if (!ativos.length) return `<p class="muted">Cadastre um tipo primeiro, na aba Tipos.</p>`;
+  if (!ativos.length) return `<p class="muted">${ehAdmin() ? "Cadastre um tipo primeiro, na aba Tipos." : "Peça a um administrador para cadastrar um tipo."}</p>`;
   return ativos.map((t) => `
     <label class="chip-check">
       <input type="checkbox" name="tipo-chegada" value="${t.id}">
@@ -256,9 +278,10 @@ function badgeTipo(senha) {
   return `<span class="sigla" style="background:${escapar(t.cor)}">${escapar(t.sigla)}</span>`;
 }
 
-function celulaHora(senha, campo, comCheck) {
+function celulaHora(senha, campo, { editar = false, chamou = false } = {}) {
   const valor = hora(senha[campo]);
-  const check = comCheck
+  if (!editar) return `<span class="hora-lida">${valor || "—"}</span>`;
+  const check = chamou
     ? `<label class="check-hora"><input type="checkbox" data-acao="toggle-atendimento" data-id="${senha.id}" ${senha.hora_atendimento ? "checked" : ""}> Chamou</label>`
     : "";
   return `<div class="hora-cell">
@@ -268,26 +291,35 @@ function celulaHora(senha, campo, comCheck) {
   </div>`;
 }
 
-function linhaSenha(senha, { setor = false } = {}) {
+function linhaSenha(senha, { chamar = false } = {}) {
   const atendida = !!senha.hora_atendimento;
   return `<tr class="${atendida ? "atendida" : "aguardando"} ${senha.preferencial ? "pref" : ""}">
-    <td class="cel-tipo" data-label="Tipo">${setor ? badgeTipo(senha) : checksTipoLinha(senha)}</td>
+    <td class="cel-tipo" data-label="Tipo">${chamar ? badgeTipo(senha) : checksTipoLinha(senha)}</td>
     <td class="cel-num col-num" data-label="Senha">
       <button type="button" class="btn ghost small num-btn" data-acao="corrigir" data-id="${senha.id}">${escapar(rotuloSenha(senha))}</button>
     </td>
     <td class="cel-pref col-pref" data-label="Preferencial">
-      <label class="pref-lab"><input type="checkbox" data-campo="preferencial" data-id="${senha.id}" ${senha.preferencial ? "checked" : ""}> <span class="pref-curto">P</span><span class="pref-longo">Preferencial</span></label>
+      <label class="pref-lab"><input type="checkbox" data-campo="preferencial" data-id="${senha.id}" ${senha.preferencial ? "checked" : ""} ${chamar ? "disabled" : ""}> <span class="pref-curto">P</span><span class="pref-longo">Preferencial</span></label>
     </td>
-    <td class="cel-rec" data-label="Hora da recepção">${celulaHora(senha, "hora_recepcao", false)}</td>
-    <td class="cel-atend" data-label="Hora do atendimento">${celulaHora(senha, "hora_atendimento", setor)}</td>
-    <td class="cel-nome" data-label="Nome"><input type="text" data-campo="nome" data-id="${senha.id}" value="${escapar(senha.nome || "")}" placeholder="Nome de quem está sendo atendido"></td>
-    <td class="cel-proc" data-label="Nº processo"><input type="text" data-campo="processo" data-id="${senha.id}" value="${escapar(senha.processo || "")}" placeholder="nº processo ou observação"></td>
+    <td class="cel-rec" data-label="Hora da recepção">${celulaHora(senha, "hora_recepcao", { editar: !chamar })}</td>
+    <td class="cel-atend" data-label="Hora do atendimento">${celulaHora(senha, "hora_atendimento", { editar: chamar, chamou: chamar })}</td>
+    <td class="cel-nome" data-label="Nome">${chamar ? `<span class="hora-lida">${escapar(senha.nome || "—")}</span>` : `<input type="text" data-campo="nome" data-id="${senha.id}" value="${escapar(senha.nome || "")}" placeholder="Nome de quem está sendo atendido">`}</td>
+    <td class="cel-proc" data-label="Nº processo">${chamar ? `<span class="hora-lida">${escapar(senha.processo || "—")}</span>` : `<input type="text" data-campo="processo" data-id="${senha.id}" value="${escapar(senha.processo || "")}" placeholder="nº processo ou observação">`}</td>
   </tr>`;
 }
 
-function tabelaFila(lista, { setor = false } = {}) {
-  const linhas = ordenarFila(lista);
-  if (!linhas.length) return `<p class="empty">Ninguém nesta fila hoje.</p>`;
+function barraFiltro() {
+  return `<label class="chip-check filtro-tudo">
+    <input id="ver-tudo" type="checkbox" ${verTudo ? "checked" : ""}>
+    <span class="chip-check-ui">Ver tudo</span>
+  </label>`;
+}
+
+function tabelaFila(lista, { chamar = false } = {}) {
+  const linhas = ordenarFila(filtrarLista(lista));
+  if (!linhas.length) {
+    return `<p class="empty">${verTudo ? "Ninguém nesta fila hoje." : "Ninguém na fila agora. Marca Ver tudo para incluir os já atendidos."}</p>`;
+  }
   return `<div class="planilha-wrap">
     <table class="planilha">
       <thead>
@@ -301,9 +333,20 @@ function tabelaFila(lista, { setor = false } = {}) {
           <th>Nº processo</th>
         </tr>
       </thead>
-      <tbody>${linhas.map((s) => linhaSenha(s, { setor })).join("")}</tbody>
+      <tbody>${linhas.map((s) => linhaSenha(s, { chamar })).join("")}</tbody>
     </table>
   </div>`;
+}
+
+function ligarFiltro(lista, opts) {
+  document.getElementById("ver-tudo")?.addEventListener("change", (ev) => {
+    verTudo = ev.target.checked;
+    const box = document.getElementById("fila-lista");
+    const dica = document.getElementById("fila-dica");
+    if (box) box.innerHTML = tabelaFila(lista, opts);
+    if (dica) dica.textContent = verTudo ? "Inclui quem já foi atendido." : "Só quem ainda está na fila.";
+    desenharAbas();
+  });
 }
 
 function legendaTipos() {
@@ -311,7 +354,7 @@ function legendaTipos() {
     ${tipos.filter((t) => t.ativo).map((t) => `<li><span class="sigla" style="background:${escapar(t.cor)}">${escapar(t.sigla)}</span> ${escapar(t.nome)}</li>`).join("")}
     <li><span class="chip aguardando">espera</span></li>
     <li><span class="chip atendida">já atendido</span></li>
-    <li><span class="chip pref">P = preferencial (sobe)</span></li>
+    <li><span class="chip pref">P = preferencial (sobe · senha P01)</span></li>
   </ul>`;
 }
 
@@ -321,8 +364,8 @@ function telaGeral() {
       <div class="card-topo">
         <div>
           <h2>Senha geral</h2>
-          <p class="muted form-dica dica-web">Marca o tipo: sai o número e a hora. Preferencial vira P01, P02… Rosa = esperando · azul = já chamaram.</p>
-          <p class="muted form-dica dica-mobile">Marca o tipo → sai a senha e a hora. Se for preferencial, marca o amarelo. Depois coloca o nome e registra.</p>
+          <p class="muted form-dica dica-web">Marca o tipo: sai o número e a hora. Preferencial vira P01, P02… A senha é uma só, sequencial. Rosa = esperando · azul = já chamaram nas abas de dentro.</p>
+          <p class="muted form-dica dica-mobile">Marca o tipo → sai a senha (01, 02… ou P01). Depois o nome e registra. Para chamar, entra na aba do tipo.</p>
         </div>
         ${legendaTipos()}
       </div>
@@ -358,8 +401,14 @@ function telaGeral() {
       <p id="form-erro" class="erro hidden"></p>
     </section>
     <section class="card">
-      <h2>Fila do dia</h2>
-      ${tabelaFila(senhas, { setor: false })}
+      <div class="card-topo">
+        <div>
+          <h2>Fila do dia</h2>
+          <p id="fila-dica" class="muted form-dica">${verTudo ? "Inclui quem já foi atendido." : "Só quem ainda está na fila."}</p>
+        </div>
+        ${barraFiltro()}
+      </div>
+      <div id="fila-lista">${tabelaFila(senhas, { chamar: false })}</div>
     </section>`;
 }
 
@@ -369,11 +418,15 @@ function telaTipo(tipo) {
     <div class="card-topo">
       <div>
         <h2>${escapar(tipo.nome)}</h2>
-        <p class="muted form-dica">Marca <strong>Chamou</strong> quando chamar a pessoa. A senha geral fica azul.</p>
+        <p class="muted form-dica">Marca <strong>Chamou</strong> quando atender. A senha geral só mostra a hora.</p>
+        <p id="fila-dica" class="muted form-dica">${verTudo ? "Inclui quem já foi atendido." : "Só quem ainda está na fila."}</p>
       </div>
-      <span class="sigla grande" style="background:${escapar(tipo.cor)}">${escapar(tipo.sigla)}</span>
+      <div class="topo-acoes">
+        ${barraFiltro()}
+        <span class="sigla grande" style="background:${escapar(tipo.cor)}">${escapar(tipo.sigla)}</span>
+      </div>
     </div>
-    ${tabelaFila(lista, { setor: true })}
+    <div id="fila-lista">${tabelaFila(lista, { chamar: true })}</div>
   </section>`;
 }
 
@@ -417,6 +470,89 @@ function telaTipos() {
   </section>`;
 }
 
+function rotuloPapel(papel) {
+  return papel === "admin" ? "Administrador" : "Operador";
+}
+
+function telaControle() {
+  const total = senhas.length;
+  const espera = naFila();
+  const feitas = total - espera;
+  const prefs = senhas.filter((s) => s.preferencial).length;
+  const porTipo = tipos.map((t) => {
+    const lista = senhas.filter((s) => s.tipo_id === t.id);
+    return {
+      t,
+      total: lista.length,
+      espera: lista.filter((s) => !s.hora_atendimento).length,
+      feitas: lista.filter((s) => s.hora_atendimento).length,
+    };
+  });
+  const porPessoa = operadores
+    .map((o) => {
+      const registrou = senhas.filter((s) => s.created_by === o.id).length;
+      const chamou = senhas.filter((s) => s.atendido_por === o.id).length;
+      return { o, registrou, chamou };
+    })
+    .filter((x) => x.registrou || x.chamou || x.o.ativo)
+    .sort((a, b) => b.registrou + b.chamou - (a.registrou + a.chamou));
+
+  return `<section class="card">
+    <div class="card-topo">
+      <div>
+        <h2>Controle da produção</h2>
+        <p class="muted form-dica">Acompanha o dia de todo mundo. Administrador também registra senha na aba Senha geral.</p>
+      </div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><span>Senhas do dia</span><strong>${total}</strong></div>
+      <div class="kpi"><span>Na fila</span><strong>${espera}</strong></div>
+      <div class="kpi"><span>Atendidas</span><strong>${feitas}</strong></div>
+      <div class="kpi"><span>Preferencial</span><strong>${prefs}</strong></div>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Por pessoa</h2>
+    <table class="table">
+      <thead><tr><th>Pessoa</th><th>Perfil</th><th>Registrou</th><th>Chamou</th></tr></thead>
+      <tbody>
+        ${
+          porPessoa.length
+            ? porPessoa
+                .map(
+                  (x) => `<tr>
+                    <td><strong>${escapar(x.o.nome)}</strong><div class="meta">${escapar(x.o.usuario)}${x.o.ativo ? "" : " · inativo"}</div></td>
+                    <td><span class="papel-badge ${x.o.papel}">${rotuloPapel(x.o.papel)}</span></td>
+                    <td>${x.registrou}</td>
+                    <td>${x.chamou}</td>
+                  </tr>`
+                )
+                .join("")
+            : `<tr><td colspan="4" class="empty">Nenhuma produção neste dia.</td></tr>`
+        }
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h2>Por tipo</h2>
+    <table class="table">
+      <thead><tr><th>Tipo</th><th>Total</th><th>Na fila</th><th>Atendidas</th></tr></thead>
+      <tbody>
+        ${porTipo
+          .map(
+            (x) => `<tr>
+              <td><span class="sigla" style="background:${escapar(x.t.cor)}">${escapar(x.t.sigla)}</span> ${escapar(x.t.nome)}</td>
+              <td>${x.total}</td>
+              <td>${x.espera}</td>
+              <td>${x.feitas}</td>
+            </tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>
+  </section>`;
+}
+
 function telaOperadores() {
   return `<section class="card">
     <h2>Operadores</h2>
@@ -430,19 +566,27 @@ function telaOperadores() {
       <label>Senha (CPF)
         <input id="op-senha" required>
       </label>
+      <label>Perfil
+        <select id="op-papel">
+          <option value="operador">Operador</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </label>
       <button class="btn primary" type="submit">Incluir</button>
     </form>
     <p id="op-erro" class="erro hidden"></p>
     <table class="table">
-      <thead><tr><th>Pessoa</th><th>Acesso</th><th>Quando</th><th></th></tr></thead>
+      <thead><tr><th>Pessoa</th><th>Perfil</th><th>Acesso</th><th>Quando</th><th></th></tr></thead>
       <tbody>
         ${operadores
           .map(
             (o) => `<tr>
-              <td><strong>${escapar(o.nome)}</strong><div class="meta">${escapar(o.usuario)} · ${escapar(o.papel)}${o.ativo ? "" : " · inativo"}</div></td>
+              <td><strong>${escapar(o.nome)}</strong><div class="meta">${escapar(o.usuario)}${o.ativo ? "" : " · inativo"}</div></td>
+              <td><span class="papel-badge ${escapar(o.papel)}">${rotuloPapel(o.papel)}</span></td>
               <td class="meta">${o.ultimo_acesso ? dataHora(o.ultimo_acesso) : "ainda não entrou"}</td>
               <td class="meta">${auditoria(o)}</td>
               <td>
+                <button type="button" class="btn ghost small" data-acao="papel-op" data-id="${o.id}" data-papel="${escapar(o.papel)}">${o.papel === "admin" ? "Virar operador" : "Virar admin"}</button>
                 <button type="button" class="btn ghost small" data-acao="toggle-op" data-id="${o.id}" data-ativo="${o.ativo ? "1" : "0"}">${o.ativo ? "Desativar" : "Ativar"}</button>
                 <button type="button" class="btn ghost small" data-acao="senha-op" data-id="${o.id}">Trocar senha</button>
               </td>
@@ -461,9 +605,24 @@ function desenhar() {
     app.innerHTML = telaGeral();
     document.getElementById("form-chegada")?.addEventListener("submit", onChegada);
     document.getElementById("form-chegada")?.addEventListener("change", onChegadaCampos);
+    ligarFiltro(senhas, { chamar: false });
+    return;
+  }
+  if (aba === "controle") {
+    if (!ehAdmin()) {
+      aba = "geral";
+      desenhar();
+      return;
+    }
+    app.innerHTML = telaControle();
     return;
   }
   if (aba === "tipos") {
+    if (!ehAdmin()) {
+      aba = "geral";
+      desenhar();
+      return;
+    }
     app.innerHTML = telaTipos();
     document.getElementById("form-tipo")?.addEventListener("submit", onTipo);
     return;
@@ -481,6 +640,7 @@ function desenhar() {
   if (aba.startsWith("tipo-")) {
     const tipo = tipos.find((t) => t.id === aba.slice(5));
     app.innerHTML = tipo ? telaTipo(tipo) : "<p>Tipo não encontrado.</p>";
+    if (tipo) ligarFiltro(senhas.filter((s) => s.tipo_id === tipo.id), { chamar: true });
     return;
   }
   aba = "geral";
@@ -594,7 +754,7 @@ async function onOperador(ev) {
     p_usuario: document.getElementById("op-usuario").value.trim().toLowerCase(),
     p_nome: document.getElementById("op-nome").value.trim(),
     p_senha: document.getElementById("op-senha").value.trim(),
-    p_papel: "operador",
+    p_papel: document.getElementById("op-papel")?.value || "operador",
   });
   if (error || !data) {
     erro.textContent = error?.message || "Não deu para criar. Confere se o usuário já existe.";
@@ -616,6 +776,10 @@ async function patch(id, valores, redesenhar = true) {
   if (redesenhar) await carregar();
 }
 
+function podeChamar() {
+  return String(aba).startsWith("tipo-");
+}
+
 async function onAcao(ev) {
   const btn = ev.target.closest("[data-acao]");
   if (!btn) return;
@@ -624,19 +788,21 @@ async function onAcao(ev) {
 
   if (acao === "agora") {
     const campo = btn.dataset.campo;
+    if (campo === "hora_atendimento" && !podeChamar()) return;
     const hhmm = agoraHHMM();
     const input = btn.parentElement.querySelector("input[type=time]");
     if (input) input.value = hhmm;
-    const extra = campo === "hora_atendimento" ? { status: "em_atendimento" } : {};
+    const extra = campo === "hora_atendimento" ? { status: "em_atendimento", atendido_por: sessao.id } : {};
     await patch(id, { [campo]: isoDoDia(hhmm), ...extra });
     return;
   }
   if (acao === "toggle-atendimento") {
+    if (!podeChamar()) return;
     if (btn.checked) {
       const hhmm = agoraHHMM();
-      await patch(id, { hora_atendimento: isoDoDia(hhmm), status: "em_atendimento" });
+      await patch(id, { hora_atendimento: isoDoDia(hhmm), status: "em_atendimento", atendido_por: sessao.id });
     } else {
-      await patch(id, { hora_atendimento: null, status: "na_fila" });
+      await patch(id, { hora_atendimento: null, status: "na_fila", atendido_por: null });
     }
     return;
   }
@@ -654,18 +820,44 @@ async function onAcao(ev) {
     return;
   }
   if (acao === "toggle-tipo") {
+    if (!ehAdmin()) return;
     const { error } = await sb.from("tipos_atendimento").update({ ativo: btn.dataset.ativo !== "1" }).eq("id", id);
     if (error) mostrarErro(error.message);
     else await carregar();
     return;
   }
   if (acao === "toggle-op") {
+    if (!ehAdmin()) return;
     const { error } = await sb.from("operadores").update({ ativo: btn.dataset.ativo !== "1" }).eq("id", id);
     if (error) mostrarErro(error.message);
     else await carregar();
     return;
   }
+  if (acao === "papel-op") {
+    if (!ehAdmin()) return;
+    const atual = btn.dataset.papel;
+    const novo = atual === "admin" ? "operador" : "admin";
+    if (id === sessao.id && novo === "operador") {
+      const outrosAdmins = operadores.filter((o) => o.id !== id && o.papel === "admin" && o.ativo).length;
+      if (!outrosAdmins) {
+        mostrarErro("Não dá para tirar o último administrador.");
+        return;
+      }
+    }
+    const { error } = await sb.from("operadores").update({ papel: novo }).eq("id", id);
+    if (error) mostrarErro(error.message);
+    else {
+      if (id === sessao.id) {
+        sessao.papel = novo;
+        localStorage.setItem(SESSAO_KEY, JSON.stringify(sessao));
+        document.getElementById("quem").textContent = textoQuem();
+      }
+      await carregar();
+    }
+    return;
+  }
   if (acao === "senha-op") {
+    if (!ehAdmin()) return;
     const nova = window.prompt("Nova senha (CPF do operador):");
     if (!nova) return;
     const { error } = await sb.rpc("definir_senha_operador", { p_id: id, p_senha: nova });
@@ -676,7 +868,7 @@ async function onAcao(ev) {
 
 async function onCampo(ev) {
   const el = ev.target.closest("[data-campo]");
-  if (!el || !el.dataset.id) return;
+  if (!el || !el.dataset.id || el.disabled) return;
   const id = el.dataset.id;
   const campo = el.dataset.campo;
   let valor;
@@ -684,7 +876,11 @@ async function onCampo(ev) {
   else if (el.type === "time") valor = isoDoDia(el.value);
   else valor = el.value;
   const extra = {};
-  if (campo === "hora_atendimento") extra.status = valor ? "em_atendimento" : "na_fila";
+  if (campo === "hora_atendimento") {
+    if (!podeChamar()) return;
+    extra.status = valor ? "em_atendimento" : "na_fila";
+    extra.atendido_por = valor ? sessao.id : null;
+  }
   await patch(id, { [campo]: valor, ...extra }, ev.type !== "blur");
 }
 
@@ -704,7 +900,7 @@ async function onLogin(ev) {
   sessao = data;
   localStorage.setItem(SESSAO_KEY, JSON.stringify(data));
   document.getElementById("login").classList.add("hidden");
-  document.getElementById("quem").textContent = sessao.nome;
+  document.getElementById("quem").textContent = textoQuem();
   document.getElementById("dia").value = hojeISO();
   await carregar();
   escutar();
