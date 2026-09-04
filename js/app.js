@@ -138,6 +138,7 @@ function aplicarTopoSessao() {
   preencherQuem();
   document.getElementById("cfg-wrap")?.classList.toggle("hidden", !ehAdmin());
   document.getElementById("btn-cfg")?.classList.toggle("on", aba === "tipos" || aba === "operadores");
+  document.getElementById("btn-relatorio")?.classList.toggle("on", aba === "relatorio");
   document.getElementById("cfg-menu")?.querySelectorAll("[data-cfg]").forEach((btn) => {
     btn.classList.toggle("on", aba === btn.dataset.cfg);
   });
@@ -419,7 +420,6 @@ function desenharAbas() {
   if (ehAdmin()) {
     abas.push({ id: "controle", label: "Dashboard", curto: "Painel", count: senhas.length });
   }
-  abas.push({ id: "relatorio", label: "Relatório", curto: "Relat.", count: senhas.length });
   abas.push({ id: "geral", label: "Senha geral", curto: "Geral", count: naFila() });
   abas.push(
     ...tipos.filter((t) => t.ativo).map((t) => ({
@@ -794,8 +794,8 @@ function htmlRelatorioTabela(lista) {
   if (!lista.length) {
     return `<p class="empty">Nada neste recorte. Limpa os filtros ou troca a data no topo.</p>`;
   }
-  return `<div class="planilha-wrap rel-wrap">
-    <table class="planilha rel-tabela table-cartoes">
+  return `<div class="rel-wrap">
+    <table class="rel-tabela table-cartoes">
       <thead>
         <tr>
           <th>Senha</th>
@@ -913,11 +913,11 @@ function telaRelatorio() {
     <div class="card-topo">
       <div>
         <h2>Relatório</h2>
-        <p class="muted form-dica">Detalhe do dia ${escapar(dataLegivel(diaAtual()))}. Filtra e tira CSV ou imprime. A data no topo troca o dia.</p>
+        <p class="muted form-dica">Dia ${escapar(dataLegivel(diaAtual()))} na tela. Filtra aqui. A data no topo troca o dia. Imprimir também serve para salvar em PDF.</p>
       </div>
       <div class="topo-acoes rel-acoes">
         <button type="button" class="btn ghost" data-acao="baixar-relatorio">Baixar CSV</button>
-        <button type="button" class="btn primary" data-acao="imprimir-relatorio">Imprimir</button>
+        <button type="button" class="btn primary" data-acao="imprimir-relatorio">Imprimir / PDF</button>
       </div>
     </div>
     <p class="so-print">Senha JEC — ${escapar(dataLegivel(diaAtual()))} — <span id="rel-qtd-print">${lista.length}</span> senhas</p>
@@ -1946,6 +1946,10 @@ function ligarEventos() {
   document.getElementById("aviso-ok")?.addEventListener("click", fecharAviso);
   document.getElementById("aviso")?.addEventListener("click", (ev) => {
     if (ev.target.id === "aviso") fecharAviso();
+  });
+  document.getElementById("btn-relatorio")?.addEventListener("click", () => {
+    aba = "relatorio";
+    desenhar();
   });
   document.getElementById("btn-ajuda")?.addEventListener("click", abrirSobre);
   document.getElementById("login-ajuda")?.addEventListener("click", abrirSobre);

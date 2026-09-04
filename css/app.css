@@ -149,7 +149,8 @@ h2 { font-size: 18px; color: var(--ink); }
   background: #f4f6f9;
 }
 
-#btn-cfg.on {
+#btn-cfg.on,
+#btn-relatorio.on {
   background: rgba(13, 59, 94, 0.1);
 }
 
@@ -1629,13 +1630,15 @@ textarea {
   .top-dia .btn,
   #btn-sair,
   #btn-cfg,
-  #btn-ajuda {
+  #btn-ajuda,
+  #btn-relatorio {
     height: 40px;
     min-height: 40px;
   }
   #btn-cfg { padding: 0 12px; font-size: 14px; }
   #btn-ajuda { min-width: 40px; padding: 0 12px; }
-  #btn-sair, #btn-cfg, #btn-ajuda { white-space: nowrap; }
+  #btn-relatorio { padding: 0 10px; font-size: 14px; }
+  #btn-sair, #btn-cfg, #btn-ajuda, #btn-relatorio { white-space: nowrap; }
   .cfg-menu {
     right: 0;
     left: auto;
@@ -1657,6 +1660,17 @@ textarea {
   .espera-faixas { grid-template-columns: 1fr 1fr; }
   .card-topo { margin-bottom: 10px; flex-direction: column; align-items: stretch; }
   .dash-filtros label { flex: 1 1 calc(50% - 10px); min-width: 0; }
+  .rel-acoes.topo-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .rel-acoes.topo-acoes .btn {
+    flex: 1 1 calc(50% - 8px);
+    width: auto;
+    height: 48px;
+    min-height: 48px;
+  }
   .form-dica { font-size: 13px; margin-bottom: 10px; }
 
   .tabs {
@@ -1780,7 +1794,8 @@ textarea {
   }
   #btn-sair,
   #btn-cfg,
-  #btn-ajuda {
+  #btn-ajuda,
+  #btn-relatorio {
     height: 40px;
     min-height: 40px;
     font-size: 14px;
@@ -1979,8 +1994,41 @@ textarea {
 }
 
 .so-print { display: none; }
-.rel-tabela td { vertical-align: top; }
+
+.rel-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 8px;
+}
+.rel-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+@media (min-width: 801px) {
+  .rel-tabela { min-width: 920px; }
+}
+.rel-tabela th {
+  background: var(--dark);
+  color: #fff;
+  text-align: left;
+  padding: 10px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.rel-tabela td {
+  padding: 8px 8px;
+  vertical-align: top;
+  border-bottom: 1px solid #edf2f7;
+}
 .rel-tabela td .meta { margin-top: 2px; }
+.rel-tabela tr.aguardando,
+.rel-tabela tr.aguardando td { background: #fde8ec; }
+.rel-tabela tr.em-atendimento,
+.rel-tabela tr.em-atendimento td { background: #fff8d6; }
+.rel-tabela tr.atendida,
+.rel-tabela tr.atendida td { background: #e7f2fa; }
 
 @media print {
   .chrome,
@@ -1993,9 +2041,27 @@ textarea {
   .overlay,
   .tip-hora-flutuante { display: none !important; }
   .so-print { display: block; font-weight: 700; color: #000; margin: 0 0 12px; }
-  body, html { background: #fff; }
+  body, html { background: #fff; overflow: visible; }
   .shell { padding: 0; }
   .card { box-shadow: none; border: 0; padding: 0; }
+  .rel-wrap { overflow: visible; }
+  .rel-tabela,
+  .rel-tabela thead,
+  .rel-tabela tbody,
+  .rel-tabela tr,
+  .rel-tabela th,
+  .rel-tabela td {
+    display: revert !important;
+  }
+  .rel-tabela {
+    min-width: 0 !important;
+    width: 100%;
+    font-size: 11px;
+    border-collapse: collapse;
+  }
+  .rel-tabela thead { display: table-header-group !important; }
+  .rel-tabela td::before { display: none !important; }
+  .rel-tabela th, .rel-tabela td { padding: 4px 6px; border-bottom: 1px solid #ccc; }
   .planilha { min-width: 0; font-size: 11px; }
   .planilha-wrap { overflow: visible; }
   .planilha th, .planilha td { padding: 4px 6px; }

@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/app.css?v=36">
+  <link rel="stylesheet" href="css/app.css?v=37">
 </head>
 <body>
   <div id="setup" class="overlay hidden">
@@ -85,6 +85,7 @@
             <button type="button" role="menuitem" data-cfg="operadores">Operadores</button>
           </div>
         </div>
+        <button type="button" class="btn ghost" id="btn-relatorio"><span class="lab-wide">Relatório</span><span class="lab-narrow">Relat.</span></button>
         <button type="button" class="btn ghost" id="btn-ajuda" aria-haspopup="dialog"><span class="lab-wide">Como funciona</span><span class="lab-narrow">?</span></button>
         <button type="button" class="btn ghost" id="btn-sair">Sair</button>
       </div>
@@ -144,7 +145,7 @@
       <p>Rosa = espera · amarelo = em atendimento · azul = finalizado. Passa o mouse na hora para ver o histórico. Duas pessoas não pegam a mesma senha.</p>
 
       <h3>Relatório</h3>
-      <p>Filtra o dia (senha, nome, tipo, situação, pessoa), imprime ou baixa CSV. A data no topo troca o dia — chamada só vale hoje.</p>
+      <p>No topo, o botão Relatório abre o dia na tela. Filtra, lê a lista e, se precisar, imprime ou salva em PDF. A data no topo troca o dia — chamada só vale hoje.</p>
 
       <h3>Login</h3>
       <p>Usuário é <strong>primeiro.sobrenome</strong>. A senha desta mesa é o CPF.</p>
@@ -158,7 +159,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
   <script src="js/config.js"></script>
-  <script src="js/app.js?v=36"></script>
+  <script src="js/app.js?v=37"></script>
   <script src="js/pwa.js"></script>
 </body>
 </html>
