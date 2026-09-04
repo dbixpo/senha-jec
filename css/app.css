@@ -1195,34 +1195,32 @@ textarea {
 .setup-card h1, .login-body h1 { color: var(--dark); font-size: 24px; }
 .login-body form {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
   text-align: left;
 }
 .login-body .campo-login {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: inherit;
-  font-weight: inherit;
-  color: inherit;
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
 }
 .login-body .campo-login input {
-  flex: 1;
-  min-width: 0;
   width: 100%;
 }
 .login-body .campo-login .tip-balao {
-  left: auto;
-  right: 0;
+  left: 0;
+  right: auto;
   width: min(280px, calc(100vw - 40px));
   font-size: 12px;
   line-height: 1.45;
   text-align: left;
+  font-weight: 500;
 }
 .login-body .campo-login .tip-balao::before {
-  left: auto;
-  right: 6px;
+  left: 6px;
+  right: auto;
 }
 .login-body .btn { width: 100%; }
 .login-body .disclaimer,

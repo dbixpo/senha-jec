@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/app.css?v=44">
+  <link rel="stylesheet" href="css/app.css?v=45">
 </head>
 <body>
   <div id="setup" class="overlay hidden">
@@ -37,21 +37,27 @@
   <div id="login" class="overlay hidden">
     <div class="login-card">
       <div class="login-body">
-        <img class="logo-login" src="img/logo-login.png?v=44" alt="Senha JEC">
+        <img class="logo-login" src="img/logo-login.png?v=45" alt="Senha JEC">
         <form id="form-login">
           <div class="campo-login">
-            <input id="login-usuario" type="text" autocomplete="username" required aria-label="Usuário">
-            <span class="tip">
-              <button type="button" class="tip-btn" aria-label="Como preencher o usuário">?</button>
-              <span class="tip-balao" role="tooltip">O usuário é criado considerando o primeiro nome e o sobrenome do usuário, por exemplo, “Nelson Salvador Teixeira” teria como usuário nelson.salvador</span>
+            <span class="lab-linha">
+              <label for="login-usuario">Usuário</label>
+              <span class="tip">
+                <button type="button" class="tip-btn" aria-label="Como preencher o usuário">?</button>
+                <span class="tip-balao" role="tooltip">O usuário é criado considerando o primeiro nome e o sobrenome do usuário, por exemplo, “Nelson Salvador Teixeira” teria como usuário nelson.salvador</span>
+              </span>
             </span>
+            <input id="login-usuario" type="text" autocomplete="username" required>
           </div>
           <div class="campo-login">
-            <input id="login-senha" type="password" autocomplete="current-password" inputmode="numeric" required aria-label="Senha">
-            <span class="tip">
-              <button type="button" class="tip-btn" aria-label="Qual é a senha">?</button>
-              <span class="tip-balao" role="tooltip">A senha padrão do sistema é o CPF do usuário</span>
+            <span class="lab-linha">
+              <label for="login-senha">Senha</label>
+              <span class="tip">
+                <button type="button" class="tip-btn" aria-label="Qual é a senha">?</button>
+                <span class="tip-balao" role="tooltip">A senha padrão do sistema é o CPF do usuário</span>
+              </span>
             </span>
+            <input id="login-senha" type="password" autocomplete="current-password" inputmode="numeric" required>
           </div>
           <p id="login-erro" class="erro hidden"></p>
           <button class="btn primary" type="submit">Entrar</button>
@@ -69,7 +75,7 @@
     <div class="faixa" aria-hidden="true"></div>
     <header class="top">
       <div class="brand">
-        <img class="logo-top" src="img/logo-topbar.png?v=44" alt="Senha JEC">
+        <img class="logo-top" src="img/logo-topbar.png?v=45" alt="Senha JEC">
       </div>
       <span id="live" class="live hidden" title="Atualização ao vivo">ao vivo</span>
       <div class="top-actions hidden">
@@ -155,7 +161,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
   <script src="js/config.js"></script>
-  <script src="js/app.js?v=44"></script>
+  <script src="js/app.js?v=45"></script>
   <script src="js/pwa.js"></script>
 </body>
 </html>
