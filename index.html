@@ -10,12 +10,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Senha JEC</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="img/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/app.css?v=40">
+  <link rel="stylesheet" href="css/app.css?v=41">
 </head>
 <body>
   <div id="setup" class="overlay hidden">
@@ -37,7 +37,7 @@
   <div id="login" class="overlay hidden">
     <div class="login-card">
       <div class="login-body">
-        <p class="eyebrow">Senha JEC</p>
+        <img class="logo-login" src="img/logo-login.png" alt="Senha JEC">
         <h1>Entrar na fila</h1>
         <p class="muted">A senha é o CPF.</p>
         <form id="form-login">
@@ -70,10 +70,7 @@
     <div class="faixa" aria-hidden="true"></div>
     <header class="top">
       <div class="brand">
-        <div>
-          <p class="eyebrow">Controle de senhas</p>
-          <h1>Senha JEC</h1>
-        </div>
+        <img class="logo-top" src="img/logo-topbar.png" alt="Senha JEC">
       </div>
       <span id="live" class="live hidden" title="Atualização ao vivo">ao vivo</span>
       <div class="top-actions hidden">
@@ -159,7 +156,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
   <script src="js/config.js"></script>
-  <script src="js/app.js?v=40"></script>
+  <script src="js/app.js?v=41"></script>
   <script src="js/pwa.js"></script>
 </body>
 </html>

@@ -1,11 +1,13 @@
-const CACHE = "senha-jec-v40";
+const CACHE = "senha-jec-v41";
 const SHELL = [
   "./",
   "./index.html",
   "./css/app.css",
   "./js/app.js",
   "./js/pwa.js",
-  "./img/favicon.svg",
+  "./img/favicon.png",
+  "./img/logo-topbar.png",
+  "./img/logo-login.png",
   "./img/preferencial.png",
   "./img/pref/cadeira.png",
   "./img/pref/idoso.png",

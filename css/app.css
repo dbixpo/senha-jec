@@ -82,7 +82,23 @@ h2 { font-size: 18px; color: var(--ink); }
   border-bottom: 3px solid #0d3b5e;
 }
 
-.brand h1 { padding: 0; border: 0; color: var(--dark); }
+.brand {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.logo-top {
+  display: block;
+  height: 42px;
+  width: auto;
+  max-width: min(280px, 46vw);
+}
+.logo-login {
+  display: block;
+  width: min(200px, 72%);
+  height: auto;
+  margin: 0 auto 2px;
+}
 
 .top .eyebrow { color: #6b4e00; }
 
@@ -1647,7 +1663,7 @@ textarea {
     padding: 8px 12px 10px;
   }
   .brand { grid-area: brand; min-width: 0; }
-  .brand h1 { font-size: 18px; }
+  .logo-top { height: 34px; max-width: min(200px, 52vw); }
   .live {
     grid-area: brand;
     justify-self: end;
