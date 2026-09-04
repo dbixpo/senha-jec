@@ -93,6 +93,16 @@ create index if not exists senhas_dia_setor_idx on senhas (data, setor_id, statu
 create index if not exists senhas_dia_servico_idx on senhas (data, servico_id);
 create index if not exists senhas_dia_atendido_idx on senhas (data, atendido_por);
 
+create table if not exists historico_chamadas (
+  id uuid primary key default gen_random_uuid(),
+  senha_id uuid not null references senhas (id) on delete cascade,
+  tipo_id uuid references tipos_atendimento (id),
+  chamado_por uuid references operadores (id),
+  chamado_em timestamptz not null default now(),
+  local text not null default ''
+);
+create index if not exists historico_senha_idx on historico_chamadas (senha_id, chamado_em);
+
 create or replace function senhas_auto_numero()
 returns trigger
 language plpgsql
@@ -225,7 +235,8 @@ set search_path = public
 as $$
 declare
   alvo senhas%rowtype;
-  quem text;
+  local_nome text;
+  primeira boolean := false;
 begin
   if p_operador is null then
     return json_build_object('ok', false, 'motivo', 'sem_operador');
@@ -236,20 +247,30 @@ begin
     return json_build_object('ok', false, 'motivo', 'nao_encontrada');
   end if;
 
-  if alvo.hora_atendimento is not null and alvo.atendido_por is distinct from p_operador then
-    select nome into quem from operadores where id = alvo.atendido_por;
-    return json_build_object('ok', false, 'motivo', 'ja_chamada', 'com', coalesce(quem, 'outra pessoa'));
+  select coalesce(t.nome, '') into local_nome
+  from tipos_atendimento t
+  where t.id = alvo.tipo_id;
+
+  if alvo.hora_atendimento is null then
+    primeira := true;
+    update senhas
+    set hora_atendimento = coalesce(p_hora, timezone('utc', now())),
+        status = 'em_atendimento',
+        atendido_por = p_operador,
+        updated_by = p_operador
+    where id = p_id
+    returning * into alvo;
+  else
+    update senhas
+    set updated_by = p_operador
+    where id = p_id
+    returning * into alvo;
   end if;
 
-  update senhas
-  set hora_atendimento = coalesce(p_hora, timezone('utc', now())),
-      status = 'em_atendimento',
-      atendido_por = p_operador,
-      updated_by = p_operador
-  where id = p_id
-  returning * into alvo;
+  insert into historico_chamadas (senha_id, tipo_id, chamado_por, local)
+  values (alvo.id, alvo.tipo_id, p_operador, coalesce(local_nome, ''));
 
-  return json_build_object('ok', true, 'senha', row_to_json(alvo));
+  return json_build_object('ok', true, 'primeira', primeira, 'senha', row_to_json(alvo));
 end;
 $$;
 
@@ -332,6 +353,7 @@ alter table senhas enable row level security;
 alter table operadores enable row level security;
 alter table servicos enable row level security;
 alter table tipos_atendimento enable row level security;
+alter table historico_chamadas enable row level security;
 
 drop policy if exists setores_publico on setores;
 create policy setores_publico on setores for all using (true) with check (true);
@@ -348,11 +370,15 @@ create policy servicos_publico on servicos for all using (true) with check (true
 drop policy if exists tipos_publico on tipos_atendimento;
 create policy tipos_publico on tipos_atendimento for all using (true) with check (true);
 
+drop policy if exists historico_publico on historico_chamadas;
+create policy historico_publico on historico_chamadas for all using (true) with check (true);
+
 alter table senhas replica identity full;
 alter table setores replica identity full;
 alter table servicos replica identity full;
 alter table operadores replica identity full;
 alter table tipos_atendimento replica identity full;
+alter table historico_chamadas replica identity full;
 
 do $$
 begin
@@ -370,6 +396,10 @@ begin
   end;
   begin
     alter publication supabase_realtime add table tipos_atendimento;
+  exception when duplicate_object then null;
+  end;
+  begin
+    alter publication supabase_realtime add table historico_chamadas;
   exception when duplicate_object then null;
   end;
 end;

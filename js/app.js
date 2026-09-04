@@ -7,6 +7,7 @@ let sessao = null;
 let tipos = [];
 let operadores = [];
 let senhas = [];
+let chamadas = [];
 let aba = "geral";
 let canal = null;
 let verTudo = false;
@@ -133,8 +134,7 @@ function rotuloSenha(senha) {
   return senha.preferencial ? "P" + n : n;
 }
 
-function rotuloProxima(tipoId, preferencial) {
-  if (!tipoId) return "—";
+function rotuloProxima(preferencial) {
   const n = padSenha(proximoNumero());
   return preferencial ? "P" + n : n;
 }
@@ -207,6 +207,17 @@ async function carregar() {
   tipos = resultados[0].data || [];
   senhas = resultados[1].data || [];
   operadores = resultados[2]?.data || [];
+  const ids = senhas.map((s) => s.id);
+  if (ids.length) {
+    const hist = await sb.from("historico_chamadas").select("*").in("senha_id", ids).order("chamado_em");
+    if (hist.error) mostrarErro(hist.error.message);
+    chamadas = hist.data || [];
+  } else {
+    chamadas = [];
+  }
+  for (const s of senhas) {
+    s.chamadas = chamadas.filter((c) => c.senha_id === s.id);
+  }
   if (!estaEditando()) desenhar();
 }
 
@@ -215,6 +226,7 @@ function escutar() {
   canal = sb
     .channel("senha-jec-ao-vivo")
     .on("postgres_changes", { event: "*", schema: "public", table: "senhas" }, () => carregar())
+    .on("postgres_changes", { event: "*", schema: "public", table: "historico_chamadas" }, () => carregar())
     .on("postgres_changes", { event: "*", schema: "public", table: "tipos_atendimento" }, () => carregar())
     .subscribe((status) => {
       document.getElementById("live").classList.toggle("off", status !== "SUBSCRIBED");
@@ -262,58 +274,42 @@ function checksTipoForm() {
     </label>`).join("");
 }
 
-function checksTipoLinha(senha) {
-  const ativos = tipos.filter((t) => t.ativo || t.id === senha.tipo_id);
-  return `<div class="tipo-mini">${ativos.map((t) => `
-    <label class="chip-check mini">
-      <input type="radio" name="tipo-${senha.id}" data-campo="tipo_id" data-id="${senha.id}" value="${t.id}" ${t.id === senha.tipo_id ? "checked" : ""}>
-      <span class="chip-check-ui" title="${escapar(t.nome)}" style="--tipo:${escapar(t.cor)}">${escapar(t.sigla)}</span>
-    </label>`).join("")}</div>`;
-}
-
 function badgeTipo(senha) {
   const t = tipoDe(senha.tipo_id);
   if (!t) return `<span class="sigla">—</span>`;
   return `<span class="sigla" style="background:${escapar(t.cor)}">${escapar(t.sigla)}</span>`;
 }
 
-function celulaHora(senha, campo, { editar = false, chamou = false } = {}) {
-  const valor = hora(senha[campo]);
-  if (!editar) {
-    const quem = senha.atendido_por && campo === "hora_atendimento"
-      ? ` <span class="com-quem">${senha.atendido_por === sessao.id ? "com você" : "com " + escapar(nomeOperador(senha.atendido_por))}</span>`
-      : "";
-    return `<span class="hora-lida">${valor || "—"}${quem}</span>`;
-  }
-  const deOutro = campo === "hora_atendimento" && senha.hora_atendimento && senha.atendido_por && senha.atendido_por !== sessao.id && !ehAdmin();
-  const check = chamou
-    ? `<label class="check-hora ${deOutro ? "travado" : ""}"><input type="checkbox" data-acao="toggle-atendimento" data-id="${senha.id}" ${senha.hora_atendimento ? "checked" : ""} ${deOutro ? "disabled" : ""}> Chamou${
-        senha.atendido_por
-          ? ` <span class="com-quem">${senha.atendido_por === sessao.id ? "com você" : "com " + escapar(nomeOperador(senha.atendido_por))}</span>`
-          : ""
-      }</label>`
-    : "";
-  return `<div class="hora-cell">
-    ${check}
-    <input type="time" data-campo="${campo}" data-id="${senha.id}" value="${escapar(valor)}" ${deOutro ? "disabled" : ""}>
-    <button type="button" class="btn ghost small" data-acao="agora" data-campo="${campo}" data-id="${senha.id}" ${deOutro ? "disabled" : ""}>Agora</button>
+function htmlHistorico(senha) {
+  const lista = senha.chamadas || [];
+  if (!lista.length) return `<span class="hora-lida">—</span>`;
+  const linhas = lista.map((c) => {
+    const quem = c.chamado_por === sessao.id ? "você" : nomeOperador(c.chamado_por);
+    const onde = c.local || tipoDe(c.tipo_id)?.nome || "";
+    return `<li><time>${escapar(hora(c.chamado_em) || "—")}</time> · ${escapar(quem)}${onde ? " · " + escapar(onde) : ""}</li>`;
+  }).join("");
+  return `<div class="hist-chamadas">
+    <strong>${escapar(hora(senha.hora_atendimento) || hora(lista[0].chamado_em) || "—")}</strong>
+    ${lista.length > 1 ? `<span class="chip pref">${lista.length}x</span>` : ""}
+    <ul class="hist-lista">${linhas}</ul>
   </div>`;
 }
 
 function linhaSenha(senha, { chamar = false } = {}) {
   const atendida = !!senha.hora_atendimento;
+  const acao = chamar
+    ? `<td class="cel-acao" data-label="Chamar">
+        <button type="button" class="btn primary small" data-acao="chamar-senha" data-id="${senha.id}">${atendida ? "Chamar de novo" : "Chamar"}</button>
+      </td>`
+    : "";
   return `<tr class="${atendida ? "atendida" : "aguardando"} ${senha.preferencial ? "pref" : ""}">
-    <td class="cel-tipo" data-label="Tipo">${chamar ? badgeTipo(senha) : checksTipoLinha(senha)}</td>
-    <td class="cel-num col-num" data-label="Senha">
-      <button type="button" class="btn ghost small num-btn" data-acao="corrigir" data-id="${senha.id}">${escapar(rotuloSenha(senha))}</button>
-    </td>
-    <td class="cel-pref col-pref" data-label="Preferencial">
-      <label class="pref-lab"><input type="checkbox" data-campo="preferencial" data-id="${senha.id}" ${senha.preferencial ? "checked" : ""} ${chamar ? "disabled" : ""}> <span class="pref-curto">P</span><span class="pref-longo">Preferencial</span></label>
-    </td>
-    <td class="cel-rec" data-label="Hora da recepção">${celulaHora(senha, "hora_recepcao", { editar: !chamar })}</td>
-    <td class="cel-atend" data-label="Hora do atendimento">${celulaHora(senha, "hora_atendimento", { editar: chamar, chamou: chamar })}</td>
-    <td class="cel-nome" data-label="Nome">${chamar ? `<span class="hora-lida">${escapar(senha.nome || "—")}</span>` : `<input type="text" data-campo="nome" data-id="${senha.id}" value="${escapar(senha.nome || "")}" placeholder="Nome de quem está sendo atendido">`}</td>
-    <td class="cel-proc" data-label="Nº processo">${chamar ? `<span class="hora-lida">${escapar(senha.processo || "—")}</span>` : `<input type="text" data-campo="processo" data-id="${senha.id}" value="${escapar(senha.processo || "")}" placeholder="nº processo ou observação">`}</td>
+    <td class="cel-num col-num" data-label="Senha"><span class="senha-num">${escapar(rotuloSenha(senha))}</span></td>
+    <td class="cel-rec" data-label="Hora da recepção"><span class="hora-lida">${escapar(hora(senha.hora_recepcao) || "—")}</span></td>
+    <td class="cel-atend" data-label="Hora do atendimento">${htmlHistorico(senha)}</td>
+    <td class="cel-nome" data-label="Nome"><span class="hora-lida">${escapar(senha.nome || "—")}</span></td>
+    <td class="cel-tipo" data-label="Tipo">${badgeTipo(senha)}</td>
+    <td class="cel-proc" data-label="Nº processo"><span class="hora-lida">${escapar(senha.processo || "—")}</span></td>
+    ${acao}
   </tr>`;
 }
 
@@ -333,13 +329,13 @@ function tabelaFila(lista, { chamar = false } = {}) {
     <table class="planilha">
       <thead>
         <tr>
-          <th>Tipo</th>
-          <th>Nº senha</th>
-          <th>Pref.</th>
+          <th>Senha</th>
           <th>Hora recepção</th>
           <th>Hora atendimento</th>
           <th>Nome</th>
+          <th>Tipo</th>
           <th>Nº processo</th>
+          ${chamar ? "<th></th>" : ""}
         </tr>
       </thead>
       <tbody>${linhas.map((s) => linhaSenha(s, { chamar })).join("")}</tbody>
@@ -373,34 +369,36 @@ function telaGeral() {
       <div class="card-topo">
         <div>
           <h2>Senha geral</h2>
-          <p class="muted form-dica dica-web">Marca o tipo: sai o número e a hora. Preferencial vira P01, P02… A senha é uma só, sequencial. Rosa = esperando · azul = já chamaram nas abas de dentro.</p>
-          <p class="muted form-dica dica-mobile">Marca o tipo → sai a senha (01, 02… ou P01). Depois o nome e registra. Para chamar, entra na aba do tipo.</p>
+          <p class="muted form-dica">Preenche nome e tipo e clica em <strong>Registrar senha</strong> — o número e a hora da recepção saem na hora. Preferencial vira P01. Para chamar, usa a aba do tipo.</p>
         </div>
         ${legendaTipos()}
       </div>
       <form id="form-chegada" class="form-chegada">
         <input type="hidden" id="campo-tipo" value="">
+        <div class="form-linha form-linha-campos">
+          <div class="campo campo-senha">
+            <span>Senha</span>
+            <strong id="campo-senha-rotulo" class="senha-valor">${rotuloProxima(false)}</strong>
+          </div>
+          <div class="campo campo-hora">
+            <span>Hora da recepção</span>
+            <strong class="senha-valor senha-hora-dica">ao registrar</strong>
+          </div>
+          <label class="campo campo-nome">Nome da pessoa
+            <input id="campo-nome" type="text" placeholder="Quem está sendo atendido" required autocomplete="off">
+          </label>
+        </div>
         <div class="form-linha">
           <fieldset class="campo campo-tipos">
-            <legend><span class="n-passo">1</span> Tipo de atendimento</legend>
+            <legend>Tipo de atendimento</legend>
             <div class="tipo-checks">${checksTipoForm()}</div>
           </fieldset>
           <label class="chip-check pref-chegada">
             <input id="campo-pref" type="checkbox">
-            <span class="chip-check-ui"><span class="n-passo">2</span> Preferencial</span>
+            <span class="chip-check-ui">Preferencial</span>
           </label>
         </div>
         <div class="form-linha form-linha-campos">
-          <div class="campo campo-senha">
-            <span><span class="n-passo">3</span> Senha</span>
-            <strong id="campo-senha-rotulo" class="senha-valor">—</strong>
-          </div>
-          <label class="campo campo-hora">Hora da recepção
-            <input id="campo-hora-rec" type="time" value="">
-          </label>
-          <label class="campo campo-nome"><span class="n-passo">4</span> Nome da pessoa
-            <input id="campo-nome" type="text" placeholder="Quem está sendo atendido" required autocomplete="off">
-          </label>
           <label class="campo campo-processo">Nº processo
             <input id="campo-processo" type="text" placeholder="Número, CPF, voltou…" autocomplete="off">
           </label>
@@ -431,7 +429,7 @@ function telaTipo(tipo) {
     <div class="card-topo">
       <div>
         <h2>${escapar(tipo.nome)}</h2>
-        <p class="muted form-dica">Use <strong>Chamar próxima</strong> para pegar a primeira da fila. Se duas pessoas clicarem juntas, cada uma leva uma senha diferente.</p>
+        <p class="muted form-dica">O botão <strong>Chamar</strong> grava a hora, quem chamou e o local. Se a pessoa disser que não ouviu, chama de novo — fica no histórico.</p>
         <p id="fila-dica" class="muted form-dica">${verTudo ? "Inclui quem já foi atendido." : "Só quem ainda está na fila."}</p>
       </div>
       <div class="topo-acoes">
@@ -506,7 +504,7 @@ function telaControle() {
   const porPessoa = operadores
     .map((o) => {
       const registrou = senhas.filter((s) => s.created_by === o.id).length;
-      const chamou = senhas.filter((s) => s.atendido_por === o.id).length;
+      const chamou = chamadas.filter((c) => c.chamado_por === o.id).length;
       return { o, registrou, chamou };
     })
     .filter((x) => x.registrou || x.chamou || x.o.ativo)
@@ -670,18 +668,13 @@ function tipoChegadaSelecionado() {
   return document.querySelector("#form-chegada input[name=tipo-chegada]:checked")?.value || "";
 }
 
-function atualizarChegada(preencherHora) {
+function atualizarChegada() {
   const tipoId = tipoChegadaSelecionado();
   const pref = document.getElementById("campo-pref")?.checked;
   const hidden = document.getElementById("campo-tipo");
   const rotulo = document.getElementById("campo-senha-rotulo");
-  const horaEl = document.getElementById("campo-hora-rec");
   if (hidden) hidden.value = tipoId;
-  if (rotulo) rotulo.textContent = rotuloProxima(tipoId, pref);
-  if (tipoId && horaEl && (preencherHora || !horaEl.value)) {
-    horaEl.value = agoraHHMM();
-  }
-  if (!tipoId && horaEl && preencherHora) horaEl.value = "";
+  if (rotulo) rotulo.textContent = rotuloProxima(pref);
 }
 
 function onChegadaCampos(ev) {
@@ -691,12 +684,10 @@ function onChegadaCampos(ev) {
     document.querySelectorAll("#form-chegada input[name=tipo-chegada]").forEach((box) => {
       box.checked = box.value === escolhido;
     });
-    atualizarChegada(true);
-    const nome = document.getElementById("campo-nome");
-    if (nome && !nome.value) nome.focus();
+    atualizarChegada();
     return;
   }
-  if (el.id === "campo-pref") atualizarChegada(false);
+  if (el.id === "campo-pref") atualizarChegada();
 }
 
 async function onChegada(ev) {
@@ -707,7 +698,6 @@ async function onChegada(ev) {
   const nome = document.getElementById("campo-nome").value.trim();
   const tipoId = tipoChegadaSelecionado() || document.getElementById("campo-tipo").value;
   const preferencial = document.getElementById("campo-pref").checked;
-  const horaRec = document.getElementById("campo-hora-rec").value;
   const processo = document.getElementById("campo-processo").value.trim();
   if (!tipoId) {
     erro.textContent = "Marca o tipo de atendimento para gerar a senha.";
@@ -728,7 +718,7 @@ async function onChegada(ev) {
     tipo_id: tipoId,
     preferencial,
     processo,
-    hora_recepcao: isoDoDia(horaRec) || new Date().toISOString(),
+    hora_recepcao: new Date().toISOString(),
     status: "na_fila",
     created_by: sessao.id,
     updated_by: sessao.id,
@@ -743,8 +733,7 @@ async function onChegada(ev) {
   }
   ev.target.reset();
   document.getElementById("campo-tipo").value = "";
-  document.getElementById("campo-senha-rotulo").textContent = "—";
-  document.getElementById("campo-hora-rec").value = "";
+  document.getElementById("campo-senha-rotulo").textContent = rotuloProxima(false);
   await carregar();
 }
 
@@ -841,6 +830,25 @@ async function onAcao(ev) {
   if (!btn || btn.disabled) return;
   const id = btn.dataset.id;
   const acao = btn.dataset.acao;
+
+  if (acao === "chamar-senha") {
+    if (!podeChamar()) return;
+    btn.disabled = true;
+    const { data, error } = await sb.rpc("chamar_senha", { p_id: id, p_operador: sessao.id });
+    btn.disabled = false;
+    if (error) mostrarErro(error.message);
+    else if (avisoChamada(data) && data.senha) {
+      const n = rotuloSenha(data.senha);
+      const nome = data.senha.nome || "";
+      if (data.primeira) {
+        mostrarErro(`Chamou a senha ${n}${nome ? " — " + nome : ""}.`);
+      } else {
+        mostrarErro(`Chamada de novo registrada: senha ${n}${nome ? " — " + nome : ""}.`);
+      }
+    }
+    await carregar();
+    return;
+  }
 
   if (acao === "chamar-proxima") {
     if (!podeChamar()) return;
