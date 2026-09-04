@@ -15,10 +15,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/app.css?v=13">
+  <link rel="stylesheet" href="css/app.css?v=14">
 </head>
 <body>
-  <div class="faixa" aria-hidden="true"></div>
   <div id="setup" class="overlay hidden">
     <div class="setup-card">
       <p class="eyebrow">Primeiro uso</p>
@@ -56,26 +55,35 @@
     </div>
   </div>
 
-  <header class="top">
-    <div class="brand">
-      <div>
-      <p class="eyebrow">Controle de senhas</p>
-      <h1>Senha JEC</h1>
+  <div class="chrome">
+    <div class="faixa" aria-hidden="true"></div>
+    <header class="top">
+      <div class="brand">
+        <div>
+          <p class="eyebrow">Controle de senhas</p>
+          <h1>Senha JEC</h1>
+        </div>
       </div>
-    </div>
-    <span id="live" class="live" title="Atualização ao vivo">ao vivo</span>
-    <div class="top-actions">
-      <p id="quem" class="quem"></p>
-      <div class="top-dia">
-        <label class="date-wrap">
-          <span>Fila do dia</span>
-          <input type="date" id="dia">
-        </label>
-        <button type="button" class="btn ghost" id="btn-hoje">Hoje</button>
+      <span id="live" class="live hidden" title="Atualização ao vivo">ao vivo</span>
+      <div class="top-actions hidden">
+        <div id="quem" class="quem"></div>
+        <div class="top-dia">
+          <label class="date-wrap">
+            <span>Dia</span>
+            <input type="date" id="dia">
+          </label>
+        </div>
+        <div id="cfg-wrap" class="cfg-wrap hidden">
+          <button type="button" class="btn ghost" id="btn-cfg" aria-haspopup="true" aria-expanded="false">Configurações</button>
+          <div id="cfg-menu" class="cfg-menu hidden" role="menu">
+            <button type="button" role="menuitem" data-cfg="tipos">Tipos</button>
+            <button type="button" role="menuitem" data-cfg="operadores">Operadores</button>
+          </div>
+        </div>
+        <button type="button" class="btn ghost" id="btn-sair">Sair</button>
       </div>
-      <button type="button" class="btn ghost" id="btn-sair">Sair</button>
-    </div>
-  </header>
+    </header>
+  </div>
 
   <div class="shell">
   <nav id="tabs" class="tabs"></nav>
@@ -93,7 +101,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
   <script src="js/config.js"></script>
-  <script src="js/app.js?v=13"></script>
+  <script src="js/app.js?v=14"></script>
   <script src="js/pwa.js"></script>
 </body>
 </html>

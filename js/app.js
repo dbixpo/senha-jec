@@ -12,6 +12,7 @@ let aba = "geral";
 let canal = null;
 let verTudo = false;
 let enviandoChegada = false;
+let dashFiltro = { tipo: "", status: "todos", pref: "todos", pessoa: "" };
 
 function hojeISO() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -77,28 +78,52 @@ function dataLegivel(iso) {
 
 function aplicarDiaSessao() {
   const input = document.getElementById("dia");
-  const hoje = document.getElementById("btn-hoje");
   if (!input) return;
   if (!ehAdmin()) {
     input.value = hojeISO();
     input.disabled = true;
     input.title = "A fila do dia. Só administrador consulta outros dias.";
-    hoje?.classList.add("hidden");
   } else {
     if (!input.value) input.value = hojeISO();
     input.disabled = false;
     input.title = "Filtrar a fila por dia";
-    hoje?.classList.remove("hidden");
   }
+}
+
+function preencherQuem() {
+  const el = document.getElementById("quem");
+  if (!el) return;
+  if (!sessao) {
+    el.innerHTML = "";
+    return;
+  }
+  el.innerHTML = `<strong class="quem-nome">${escapar((sessao.nome || "").toUpperCase())}</strong><span class="quem-papel">${ehAdmin() ? "Administrador" : "Operador"}</span>`;
+}
+
+function aplicarTopoSessao() {
+  const actions = document.querySelector(".top-actions");
+  const live = document.getElementById("live");
+  if (!sessao) {
+    actions?.classList.add("hidden");
+    live?.classList.add("hidden");
+    const quem = document.getElementById("quem");
+    if (quem) quem.innerHTML = "";
+    document.getElementById("cfg-wrap")?.classList.add("hidden");
+    return;
+  }
+  actions?.classList.remove("hidden");
+  live?.classList.remove("hidden");
+  aplicarDiaSessao();
+  preencherQuem();
+  document.getElementById("cfg-wrap")?.classList.toggle("hidden", !ehAdmin());
+  document.getElementById("btn-cfg")?.classList.toggle("on", aba === "tipos" || aba === "operadores");
+  document.getElementById("cfg-menu")?.querySelectorAll("[data-cfg]").forEach((btn) => {
+    btn.classList.toggle("on", aba === btn.dataset.cfg);
+  });
 }
 
 function ehAdmin() {
   return sessao?.papel === "admin";
-}
-
-function textoQuem() {
-  if (!sessao) return "";
-  return `${sessao.nome} · ${ehAdmin() ? "Administrador" : "Operador"}`;
 }
 
 function operadorDe(id) {
@@ -207,13 +232,14 @@ function pedirLogin() {
   sessao = lerSessao();
   const box = document.getElementById("login");
   if (!sessao?.id) {
+    sessao = null;
+    aplicarTopoSessao();
     box.classList.remove("hidden");
     document.getElementById("login-usuario")?.focus();
     return false;
   }
   box.classList.add("hidden");
-  document.getElementById("quem").textContent = textoQuem();
-  aplicarDiaSessao();
+  aplicarTopoSessao();
   return true;
 }
 
@@ -268,20 +294,19 @@ function contarTipo(tipoId) {
 
 function desenharAbas() {
   const nav = document.getElementById("tabs");
-  const abas = [
-    { id: "geral", label: "Senha geral", count: naFila() },
+  const abas = [];
+  if (ehAdmin()) {
+    abas.push({ id: "controle", label: "Dashboard", count: senhas.length });
+  }
+  abas.push({ id: "geral", label: "Senha geral", count: naFila() });
+  abas.push(
     ...tipos.filter((t) => t.ativo).map((t) => ({
       id: "tipo-" + t.id,
       label: t.nome,
       count: contarTipo(t.id),
       cor: t.cor,
-    })),
-  ];
-  if (ehAdmin()) {
-    abas.push({ id: "controle", label: "Controle", count: senhas.length });
-    abas.push({ id: "tipos", label: "Tipos", count: tipos.filter((t) => t.ativo).length });
-    abas.push({ id: "operadores", label: "Operadores", count: operadores.filter((o) => o.ativo).length });
-  }
+    }))
+  );
   nav.innerHTML = abas
     .map(
       (item) =>
@@ -291,11 +316,12 @@ function desenharAbas() {
         </button>`
     )
     .join("");
+  aplicarTopoSessao();
 }
 
 function checksTipoForm() {
   const ativos = tipos.filter((t) => t.ativo);
-  if (!ativos.length) return `<p class="muted">${ehAdmin() ? "Cadastre um tipo primeiro, na aba Tipos." : "Peça a um administrador para cadastrar um tipo."}</p>`;
+  if (!ativos.length) return `<p class="muted">${ehAdmin() ? "Cadastre um tipo primeiro, em Configurações → Tipos." : "Peça a um administrador para cadastrar um tipo."}</p>`;
   return ativos.map((t) => `
     <label class="chip-check">
       <input type="checkbox" name="tipo-chegada" value="${t.id}">
@@ -478,7 +504,7 @@ function telaTipo(tipo) {
 function telaTipos() {
   return `<section class="card">
     <h2>Tipos de atendimento</h2>
-    <p class="muted form-dica">Cada tipo vira uma aba. Sigla e cor identificam na planilha.</p>
+    <p class="muted form-dica">Configurações do sistema. Cada tipo vira uma aba na fila. Sigla e cor identificam na planilha.</p>
     <form id="form-tipo" class="form-grid cadastro">
       <label>Nome
         <input id="tipo-nome" required placeholder="Ex.: Triagem">
@@ -519,80 +545,279 @@ function rotuloPapel(papel) {
   return papel === "admin" ? "Administrador" : "Operador";
 }
 
+function horaDoTs(ts) {
+  if (!ts) return null;
+  const parte = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TZ,
+    hour: "numeric",
+    hourCycle: "h23",
+  }).formatToParts(new Date(ts)).find((p) => p.type === "hour");
+  const n = Number(parte?.value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function minutosEntre(a, b) {
+  if (!a || !b) return null;
+  return Math.max(0, (new Date(b) - new Date(a)) / 60000);
+}
+
+function fmtMin(n) {
+  if (n == null || Number.isNaN(n)) return "—";
+  if (n < 1) return "< 1 min";
+  if (n < 60) return `${Math.round(n)} min`;
+  const h = Math.floor(n / 60);
+  const m = Math.round(n % 60);
+  return `${h}h${String(m).padStart(2, "0")}`;
+}
+
+function senhasDash() {
+  return senhas.filter((s) => {
+    if (dashFiltro.tipo && s.tipo_id !== dashFiltro.tipo) return false;
+    if (dashFiltro.status === "fila" && s.hora_atendimento) return false;
+    if (dashFiltro.status === "atendidas" && !s.hora_atendimento) return false;
+    if (dashFiltro.pref === "sim" && !s.preferencial) return false;
+    if (dashFiltro.pref === "nao" && s.preferencial) return false;
+    if (dashFiltro.pessoa) {
+      const chamou = (s.chamadas || []).some((c) => c.chamado_por === dashFiltro.pessoa);
+      if (s.created_by !== dashFiltro.pessoa && s.atendido_por !== dashFiltro.pessoa && !chamou) return false;
+    }
+    return true;
+  });
+}
+
+function svgDonut(fatias) {
+  const total = fatias.reduce((s, f) => s + f.valor, 0);
+  const r = 15.5;
+  const c = 2 * Math.PI * r;
+  if (!total) {
+    return `<svg class="donut" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="${r}" fill="none" stroke="#e2e8f0" stroke-width="4"></circle></svg>`;
+  }
+  let acc = 0;
+  const rings = fatias
+    .filter((f) => f.valor > 0)
+    .map((f) => {
+      const frac = f.valor / total;
+      const html = `<circle cx="18" cy="18" r="${r}" fill="none" stroke="${escapar(f.cor)}" stroke-width="4" stroke-dasharray="${(frac * c).toFixed(2)} ${(c - frac * c).toFixed(2)}" stroke-dashoffset="${(-acc * c).toFixed(2)}" transform="rotate(-90 18 18)"></circle>`;
+      acc += frac;
+      return html;
+    })
+    .join("");
+  return `<svg class="donut" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="${r}" fill="none" stroke="#eef2f6" stroke-width="4"></circle>${rings}</svg>`;
+}
+
+function ligarDash() {
+  const bind = (id, key) => {
+    document.getElementById(id)?.addEventListener("change", (ev) => {
+      dashFiltro[key] = ev.target.value;
+      desenhar();
+    });
+  };
+  bind("dash-tipo", "tipo");
+  bind("dash-status", "status");
+  bind("dash-pref", "pref");
+  bind("dash-pessoa", "pessoa");
+}
+
 function telaControle() {
-  const total = senhas.length;
-  const espera = naFila();
+  const lista = senhasDash();
+  const total = lista.length;
+  const espera = lista.filter((s) => !s.hora_atendimento).length;
   const feitas = total - espera;
-  const prefs = senhas.filter((s) => s.preferencial).length;
+  const prefs = lista.filter((s) => s.preferencial).length;
+  const esperas = lista.map((s) => minutosEntre(s.hora_recepcao, s.hora_atendimento)).filter((n) => n != null);
+  const mediaEspera = esperas.length ? esperas.reduce((a, b) => a + b, 0) / esperas.length : null;
+  const agora = Date.now();
+  const naFilaMin = lista
+    .filter((s) => !s.hora_atendimento && s.hora_recepcao)
+    .map((s) => Math.max(0, (agora - new Date(s.hora_recepcao)) / 60000));
+  const maisAntiga = naFilaMin.length ? Math.max(...naFilaMin) : null;
+
   const porTipo = tipos.map((t) => {
-    const lista = senhas.filter((s) => s.tipo_id === t.id);
+    const doTipo = lista.filter((s) => s.tipo_id === t.id);
     return {
       t,
-      total: lista.length,
-      espera: lista.filter((s) => !s.hora_atendimento).length,
-      feitas: lista.filter((s) => s.hora_atendimento).length,
+      total: doTipo.length,
+      espera: doTipo.filter((s) => !s.hora_atendimento).length,
+      feitas: doTipo.filter((s) => s.hora_atendimento).length,
     };
   });
+  const maxTipo = Math.max(1, ...porTipo.map((x) => x.total));
+  const donutFatias = porTipo.map((x) => ({ valor: x.total, cor: x.t.cor, nome: x.t.nome }));
+
+  const horasDados = lista.flatMap((s) => [s.hora_recepcao, s.hora_atendimento]).map(horaDoTs).filter((h) => h != null);
+  let hMin = 8;
+  let hMax = 18;
+  if (horasDados.length) {
+    hMin = Math.min(hMin, ...horasDados);
+    hMax = Math.max(hMax, ...horasDados);
+  }
+  const horas = [];
+  for (let h = hMin; h <= hMax; h += 1) horas.push(h);
+  const recPorHora = horas.map((h) => lista.filter((s) => horaDoTs(s.hora_recepcao) === h).length);
+  const atPorHora = horas.map((h) => lista.filter((s) => horaDoTs(s.hora_atendimento) === h).length);
+  const maxHora = Math.max(1, ...recPorHora, ...atPorHora);
+  const picoRec = recPorHora.reduce((melhor, n, i) => (n > (recPorHora[melhor] || 0) ? i : melhor), 0);
+
+  const faixas = [
+    { rotulo: "Até 5 min", n: esperas.filter((n) => n <= 5).length },
+    { rotulo: "5 a 15 min", n: esperas.filter((n) => n > 5 && n <= 15).length },
+    { rotulo: "15 a 30 min", n: esperas.filter((n) => n > 15 && n <= 30).length },
+    { rotulo: "Mais de 30", n: esperas.filter((n) => n > 30).length },
+  ];
+
+  const idsLista = new Set(lista.map((s) => s.id));
+  const chamadasDash = chamadas.filter((c) => idsLista.has(c.senha_id));
   const porPessoa = operadores
     .map((o) => {
-      const registrou = senhas.filter((s) => s.created_by === o.id).length;
-      const chamou = chamadas.filter((c) => c.chamado_por === o.id).length;
-      return { o, registrou, chamou };
+      const registrou = lista.filter((s) => s.created_by === o.id).length;
+      const chamou = chamadasDash.filter((c) => c.chamado_por === o.id).length;
+      return { o, registrou, chamou, total: registrou + chamou };
     })
-    .filter((x) => x.registrou || x.chamou || x.o.ativo)
-    .sort((a, b) => b.registrou + b.chamou - (a.registrou + a.chamou));
+    .filter((x) => x.total || x.o.ativo)
+    .sort((a, b) => b.total - a.total);
+  const maxPessoa = Math.max(1, ...porPessoa.map((x) => x.total));
+
+  const optsTipo = tipos.map((t) => `<option value="${t.id}" ${dashFiltro.tipo === t.id ? "selected" : ""}>${escapar(t.nome)}</option>`).join("");
+  const optsPessoa = operadores
+    .filter((o) => o.ativo || lista.some((s) => s.created_by === o.id || s.atendido_por === o.id))
+    .map((o) => `<option value="${o.id}" ${dashFiltro.pessoa === o.id ? "selected" : ""}>${escapar(o.nome)}</option>`)
+    .join("");
 
   return `<section class="card">
     <div class="card-topo">
       <div>
-        <h2>Controle da produção</h2>
-        <p class="muted form-dica">${ehHoje() ? "Acompanha o dia de todo mundo." : `Produção de ${dataLegivel(diaAtual())}.`} Administrador também registra senha na aba Senha geral, no dia de hoje.</p>
+        <h2>Dashboard</h2>
+        <p class="muted form-dica">${ehHoje() ? "Produção de hoje, ao vivo." : `Produção de ${dataLegivel(diaAtual())}.`} A data no topo troca o dia. Os filtros abaixo recortam o que está na tela.</p>
       </div>
     </div>
+    <div class="dash-filtros">
+      <label>Tipo
+        <select id="dash-tipo">
+          <option value="">Todos</option>
+          ${optsTipo}
+        </select>
+      </label>
+      <label>Situação
+        <select id="dash-status">
+          <option value="todos" ${dashFiltro.status === "todos" ? "selected" : ""}>Todas</option>
+          <option value="fila" ${dashFiltro.status === "fila" ? "selected" : ""}>Na fila</option>
+          <option value="atendidas" ${dashFiltro.status === "atendidas" ? "selected" : ""}>Atendidas</option>
+        </select>
+      </label>
+      <label>Preferencial
+        <select id="dash-pref">
+          <option value="todos" ${dashFiltro.pref === "todos" ? "selected" : ""}>Todas</option>
+          <option value="sim" ${dashFiltro.pref === "sim" ? "selected" : ""}>Só preferencial</option>
+          <option value="nao" ${dashFiltro.pref === "nao" ? "selected" : ""}>Sem preferencial</option>
+        </select>
+      </label>
+      <label>Pessoa
+        <select id="dash-pessoa">
+          <option value="">Todo mundo</option>
+          ${optsPessoa}
+        </select>
+      </label>
+    </div>
     <div class="kpis">
-      <div class="kpi"><span>Senhas do dia</span><strong>${total}</strong></div>
-      <div class="kpi"><span>Na fila</span><strong>${espera}</strong></div>
-      <div class="kpi"><span>Atendidas</span><strong>${feitas}</strong></div>
-      <div class="kpi"><span>Preferencial</span><strong>${prefs}</strong></div>
+      <div class="kpi"><span>Senhas</span><strong>${total}</strong><small>${senhas.length === total ? "no dia" : `de ${senhas.length} no dia`}</small></div>
+      <div class="kpi fila"><span>Na fila</span><strong>${espera}</strong><small>${maisAntiga == null ? "ninguém esperando" : "mais antiga " + fmtMin(maisAntiga)}</small></div>
+      <div class="kpi ok"><span>Atendidas</span><strong>${feitas}</strong><small>${total ? Math.round((feitas / total) * 100) + "% do recorte" : "—"}</small></div>
+      <div class="kpi pref"><span>Preferencial</span><strong>${prefs}</strong><small>espera média ${fmtMin(mediaEspera)}</small></div>
+    </div>
+  </section>
+  <div class="dash-grid">
+    <section class="card">
+      <h2>Por tipo</h2>
+      ${
+        total
+          ? `<div class="dash-split">
+              ${svgDonut(donutFatias)}
+              <ul class="dash-legenda">
+                ${porTipo
+                  .map(
+                    (x) => `<li>
+                      <i class="dash-dot" style="background:${escapar(x.t.cor)}"></i>
+                      <span>${escapar(x.t.sigla)} · ${escapar(x.t.nome)}</span>
+                      <strong>${x.total}</strong>
+                    </li>`
+                  )
+                  .join("")}
+              </ul>
+            </div>
+            <div class="bar-h-row">
+              ${porTipo
+                .map(
+                  (x) => `<div>
+                    <div class="bar-h-lab"><span>${escapar(x.t.nome)}</span><span>${x.feitas} atend. · ${x.espera} fila</span></div>
+                    <div class="bar-h" title="${x.total} senhas">
+                      <i style="width:${(x.feitas / maxTipo) * 100}%;background:#19a88b"></i>
+                      <i style="width:${(x.espera / maxTipo) * 100}%;background:#e63030"></i>
+                    </div>
+                  </div>`
+                )
+                .join("")}
+            </div>`
+          : `<p class="dash-vazio">Sem senha neste recorte para montar o gráfico.</p>`
+      }
+    </section>
+    <section class="card">
+      <h2>Ao longo do dia</h2>
+      <p class="dash-chips"><span><i></i>Recepção</span><span><i class="at"></i>Atendimento</span></p>
+      ${
+        total
+          ? `<div class="chart-hours" role="img" aria-label="Senhas por hora">
+              ${horas
+                .map((h, i) => {
+                  const rec = recPorHora[i];
+                  const at = atPorHora[i];
+                  return `<div class="chart-col">
+                    <div class="pares">
+                      <span class="bar" style="height:${rec ? Math.max(8, (rec / maxHora) * 100) : 0}%"></span>
+                      <span class="bar at" style="height:${at ? Math.max(8, (at / maxHora) * 100) : 0}%"></span>
+                    </div>
+                    <span>${String(h).padStart(2, "0")}</span>
+                  </div>`;
+                })
+                .join("")}
+            </div>
+            <p class="muted form-dica" style="margin-top:12px">${recPorHora[picoRec] ? `Pico de chegada às ${String(horas[picoRec]).padStart(2, "0")}h (${recPorHora[picoRec]}).` : "Ainda sem pico de chegada neste recorte."}</p>`
+          : `<p class="dash-vazio">Quando as senhas começarem a entrar, o movimento do dia aparece aqui.</p>`
+      }
+    </section>
+  </div>
+  <section class="card">
+    <h2>Tempo de espera</h2>
+    <p class="muted form-dica">Da hora da recepção até a primeira chamada. Só entra quem já foi atendido.</p>
+    <div class="kpis">
+      <div class="kpi"><span>Média</span><strong>${fmtMin(mediaEspera)}</strong></div>
+      <div class="kpi"><span>Atendidas com hora</span><strong>${esperas.length}</strong></div>
+      <div class="kpi fila"><span>Ainda na fila</span><strong>${espera}</strong></div>
+      <div class="kpi"><span>Mais antiga agora</span><strong>${fmtMin(maisAntiga)}</strong></div>
+    </div>
+    <div class="espera-faixas">
+      ${faixas.map((f) => `<div class="espera-faixa"><span>${escapar(f.rotulo)}</span><strong>${f.n}</strong></div>`).join("")}
     </div>
   </section>
   <section class="card">
     <h2>Por pessoa</h2>
     <table class="table">
-      <thead><tr><th>Pessoa</th><th>Perfil</th><th>Registrou</th><th>Chamou</th></tr></thead>
+      <thead><tr><th>Pessoa</th><th>Perfil</th><th>Registrou</th><th>Chamou</th><th></th></tr></thead>
       <tbody>
         ${
           porPessoa.length
             ? porPessoa
                 .map(
                   (x) => `<tr>
-                    <td><strong>${escapar(x.o.nome)}</strong><div class="meta">${escapar(x.o.usuario)}${x.o.ativo ? "" : " · inativo"}</div></td>
+                    <td><strong>${escapar(x.o.nome)}</strong><div class="meta">${escapar(x.o.usuario || "")}${x.o.ativo ? "" : " · inativo"}</div></td>
                     <td><span class="papel-badge ${x.o.papel}">${rotuloPapel(x.o.papel)}</span></td>
                     <td>${x.registrou}</td>
                     <td>${x.chamou}</td>
+                    <td><div class="prod-bar"><i style="width:${(x.total / maxPessoa) * 100}%"></i></div></td>
                   </tr>`
                 )
                 .join("")
-            : `<tr><td colspan="4" class="empty">Nenhuma produção neste dia.</td></tr>`
+            : `<tr><td colspan="5" class="empty">Nenhuma produção neste recorte.</td></tr>`
         }
-      </tbody>
-    </table>
-  </section>
-  <section class="card">
-    <h2>Por tipo</h2>
-    <table class="table">
-      <thead><tr><th>Tipo</th><th>Total</th><th>Na fila</th><th>Atendidas</th></tr></thead>
-      <tbody>
-        ${porTipo
-          .map(
-            (x) => `<tr>
-              <td><span class="sigla" style="background:${escapar(x.t.cor)}">${escapar(x.t.sigla)}</span> ${escapar(x.t.nome)}</td>
-              <td>${x.total}</td>
-              <td>${x.espera}</td>
-              <td>${x.feitas}</td>
-            </tr>`
-          )
-          .join("")}
       </tbody>
     </table>
   </section>`;
@@ -601,6 +826,7 @@ function telaControle() {
 function telaOperadores() {
   return `<section class="card">
     <h2>Operadores</h2>
+    <p class="muted form-dica">Configurações do sistema. Usuário é o primeiro.segundo nome; a senha é o CPF.</p>
     <form id="form-operador" class="form-grid cadastro">
       <label>Usuário
         <input id="op-usuario" required placeholder="primeiro.segundo" autocomplete="off">
@@ -660,6 +886,7 @@ function desenhar() {
       return;
     }
     app.innerHTML = telaControle();
+    ligarDash();
     return;
   }
   if (aba === "tipos") {
@@ -965,7 +1192,7 @@ async function onAcao(ev) {
       if (id === sessao.id) {
         sessao.papel = novo;
         localStorage.setItem(SESSAO_KEY, JSON.stringify(sessao));
-        document.getElementById("quem").textContent = textoQuem();
+        preencherQuem();
       }
       await carregar();
     }
@@ -1015,9 +1242,8 @@ async function onLogin(ev) {
   sessao = data;
   localStorage.setItem(SESSAO_KEY, JSON.stringify(data));
   document.getElementById("login").classList.add("hidden");
-  document.getElementById("quem").textContent = textoQuem();
   document.getElementById("dia").value = hojeISO();
-  aplicarDiaSessao();
+  aplicarTopoSessao();
   await carregar();
   escutar();
 }
@@ -1025,7 +1251,7 @@ async function onLogin(ev) {
 function sair() {
   localStorage.removeItem(SESSAO_KEY);
   sessao = null;
-  document.getElementById("quem").textContent = "";
+  document.getElementById("quem").innerHTML = "";
   pedirLogin();
 }
 
@@ -1060,9 +1286,26 @@ function ligarEventos() {
     if (!ehAdmin()) document.getElementById("dia").value = hojeISO();
     carregar();
   });
-  document.getElementById("btn-hoje").addEventListener("click", () => {
-    document.getElementById("dia").value = hojeISO();
-    carregar();
+  const cfgBtn = document.getElementById("btn-cfg");
+  const cfgMenu = document.getElementById("cfg-menu");
+  cfgBtn?.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    const aberto = !cfgMenu.classList.contains("hidden");
+    cfgMenu.classList.toggle("hidden", aberto);
+    cfgBtn.setAttribute("aria-expanded", String(!aberto));
+  });
+  cfgMenu?.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    const item = ev.target.closest("[data-cfg]");
+    if (!item) return;
+    aba = item.dataset.cfg;
+    cfgMenu.classList.add("hidden");
+    cfgBtn?.setAttribute("aria-expanded", "false");
+    desenhar();
+  });
+  document.addEventListener("click", () => {
+    cfgMenu?.classList.add("hidden");
+    cfgBtn?.setAttribute("aria-expanded", "false");
   });
   document.getElementById("btn-sair").addEventListener("click", sair);
   document.getElementById("setup-salvar").addEventListener("click", salvarSetup);
@@ -1074,7 +1317,7 @@ async function init() {
   ligarEventos();
   if (!(await conectar())) return;
   if (!pedirLogin()) return;
-  aplicarDiaSessao();
+  aplicarTopoSessao();
   await carregar();
   escutar();
 }
