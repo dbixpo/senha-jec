@@ -7,7 +7,6 @@
   --paper: #ffffff;
   --line: #e2e8f0;
   --dark: #0d3b5e;
-  --primary: #1a82b8;
   --amarelo: #ffd32c;
   --amarelo-hover: #e8bc18;
   --stamp: #e63030;
@@ -32,11 +31,11 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-a { color: var(--primary); }
+a { color: var(--dark); }
 
 .faixa {
   height: 4px;
-  background: linear-gradient(90deg, #e63030 0%, #f5c500 45%, #1a82b8 100%);
+  background: var(--amarelo);
 }
 
 .eyebrow {
@@ -66,7 +65,7 @@ h2 { font-size: 18px; color: var(--ink); }
   position: relative;
   z-index: 30;
   background: var(--dark);
-  border-bottom: 3px solid var(--primary);
+  border-bottom: 3px solid var(--amarelo);
 }
 
 .brand h1 { padding: 0; border: 0; color: #fff; }
