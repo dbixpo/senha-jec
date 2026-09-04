@@ -530,33 +530,37 @@ textarea {
   min-width: var(--control-h);
   min-height: var(--control-h);
   padding: 0;
-  border: 1px solid #c5dcea;
+  border: 1px solid #d8e8f1;
   border-radius: var(--radius);
-  background: #d9edf6;
+  background: #eaf4f9;
   cursor: pointer;
   display: grid;
   place-items: center;
   flex: 0 0 var(--control-h);
   box-sizing: border-box;
+  box-shadow: none;
+  transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
 }
 .btn-pref img {
   width: 22px;
   height: 22px;
   object-fit: contain;
-  opacity: 0.55;
+  opacity: 0.32;
   pointer-events: none;
+  transition: opacity 0.12s ease, filter 0.12s ease;
 }
 .btn-pref:not(.on):not(.colorido) img {
-  filter: invert(28%) sepia(18%) saturate(1800%) hue-rotate(163deg) brightness(95%) contrast(90%);
+  filter: invert(48%) sepia(8%) saturate(450%) hue-rotate(163deg) brightness(102%) contrast(82%);
 }
 .btn-pref:hover {
-  background: #b7d9ee;
-  border-color: #7eb6d6;
+  background: #e7f2f8;
+  border-color: #cddfe9;
 }
-.btn-pref:hover img { opacity: 0.85; }
+.btn-pref:hover img { opacity: 0.48; }
 .btn-pref.on {
   background: #1a82b8;
   border-color: #1a82b8;
+  box-shadow: 0 2px 8px rgba(26, 130, 184, 0.32);
 }
 .btn-pref.on img { opacity: 1; }
 .btn-pref.on:not(.colorido) img {
