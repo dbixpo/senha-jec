@@ -3,3 +3,7 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
+.env
+.env.local
+manutencao.env
+supabase/seed.sql

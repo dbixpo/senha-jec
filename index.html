@@ -3,18 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Controle de fila</title>
+  <title>Senha JEC</title>
+  <link rel="icon" href="img/favicon-senha-jec.png">
+  <link rel="apple-touch-icon" href="img/favicon-senha-jec.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Nunito:wght@400;600;700;800&family=DM+Mono:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
-  <div id="setup" class="setup hidden">
+  <div id="setup" class="overlay hidden">
     <div class="setup-card">
       <p class="eyebrow">Primeiro uso</p>
       <h1>Conectar no Supabase</h1>
-      <p>Cria um projeto grátis em <a href="https://supabase.com/dashboard" target="_blank" rel="noopener">supabase.com</a>, cola o SQL de <code>supabase/schema.sql</code> no SQL Editor e traz as duas chaves de <strong>Project Settings → API</strong>.</p>
+      <p>No projeto <strong>Senha JEC</strong>, cola o <code>supabase/schema.sql</code> no SQL Editor, depois o <code>supabase/seed.sql</code> (só neste PC). Em <strong>Project Settings → API</strong> copia a URL e a chave anon.</p>
       <label>Project URL
         <input id="setup-url" type="url" placeholder="https://xxxx.supabase.co" autocomplete="off">
       </label>
@@ -22,33 +24,60 @@
         <textarea id="setup-key" rows="4" placeholder="eyJ..." autocomplete="off"></textarea>
       </label>
       <p id="setup-erro" class="erro hidden"></p>
-      <button type="button" class="btn primary" id="setup-salvar">Salvar e abrir a fila</button>
+      <button type="button" class="btn primary" id="setup-salvar">Salvar e continuar</button>
+    </div>
+  </div>
+
+  <div id="login" class="overlay hidden">
+    <div class="login-card">
+      <img class="login-hero" src="img/fusca-login.png" alt="Fusca amarelo-creme">
+      <div class="login-body">
+        <p class="eyebrow">Senha JEC</p>
+        <h1>Entrar na fila</h1>
+        <p class="muted">Usuário é o primeiro.segundo nome. A senha é o CPF.</p>
+        <form id="form-login">
+          <label>Usuário
+            <input id="login-usuario" type="text" autocomplete="username" placeholder="diego.bispo" required>
+          </label>
+          <label>Senha
+            <input id="login-senha" type="password" autocomplete="current-password" inputmode="numeric" required>
+          </label>
+          <p id="login-erro" class="erro hidden"></p>
+          <button class="btn primary" type="submit">Entrar</button>
+        </form>
+        <p class="disclaimer">Sisteminha interno de fila. Não é um sistema oficial do Tribunal de Justiça.</p>
+      </div>
     </div>
   </div>
 
   <header class="top">
-    <div>
-      <p class="eyebrow">Fila do dia</p>
-      <h1>Controle de senhas</h1>
+    <div class="brand">
+      <img src="img/favicon-senha-jec.png" alt="" class="brand-mark">
+      <div>
+        <p class="eyebrow">Fila do dia</p>
+        <h1>Senha JEC</h1>
+      </div>
     </div>
     <div class="top-actions">
+      <p id="quem" class="quem"></p>
       <label class="date-wrap">Dia
-        <input type="date" id="dia" >
+        <input type="date" id="dia">
       </label>
       <button type="button" class="btn ghost" id="btn-hoje">Hoje</button>
       <button type="button" class="btn ghost" id="btn-setores" title="Renomear setores">Setores</button>
+      <button type="button" class="btn ghost" id="btn-sair">Sair</button>
       <span id="live" class="live" title="Atualização ao vivo">ao vivo</span>
     </div>
   </header>
 
   <nav id="tabs" class="tabs"></nav>
-
   <main id="app" class="app"></main>
+  <p class="disclaimer foot">Sisteminha interno de fila · não é um sistema oficial do Tribunal de Justiça</p>
 
   <dialog id="dlg-setores" class="dlg">
     <form method="dialog" id="form-setores">
       <h2>Nomes dos setores</h2>
-      <p>Depois dá para trocar sem perder o histórico.</p>
+      <p class="muted">Dá para trocar sem perder o histórico.</p>
       <div id="setores-campos"></div>
       <menu>
         <button type="submit" class="btn primary" value="ok">Salvar</button>

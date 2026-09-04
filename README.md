@@ -1,53 +1,31 @@
-# Controle de fila
+# Senha JEC
 
-Sisteminha pessoal para trocar a planilha: recepção anota **nome + senha de papel**, encaminha para **4 setores**, cada setor vê a própria fila e registra o que se resolveu.
-
-Mesmo esquema do dashboard do Patrick: **Supabase** no banco e **GitHub Pages** no front.
+Sisteminha interno de fila (não é oficial do Tribunal). Recepção anota **senha de papel + nome + serviço**, encaminha para 4 setores, cada um registra o que se resolveu. Tem cadastro de serviços, gestão de operadores e data/hora em tudo que salva.
 
 - Site: https://dbixpo.github.io/senha-jec/
 - Código: https://github.com/dbixpo/senha-jec
+- Banco: projeto Supabase **Senha JEC** (organização DBixpo)
 
-Não fica na prefeitura. Pasta local: `C:\Users\hardr\Projects\controle-fila`.
+A senha do banco **não** vai neste repositório (ele é público). Fica em `manutencao.env` neste PC e no secret `SUPABASE_DB_PASSWORD` do GitHub.
 
-## 1. Criar o banco (5 minutos)
+## Ligar o banco
 
-1. Entra em [https://supabase.com/dashboard](https://supabase.com/dashboard) e cria um projeto (plano grátis serve).
-2. Espera o banco ficar `Ready`.
-3. Vai em **SQL Editor → New query**, cola o conteúdo de `supabase/schema.sql` e clica **Run**.
-4. Em **Project Settings → API**, copia:
-   - **Project URL**
-   - **anon public** (não use a `service_role`)
+1. Espera o projeto **Senha JEC** ficar Ready.
+2. SQL Editor: cola `supabase/schema.sql` → Run.
+3. SQL Editor: cola `supabase/seed.sql` (arquivo só neste PC, no `.gitignore`) → Run. Isso cria os dois admins.
+4. Project Settings → API: copia **Project URL** e **anon public**.
+5. Abre o site, cola as duas chaves uma vez.
 
-## 2. Abrir o sisteminha
+Login: `diego.bispo` e `flavia.abes`. A senha de cada um é o CPF.
 
-Não abre o arquivo no duplo clique (`file://` costuma bloquear a API). Na pasta do projeto:
+## No balcão
 
-```powershell
-npx --yes serve .
-```
+- **Recepção:** número da senha, nome de quem está sendo atendido e o serviço. Encaminha na hora ou depois.
+- **Serviços:** cadastro do que se faz lá dentro. A primeira fila precisa disso para registrar a pessoa.
+- **Operadores:** só admin inclui gente no formato `primeiro.segundo`.
+- Cada registro guarda data/hora de criação e da última alteração.
+- O dia no topo é o histórico.
 
-Na primeira vez cola URL + chave anon. Fica salvo neste computador.
+## Identidade
 
-Se quiser deixar as chaves no código (para a amiga não ter que colar), copia `js/config.example.js` para `js/config.js` e preenche.
-
-## 3. Uso no balcão
-
-- **Recepção:** número da senha de papel + nome. Pode encaminhar na hora ou deixar na recepção e clicar no setor depois.
-- **Setor:** chama → atende → anota o que se resolveu. Dá para devolver à fila ou mandar para outro setor se encaminhou errado.
-- **Corrigir senha:** o número grande é clicável.
-- **Dia:** o seletor de data no topo é o histórico. “Hoje” volta para o dia corrente (fuso de São Paulo).
-- **Setores:** botão no topo para renomear os 4 nomes (o histórico não some).
-
-## 4. Front no GitHub Pages
-
-O banco fica no Supabase. O site é o `index.html` deste repositório, publicado em:
-
-**https://dbixpo.github.io/senha-jec/**
-
-É o mesmo modelo do [dashboard de emendas](https://zmaffeisz.github.io/dashboard-emendas/): HTML estático no GitHub, PostgreSQL no Supabase.
-
-Sem login por enquanto: quem tiver o endereço usa. Serve para uso interno. Depois dá para colocar um PIN na porta.
-
-## Backup
-
-No Supabase: **Project Settings → Database** tem backup automático no plano pago; no grátis, de vez em quando **Table Editor** → exporta CSV, ou roda um `select * from senhas`.
+Paleta do fusca da Flavinha: amarelo-creme, não amarelo limão. O brasão do Tribunal não entra na cara do sistema para ninguém achar que é oficial.
