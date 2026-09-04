@@ -1,6 +1,6 @@
 # Senha JEC
 
-Fila de recepção para um balcão pequeno: senha de papel, nome, tipo de atendimento e quem está chamando. Feito para o Juizado Especial Cível de Sorocaba, **sem ser sistema oficial do Tribunal**.
+Fila de recepção para um balcão pequeno: senha de papel, nome, tipo de atendimento e quem está chamando. Feito para o Juizado Especial Cível de Sorocaba.
 
 - Código: https://github.com/dbixpo/senha-jec
 - Licença: [MIT](LICENSE)
@@ -8,10 +8,6 @@ Fila de recepção para um balcão pequeno: senha de papel, nome, tipo de atendi
 O repositório é o **programa**. O banco Postgres de quem já usa no balcão **não está aqui** — nem URL, nem chave, nem senha. Quem for usar monta o **próprio** projeto no Supabase, cola o `supabase/schema.sql` e aponta o `js/config.js` local para esse projeto.
 
 Qualquer núcleo, cartório ou recepção parecida pode copiar, hospedar o seu e adaptar os tipos.
-
-## O que isto não é
-
-Não é sistema do TJ, não substitui o SAJ/eSAJ, não emite senha oficial e não deve usar brasão nem identidade do Tribunal. É um painel interno de quem está na fila **hoje**, no mesmo espírito de uma planilha compartilhada.
 
 ## Como funciona
 
@@ -123,4 +119,4 @@ Migrações extras ficam em `supabase/migrations/`. O arquivo canônico para um 
 
 Issue e PR no GitHub são bem-vindos: fila, acessibilidade no celular, tipos, dashboard. Não abra PR com senha, CPF, `.env`, `manutencao.env`, `js/config.js` nem URL de banco de ninguém.
 
-Se for usar em outro órgão, troque o nome na interface e os tipos — e deixe claro que **não é sistema oficial**.
+Se for usar em outro órgão, troque o nome na interface e os tipos.
