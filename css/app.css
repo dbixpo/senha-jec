@@ -1456,29 +1456,13 @@ textarea {
 }
 
 @media (min-width: 801px) {
-  .top {
-    display: grid;
-    grid-template-columns: auto auto minmax(0, 1fr) auto;
-    align-items: center;
-    column-gap: 10px;
-  }
-  .brand { grid-column: 1; }
-  .live { grid-column: 2; }
   .top-dia {
-    grid-column: 3;
-    position: static;
-    left: auto;
-    top: auto;
-    transform: none;
-    z-index: auto;
-    justify-self: center;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
   }
-  .top-actions {
-    grid-column: 4;
-    margin-left: 0;
-    flex-wrap: nowrap;
-  }
-  .top-actions .btn { flex-shrink: 0; }
 }
 
 .n-passo, .dica-mobile, .pref-longo { display: none; }
