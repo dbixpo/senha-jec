@@ -7,6 +7,7 @@
   --paper: #ffffff;
   --line: #e2e8f0;
   --dark: #0d3b5e;
+  --primary: #1a82b8;
   --amarelo: #ffd32c;
   --amarelo-hover: #e8bc18;
   --stamp: #e63030;
@@ -31,7 +32,12 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-a { color: #1a82b8; }
+a { color: var(--primary); }
+
+.faixa {
+  height: 4px;
+  background: linear-gradient(90deg, #e63030 0%, #f5c500 45%, #1a82b8 100%);
+}
 
 .eyebrow {
   margin: 0 0 2px;
@@ -57,8 +63,10 @@ h2 { font-size: 18px; color: var(--ink); }
   padding: 10px 20px;
   padding-left: max(20px, env(safe-area-inset-left));
   padding-right: max(20px, env(safe-area-inset-right));
+  position: relative;
+  z-index: 30;
   background: var(--dark);
-  border-bottom: 3px solid var(--amarelo);
+  border-bottom: 3px solid var(--primary);
 }
 
 .brand h1 { padding: 0; border: 0; color: #fff; }
@@ -254,10 +262,10 @@ textarea { resize: vertical; width: 100%; }
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(13, 59, 94, 0.45);
+  background: var(--bg);
   display: grid;
   place-items: center;
-  padding: 20px;
+  padding: 72px 20px 20px;
   z-index: 20;
 }
 
