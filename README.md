@@ -4,8 +4,8 @@ Sisteminha pessoal para trocar a planilha: recepção anota **nome + senha de pa
 
 Mesmo esquema do dashboard do Patrick: **Supabase** no banco e **GitHub Pages** no front.
 
-- Site: https://dbixpo.github.io/controle-fila/
-- Código: https://github.com/dbixpo/controle-fila
+- Site: https://dbixpo.github.io/senha-jec/
+- Código: https://github.com/dbixpo/senha-jec
 
 Não fica na prefeitura. Pasta local: `C:\Users\hardr\Projects\controle-fila`.
 
@@ -42,7 +42,7 @@ Se quiser deixar as chaves no código (para a amiga não ter que colar), copia `
 
 O banco fica no Supabase. O site é o `index.html` deste repositório, publicado em:
 
-**https://dbixpo.github.io/controle-fila/**
+**https://dbixpo.github.io/senha-jec/**
 
 É o mesmo modelo do [dashboard de emendas](https://zmaffeisz.github.io/dashboard-emendas/): HTML estático no GitHub, PostgreSQL no Supabase.
 
