@@ -1943,6 +1943,17 @@ function ligarEventos() {
   document.getElementById("btn-sair").addEventListener("click", sair);
   document.getElementById("setup-salvar").addEventListener("click", salvarSetup);
   document.getElementById("form-login").addEventListener("submit", onLogin);
+  document.getElementById("form-login").addEventListener("keydown", (ev) => {
+    if (ev.key !== "Enter") return;
+    if (ev.target?.id !== "login-usuario" && ev.target?.id !== "login-senha") return;
+    ev.preventDefault();
+    document.getElementById("form-login").requestSubmit();
+  });
+  document.getElementById("btn-home")?.addEventListener("click", () => {
+    if (!sessao) return;
+    aba = "geral";
+    desenhar();
+  });
   document.getElementById("aviso-ok")?.addEventListener("click", fecharAviso);
   document.getElementById("aviso")?.addEventListener("click", (ev) => {
     if (ev.target.id === "aviso") fecharAviso();

@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/app.css?v=45">
+  <link rel="stylesheet" href="css/app.css?v=46">
 </head>
 <body>
   <div id="setup" class="overlay hidden">
@@ -37,13 +37,13 @@
   <div id="login" class="overlay hidden">
     <div class="login-card">
       <div class="login-body">
-        <img class="logo-login" src="img/logo-login.png?v=45" alt="Senha JEC">
+        <img class="logo-login" src="img/logo-login.png?v=46" alt="Senha JEC">
         <form id="form-login">
           <div class="campo-login">
             <span class="lab-linha">
               <label for="login-usuario">Usuário</label>
               <span class="tip">
-                <button type="button" class="tip-btn" aria-label="Como preencher o usuário">?</button>
+                <button type="button" class="tip-btn" tabindex="-1" aria-label="Como preencher o usuário">?</button>
                 <span class="tip-balao" role="tooltip">O usuário é criado considerando o primeiro nome e o sobrenome do usuário, por exemplo, “Nelson Salvador Teixeira” teria como usuário nelson.salvador</span>
               </span>
             </span>
@@ -53,7 +53,7 @@
             <span class="lab-linha">
               <label for="login-senha">Senha</label>
               <span class="tip">
-                <button type="button" class="tip-btn" aria-label="Qual é a senha">?</button>
+                <button type="button" class="tip-btn" tabindex="-1" aria-label="Qual é a senha">?</button>
                 <span class="tip-balao" role="tooltip">A senha padrão do sistema é o CPF do usuário</span>
               </span>
             </span>
@@ -74,9 +74,9 @@
   <div class="chrome">
     <div class="faixa" aria-hidden="true"></div>
     <header class="top">
-      <div class="brand">
-        <img class="logo-top" src="img/logo-topbar.png?v=45" alt="Senha JEC">
-      </div>
+      <button type="button" class="brand" id="btn-home" aria-label="Ir para Senha geral">
+        <img class="logo-top" src="img/logo-topbar.png?v=46" alt="">
+      </button>
       <span id="live" class="live hidden" title="Atualização ao vivo">ao vivo</span>
       <div class="top-actions hidden">
         <div id="quem" class="quem"></div>
@@ -161,7 +161,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
   <script src="js/config.js"></script>
-  <script src="js/app.js?v=45"></script>
+  <script src="js/app.js?v=46"></script>
   <script src="js/pwa.js"></script>
 </body>
 </html>
