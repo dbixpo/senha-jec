@@ -483,16 +483,16 @@ function telaGeral() {
   const form = ehHoje()
     ? `<form id="form-chegada" class="form-chegada${travado ? " aguardando-chamada" : ""}">
         <input type="hidden" id="campo-tipo" value="${escapar(rascunhoChegada.tipoId)}">
-        <div class="campo campo-senha-bloco">
-          <span>Senha</span>
-          <div class="senha-com-pref">
+        <div class="senha-com-pref">
+          <div class="campo campo-senha-num">
+            <span>Senha</span>
             <strong id="campo-senha-rotulo" class="senha-valor">${rotuloProxima(rascunhoEhPref())}</strong>
-            ${botoesPrefForm()}
           </div>
+          ${botoesPrefForm()}
         </div>
         <button type="button" class="btn primary" id="btn-chamar-recepcao">Chamar</button>
         <div class="campo campo-hora">
-          <span>Recepção</span>
+          <span>Hora recepção</span>
           <strong id="campo-hora-rotulo" class="senha-valor senha-hora-dica">${rascunhoChegada.horaIso ? escapar(hora(rascunhoChegada.horaIso)) : "—"}</strong>
         </div>
         <label class="campo campo-nome">Nome

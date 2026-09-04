@@ -512,8 +512,14 @@ textarea {
 .campo-senha-bloco { flex: 0 0 auto; }
 .senha-com-pref {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 6px;
+  flex: 0 0 auto;
+}
+.campo-senha-num {
+  flex: 0 0 auto;
+  justify-items: center;
+  text-align: center;
 }
 .pref-tipos {
   display: flex;
@@ -651,7 +657,15 @@ textarea {
 .pref-motivo.on:not(.colorido) .pref-ico {
   filter: brightness(0) invert(1);
 }
-.campo-hora { flex: 0 0 64px; }
+.campo-hora {
+  flex: 0 0 auto;
+  width: max-content;
+  justify-items: center;
+  text-align: center;
+}
+.campo-hora > span {
+  white-space: nowrap;
+}
 .campo-nome,
 .campo-processo {
   flex: 1 1 0;
@@ -677,6 +691,7 @@ textarea {
   min-height: var(--control-h);
   display: flex;
   align-items: center;
+  justify-content: center;
   font-size: 22px;
   font-weight: 700;
   line-height: 1;
@@ -685,10 +700,13 @@ textarea {
   letter-spacing: -0.03em;
 }
 #campo-senha-rotulo {
-  justify-content: flex-start;
   width: 3.4em;
   min-width: 3.4em;
-  flex: 0 0 3.4em;
+  flex: none;
+  justify-content: center;
+}
+#campo-hora-rotulo {
+  width: 100%;
 }
 
 .form-chegada .campo-hora input,
@@ -1261,7 +1279,6 @@ textarea {
   .form-chegada #campo-senha-rotulo {
     width: 3.5em;
     min-width: 3.5em;
-    flex-basis: 3.5em;
   }
   .form-chegada .senha-hora-dica {
     font-size: 13px;
@@ -1424,10 +1441,8 @@ textarea {
   .chip-check .chip-check-ui {
     width: 100%;
   }
-  .form-chegada .campo-senha-bloco {
-    grid-column: 1 / -1;
-  }
   .form-chegada .senha-com-pref {
+    grid-column: 1 / -1;
     width: 100%;
   }
   .form-chegada .pref-tipos {
@@ -1468,7 +1483,6 @@ textarea {
   .form-chegada #campo-senha-rotulo {
     width: 3.5em;
     min-width: 3.5em;
-    flex-basis: 3.5em;
   }
   .form-submit {
     height: 52px;
