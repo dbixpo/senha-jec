@@ -288,6 +288,7 @@ textarea {
 .card .btn.ghost:hover,
 .app .btn.ghost:hover { background: #f4f6f9; }
 .btn.stamp { background: var(--stamp); color: #fff; }
+.btn.stamp:hover { background: #c41f1f; }
 .btn.small {
   height: 36px;
   min-height: 36px;
@@ -546,13 +547,15 @@ textarea {
   max-width: none;
 }
 .form-chegada .form-submit,
-.form-chegada #btn-chamar-recepcao {
+.form-chegada #btn-chamar-recepcao,
+.form-chegada #btn-nao-respondeu-recepcao {
   flex: 0 0 auto;
 }
 .form-chegada.aguardando-chamada .campo-nome,
 .form-chegada.aguardando-chamada .campo-tipos,
 .form-chegada.aguardando-chamada .campo-processo,
-.form-chegada.aguardando-chamada .form-submit {
+.form-chegada.aguardando-chamada .form-submit,
+.form-chegada.aguardando-chamada #btn-nao-respondeu-recepcao {
   opacity: 0.45;
   pointer-events: none;
 }
@@ -1117,6 +1120,7 @@ textarea {
   .form-chegada .chip-check:not(.pref-chegada) .chip-check-ui,
   .form-chegada .form-submit,
   .form-chegada #btn-chamar-recepcao,
+  .form-chegada #btn-nao-respondeu-recepcao,
   .form-chegada input[type="text"] {
     height: 36px;
     min-height: 36px;
@@ -1136,7 +1140,8 @@ textarea {
     letter-spacing: 0;
   }
   .form-chegada .form-submit,
-  .form-chegada #btn-chamar-recepcao { padding: 0 14px; }
+  .form-chegada #btn-chamar-recepcao,
+  .form-chegada #btn-nao-respondeu-recepcao { padding: 0 14px; }
   .card-fila .form-dica { margin-bottom: 0; }
 }
 
@@ -1277,7 +1282,8 @@ textarea {
   .form-chegada .campo-tipos,
   .form-chegada .campo-processo,
   .form-chegada .form-submit,
-  .form-chegada #btn-chamar-recepcao {
+  .form-chegada #btn-chamar-recepcao,
+  .form-chegada #btn-nao-respondeu-recepcao {
     grid-column: 1 / -1;
   }
   .form-chegada .campo-nome,

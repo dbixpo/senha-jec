@@ -467,6 +467,7 @@ function telaGeral() {
           <input id="campo-processo" type="text" placeholder="Nº processo" autocomplete="off" ${travado ? "disabled" : ""} value="${escapar(rascunhoChegada.processo)}">
         </label>
         <button class="btn primary form-submit" id="btn-registrar" type="submit" ${travado ? "disabled" : ""}>Registrar</button>
+        <button type="button" class="btn stamp" id="btn-nao-respondeu-recepcao" ${travado ? "disabled" : ""}>Não respondeu</button>
       </form>
       <p id="form-erro" class="erro hidden"></p>`
     : `<p class="muted form-dica">Consultando ${dataLegivel(diaAtual())}. Para registrar senha, volta a data para hoje.</p>`;
@@ -475,7 +476,7 @@ function telaGeral() {
       <div class="card-topo">
         <div>
           <h2>Senha geral</h2>
-          <p class="muted form-dica">${ehHoje() ? "Chamar anota a hora da recepção. Aí preenche e registra — vai para a fila do tipo." : "Fila de outro dia. Só consulta."}</p>
+          <p class="muted form-dica">${ehHoje() ? "Chamar anota a hora. Se a pessoa não aparecer, Não respondeu. Se aparecer, preenche e registra." : "Fila de outro dia. Só consulta."}</p>
         </div>
         <div class="topo-acoes">
           ${legendaTipos()}
@@ -892,6 +893,7 @@ function desenhar() {
     document.getElementById("form-chegada")?.addEventListener("change", onChegadaCampos);
     document.getElementById("form-chegada")?.addEventListener("input", onChegadaCampos);
     document.getElementById("btn-chamar-recepcao")?.addEventListener("click", onChamarRecepcao);
+    document.getElementById("btn-nao-respondeu-recepcao")?.addEventListener("click", onNaoRespondeuRecepcao);
     ligarFiltro(senhas, { chamar: false });
     return;
   }
@@ -968,6 +970,7 @@ function aplicarEstadoChegada() {
   document.getElementById("campo-nome")?.toggleAttribute("disabled", travado);
   document.getElementById("campo-processo")?.toggleAttribute("disabled", travado);
   document.getElementById("btn-registrar")?.toggleAttribute("disabled", travado);
+  document.getElementById("btn-nao-respondeu-recepcao")?.toggleAttribute("disabled", travado);
   document.querySelectorAll("#form-chegada input[name=tipo-chegada]").forEach((el) => {
     el.disabled = travado;
   });
@@ -982,6 +985,20 @@ function onChamarRecepcao() {
   rascunhoChegada.horaIso = new Date().toISOString();
   aplicarEstadoChegada();
   document.getElementById("campo-nome")?.focus();
+}
+
+function onNaoRespondeuRecepcao() {
+  if (!ehHoje() || !rascunhoChegada.chamado) return;
+  limparRascunho();
+  document.getElementById("form-chegada")?.reset();
+  const hidden = document.getElementById("campo-tipo");
+  if (hidden) hidden.value = "";
+  document.querySelectorAll("#form-chegada input[name=tipo-chegada]").forEach((box) => {
+    box.checked = false;
+  });
+  const rotulo = document.getElementById("campo-senha-rotulo");
+  if (rotulo) rotulo.textContent = rotuloProxima(false);
+  aplicarEstadoChegada();
 }
 
 function atualizarChegada() {
