@@ -1558,7 +1558,7 @@ textarea {
   left: 12px;
   right: 12px;
   bottom: max(12px, env(safe-area-inset-bottom));
-  z-index: 30;
+  z-index: 70;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -1597,8 +1597,11 @@ textarea {
   border-color: rgba(255,255,255,0.35);
 }
 
-@media (min-width: 801px) {
+@media (hover: hover) and (pointer: fine) and (min-width: 901px) {
   .pwa-bar { display: none !important; }
+}
+
+@media (min-width: 801px) {
   .cel-num .chip { display: none; }
   .form-chegada {
     flex-wrap: wrap;

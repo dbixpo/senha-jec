@@ -11,68 +11,75 @@
   const standalone =
     window.matchMedia("(display-mode: standalone)").matches ||
     window.navigator.standalone === true;
-  if (standalone) {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("./sw.js").catch(() => {});
-    }
-    return;
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  }
+  if (standalone) return;
+
+  function ehIOS() {
+    const ua = navigator.userAgent || "";
+    if (/iPhone|iPod/i.test(ua)) return true;
+    if (/iPad/i.test(ua)) return true;
+    if (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) return true;
+    return false;
   }
 
   function ehCelular() {
     const ua = navigator.userAgent || "";
-    if (/Android.+Mobile|iPhone|iPod/i.test(ua)) return true;
-    if (/Android/i.test(ua) && /Mobile/i.test(ua)) return true;
-    const ipad = /iPad/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    if (ipad) return window.matchMedia("(max-width: 900px)").matches;
+    if (/iPhone|iPod|Android.+Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return true;
+    if (/iPad/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) return true;
     return window.matchMedia("(max-width: 800px) and (pointer: coarse)").matches;
   }
 
-  const ios =
-    /iphone|ipad|ipod/i.test(navigator.userAgent) &&
-    !window.MSStream &&
-    !navigator.standalone;
   const dismissed = localStorage.getItem(DISMISS_KEY) === "1";
 
+  function esconder() {
+    bar.classList.add("hidden");
+    document.body.classList.remove("com-pwa");
+  }
+
   function mostrar(msg, comBotao) {
-    if (!ehCelular()) return;
+    if (!ehCelular() || standalone) return;
     texto.textContent = msg;
     btnInstalar.classList.toggle("hidden", !comBotao);
     bar.classList.remove("hidden");
     document.body.classList.add("com-pwa");
   }
 
+  function sugerir() {
+    if (!ehCelular() || dismissed || standalone) return;
+    if (ehIOS()) {
+      mostrar("No iPhone: toque em Compartilhar e depois em Adicionar à Tela de Início.", false);
+      return;
+    }
+    mostrar("Quer o Senha JEC na tela inicial? Fica igual um aplicativo.", true);
+  }
+
   btnFechar.addEventListener("click", () => {
-    bar.classList.add("hidden");
-    document.body.classList.remove("com-pwa");
+    esconder();
     localStorage.setItem(DISMISS_KEY, "1");
   });
 
   btnInstalar.addEventListener("click", async () => {
-    if (!deferred) return;
-    deferred.prompt();
-    await deferred.userChoice;
-    deferred = null;
-    bar.classList.add("hidden");
-    document.body.classList.remove("com-pwa");
+    if (deferred) {
+      deferred.prompt();
+      await deferred.userChoice;
+      deferred = null;
+      esconder();
+      return;
+    }
+    mostrar("No Chrome: toque no menu ⋮ e depois em Instalar app.", false);
   });
 
   window.addEventListener("beforeinstallprompt", (ev) => {
     ev.preventDefault();
+    if (!ehCelular()) return;
     deferred = ev;
-    if (dismissed || !ehCelular()) return;
-    mostrar("Quer o Senha JEC na tela inicial? Fica igual um aplicativo.", true);
+    if (!dismissed) sugerir();
   });
 
-  window.addEventListener("appinstalled", () => {
-    bar.classList.add("hidden");
-    document.body.classList.remove("com-pwa");
-  });
+  window.addEventListener("appinstalled", esconder);
 
-  if (ios && !dismissed && ehCelular()) {
-    mostrar("No celular: toque em Compartilhar e depois em Adicionar à Tela de Início.", false);
-  }
-
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js").catch(() => {});
-  }
+  sugerir();
 })();
