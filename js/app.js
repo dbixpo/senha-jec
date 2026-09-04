@@ -118,7 +118,7 @@ function ordenarFila(lista) {
 
 function estaEditando() {
   const el = document.activeElement;
-  return el && el.closest(".planilha") && (el.matches("input, select, textarea"));
+  return el && el.closest(".planilha-wrap") && (el.matches("input, select, textarea"));
 }
 
 async function conectar() {
@@ -241,17 +241,17 @@ function celulaHora(senha, campo, comCheck) {
 function linhaSenha(senha, { setor = false } = {}) {
   const atendida = !!senha.hora_atendimento;
   return `<tr class="${atendida ? "atendida" : "aguardando"} ${senha.preferencial ? "pref" : ""}">
-    <td>${setor ? badgeTipo(senha) : `<select class="sel-tipo" data-campo="tipo_id" data-id="${senha.id}">${opcoesTipo(senha.tipo_id)}</select>`}</td>
-    <td class="col-num">
+    <td data-label="Tipo">${setor ? badgeTipo(senha) : `<select class="sel-tipo" data-campo="tipo_id" data-id="${senha.id}">${opcoesTipo(senha.tipo_id)}</select>`}</td>
+    <td class="col-num" data-label="Nº senha">
       <button type="button" class="btn ghost small num-btn" data-acao="corrigir" data-id="${senha.id}">${String(senha.numero).padStart(2, "0")}</button>
     </td>
-    <td class="col-pref">
+    <td class="col-pref" data-label="Preferencial">
       <label class="pref-lab"><input type="checkbox" data-campo="preferencial" data-id="${senha.id}" ${senha.preferencial ? "checked" : ""}> P</label>
     </td>
-    <td>${celulaHora(senha, "hora_recepcao", false)}</td>
-    <td>${celulaHora(senha, "hora_atendimento", setor)}</td>
-    <td><input type="text" data-campo="nome" data-id="${senha.id}" value="${escapar(senha.nome || "")}" placeholder="Nome de quem está sendo atendido"></td>
-    <td><input type="text" data-campo="processo" data-id="${senha.id}" value="${escapar(senha.processo || "")}" placeholder="nº processo ou observação"></td>
+    <td data-label="Hora recepção">${celulaHora(senha, "hora_recepcao", false)}</td>
+    <td data-label="Hora atendimento">${celulaHora(senha, "hora_atendimento", setor)}</td>
+    <td data-label="Nome"><input type="text" data-campo="nome" data-id="${senha.id}" value="${escapar(senha.nome || "")}" placeholder="Nome de quem está sendo atendido"></td>
+    <td data-label="Nº processo"><input type="text" data-campo="processo" data-id="${senha.id}" value="${escapar(senha.processo || "")}" placeholder="nº processo ou observação"></td>
   </tr>`;
 }
 

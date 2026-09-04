@@ -33,3 +33,5 @@ Login: `diego.bispo` e `flavia.abes`. A senha de cada um é o CPF.
 ## Identidade
 
 Amarelo **#FFD32C**. Sem brasão do Tribunal, para ninguém achar que é sistema oficial.
+
+No celular o site sugere **Instalar** (Android/Chrome) ou, no iPhone, Compartilhar → Adicionar à Tela de Início.
