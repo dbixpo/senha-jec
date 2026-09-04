@@ -834,15 +834,35 @@ textarea {
   line-height: 1.45;
 }
 .hist-lista time { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
+.cel-acao { white-space: nowrap; }
 .cel-acao .btn { white-space: nowrap; }
+.cel-acao { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.btn-ausente {
+  color: #e63030;
+  border-color: #e63030;
+}
+.btn-ausente:hover { background: #fde8ec; }
+.planilha tr.faltou td { background: #fff6f7; }
 
 .minha-chamada {
+  display: grid;
+  gap: 8px;
   margin: 0 0 12px;
   padding: 12px 14px;
   background: var(--amarelo);
   color: var(--dark);
   border-radius: var(--radius);
   font-weight: 600;
+}
+.minha-chamada-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.minha-chamada .btn-ausente {
+  background: #fff;
 }
 .com-quem {
   font-size: 12px;
@@ -939,6 +959,7 @@ textarea {
 .chip.aguardando { background: #f8d0d8; }
 .chip.atendida { background: #c5ddf0; }
 .chip.pref { background: var(--amarelo); }
+.chip.ausente { background: #fde8ec; color: #e63030; margin-left: 6px; font-weight: 600; }
 
 .check-wrap span {
   display: flex;

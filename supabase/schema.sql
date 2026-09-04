@@ -85,6 +85,7 @@ create table if not exists senhas (
   updated_by uuid references operadores (id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  nao_respondeu integer not null default 0,
   constraint senhas_numero_por_dia unique (data, numero)
 );
 
@@ -300,7 +301,7 @@ begin
   where data = p_data
     and tipo_id = p_tipo_id
     and hora_atendimento is null
-  order by preferencial desc, numero
+  order by coalesce(nao_respondeu, 0), preferencial desc, numero
   for update skip locked
   limit 1;
 
@@ -349,12 +350,82 @@ begin
 end;
 $$;
 
+create or replace function nao_respondeu_senha(p_id uuid, p_operador uuid)
+returns json
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  alvo senhas%rowtype;
+  eh_admin boolean;
+  escolhida uuid;
+  proxima json;
+begin
+  if p_operador is null then
+    return json_build_object('ok', false, 'motivo', 'sem_operador');
+  end if;
+
+  select * into alvo from senhas where id = p_id for update;
+  if not found then
+    return json_build_object('ok', false, 'motivo', 'nao_encontrada');
+  end if;
+
+  if alvo.data is distinct from (timezone('America/Sao_Paulo', now()))::date then
+    return json_build_object('ok', false, 'motivo', 'outro_dia');
+  end if;
+
+  if alvo.hora_atendimento is null then
+    return json_build_object('ok', false, 'motivo', 'nao_chamada');
+  end if;
+
+  select exists (
+    select 1 from operadores
+    where id = p_operador and papel = 'admin' and ativo = true
+  ) into eh_admin;
+
+  if alvo.atendido_por is distinct from p_operador and not eh_admin then
+    return json_build_object('ok', false, 'motivo', 'nao_e_sua');
+  end if;
+
+  insert into historico_chamadas (senha_id, tipo_id, chamado_por, local)
+  values (alvo.id, alvo.tipo_id, p_operador, 'Não respondeu');
+
+  update senhas
+  set hora_atendimento = null,
+      status = 'na_fila',
+      atendido_por = null,
+      nao_respondeu = coalesce(nao_respondeu, 0) + 1,
+      updated_by = p_operador
+  where id = p_id
+  returning * into alvo;
+
+  select id into escolhida
+  from senhas
+  where data = alvo.data
+    and tipo_id = alvo.tipo_id
+    and hora_atendimento is null
+    and id is distinct from p_id
+  order by coalesce(nao_respondeu, 0), preferencial desc, numero
+  for update skip locked
+  limit 1;
+
+  if escolhida is null then
+    return json_build_object('ok', true, 'pulada', row_to_json(alvo), 'proxima', json_build_object('ok', false, 'motivo', 'fila_vazia'));
+  end if;
+
+  proxima := chamar_senha(escolhida, p_operador, null);
+  return json_build_object('ok', true, 'pulada', row_to_json(alvo), 'proxima', proxima);
+end;
+$$;
+
 grant execute on function login_operador(text, text) to anon, authenticated;
 grant execute on function criar_operador(text, text, text, text) to anon, authenticated;
 grant execute on function definir_senha_operador(uuid, text) to anon, authenticated;
 grant execute on function chamar_senha(uuid, uuid, timestamptz) to anon, authenticated;
 grant execute on function chamar_proxima(uuid, uuid, date) to anon, authenticated;
 grant execute on function liberar_senha(uuid, uuid) to anon, authenticated;
+grant execute on function nao_respondeu_senha(uuid, uuid) to anon, authenticated;
 
 alter table setores enable row level security;
 alter table senhas enable row level security;

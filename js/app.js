@@ -211,6 +211,9 @@ function naFila(lista = senhas) {
 
 function ordenarFila(lista) {
   return [...lista].sort((a, b) => {
+    const sa = Number(a.nao_respondeu) || 0;
+    const sb = Number(b.nao_respondeu) || 0;
+    if (sa !== sb) return sa - sb;
     if (!!a.preferencial !== !!b.preferencial) return a.preferencial ? -1 : 1;
     return (a.numero || 0) - (b.numero || 0);
   });
@@ -362,13 +365,16 @@ function htmlHistorico(senha) {
 
 function linhaSenha(senha, { chamar = false } = {}) {
   const atendida = !!senha.hora_atendimento;
+  const minha = atendida && senha.atendido_por === sessao.id;
+  const faltou = Number(senha.nao_respondeu) > 0;
   const acao = chamar
     ? `<td class="cel-acao" data-label="Chamar">
         <button type="button" class="btn primary small" data-acao="chamar-senha" data-id="${senha.id}">${atendida ? "Chamar de novo" : "Chamar"}</button>
+        ${minha ? `<button type="button" class="btn ghost small btn-ausente" data-acao="nao-respondeu" data-id="${senha.id}">Não respondeu</button>` : ""}
       </td>`
     : "";
-  return `<tr class="${atendida ? "atendida" : "aguardando"} ${senha.preferencial ? "pref" : ""}">
-    <td class="cel-num col-num" data-label="Senha"><span class="senha-num">${escapar(rotuloSenha(senha))}</span></td>
+  return `<tr class="${atendida ? "atendida" : "aguardando"} ${senha.preferencial ? "pref" : ""} ${faltou && !atendida ? "faltou" : ""}">
+    <td class="cel-num col-num" data-label="Senha"><span class="senha-num">${escapar(rotuloSenha(senha))}</span>${faltou ? `<span class="chip ausente">${senha.nao_respondeu}x não resp.</span>` : ""}</td>
     <td class="cel-rec" data-label="Hora da recepção"><span class="hora-lida">${escapar(hora(senha.hora_recepcao) || "—")}</span></td>
     <td class="cel-atend" data-label="Hora do atendimento">${htmlHistorico(senha)}</td>
     <td class="cel-nome" data-label="Nome"><span class="hora-lida">${escapar(senha.nome || "—")}</span></td>
@@ -425,6 +431,7 @@ function legendaTipos() {
     <li><span class="chip aguardando">espera</span></li>
     <li><span class="chip atendida">já atendido</span></li>
     <li><span class="chip pref">P = preferencial (sobe · senha P01)</span></li>
+    <li><span class="chip ausente">não respondeu</span></li>
   </ul>`;
 }
 
@@ -483,13 +490,13 @@ function telaTipo(tipo) {
   const lista = senhas.filter((s) => s.tipo_id === tipo.id);
   const comigo = lista.filter((s) => s.atendido_por === sessao.id && s.hora_atendimento);
   const banner = comigo.length
-    ? `<div class="minha-chamada">Com você agora: ${comigo.map((s) => `<strong>${escapar(rotuloSenha(s))}</strong> ${escapar(s.nome || "")}`).join(" · ")}</div>`
+    ? `<div class="minha-chamada">${comigo.map((s) => `<div class="minha-chamada-item"><span>Com você agora: <strong>${escapar(rotuloSenha(s))}</strong> ${escapar(s.nome || "")}</span>${ehHoje() ? `<button type="button" class="btn ghost small btn-ausente" data-acao="nao-respondeu" data-id="${s.id}">Não respondeu</button>` : ""}</div>`).join("")}</div>`
     : "";
   return `<section class="card">
     <div class="card-topo">
       <div>
         <h2>${escapar(tipo.nome)}</h2>
-        <p class="muted form-dica">${ehHoje() ? "O botão <strong>Chamar</strong> grava a hora, quem chamou e o local. Se a pessoa disser que não ouviu, chama de novo — fica no histórico." : `Consultando ${dataLegivel(diaAtual())}. Chamada só no dia de hoje.`}</p>
+        <p class="muted form-dica">${ehHoje() ? "Chamar grava a hora. Se a pessoa não aparecer, <strong>Não respondeu</strong> segue para a próxima. Se não ouviu, chama de novo." : `Consultando ${dataLegivel(diaAtual())}. Chamada só no dia de hoje.`}</p>
         <p id="fila-dica" class="muted form-dica">${verTudo ? "Inclui quem já foi atendido." : "Só quem ainda está na fila."}</p>
       </div>
       <div class="topo-acoes">
@@ -1100,7 +1107,7 @@ function avisoChamada(res) {
   if (res?.ok) return true;
   if (res?.motivo === "ja_chamada") mostrarErro(`Essa senha já está com ${res.com}.`);
   else if (res?.motivo === "fila_vazia") mostrarErro("Não tem ninguém esperando neste tipo.");
-  else if (res?.motivo === "nao_e_sua") mostrarErro("Essa senha está com outra pessoa.");
+  else if (res?.motivo === "nao_chamada") mostrarErro("Chama a senha antes. Não respondeu só vale depois da chamada.");
   else if (res?.motivo === "outro_dia") mostrarErro("Chamada só no dia de hoje. Volta a data no topo.");
   else mostrarErro("Não deu para pegar essa senha. Atualiza a tela.");
   return false;
@@ -1176,6 +1183,28 @@ async function onAcao(ev) {
       const nome = data.senha.nome || "";
       mostrarErro(`Você pegou a senha ${n}${nome ? " — " + nome : ""}.`);
     }
+    await carregar();
+    return;
+  }
+
+  if (acao === "nao-respondeu") {
+    if (!podeChamar()) return;
+    btn.disabled = true;
+    const { data, error } = await sb.rpc("nao_respondeu_senha", { p_id: id, p_operador: sessao.id });
+    btn.disabled = false;
+    if (error) mostrarErro(error.message);
+    else if (data?.ok) {
+      const pulada = data.pulada;
+      const n = pulada ? rotuloSenha(pulada) : "";
+      const prox = data.proxima;
+      if (prox?.ok && prox.senha) {
+        const pn = rotuloSenha(prox.senha);
+        const nome = prox.senha.nome || "";
+        mostrarErro(`Senha ${n} não respondeu. Chamou a ${pn}${nome ? " — " + nome : ""}.`);
+      } else {
+        mostrarErro(`Senha ${n} não respondeu. Não tem mais ninguém esperando.`);
+      }
+    } else avisoChamada(data);
     await carregar();
     return;
   }
