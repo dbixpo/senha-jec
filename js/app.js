@@ -21,6 +21,7 @@ let rascunhoChegada = {
   processo: "",
 };
 let dashFiltro = { tipo: "", status: "todos", pref: "todos", pessoa: "" };
+let relFiltro = { senha: "", nome: "", tipo: "", status: "todos", pref: "todos", pessoa: "" };
 let tipoEditandoId = null;
 let carregarTimer = 0;
 let carregarSeq = 0;
@@ -409,6 +410,7 @@ function desenharAbas() {
   if (ehAdmin()) {
     abas.push({ id: "controle", label: "Dashboard", curto: "Painel", count: senhas.length });
   }
+  abas.push({ id: "relatorio", label: "Relatório", curto: "Relat.", count: senhas.length });
   abas.push({ id: "geral", label: "Senha geral", curto: "Geral", count: naFila() });
   abas.push(
     ...tipos.filter((t) => t.ativo).map((t) => ({
@@ -450,19 +452,37 @@ function badgeTipo(senha) {
   return `<span class="sigla" style="background:${escapar(t.cor)}">${escapar(t.sigla)}</span>`;
 }
 
+function htmlHoraDica(quando, linhas) {
+  const texto = quando || "—";
+  const dica = (linhas || []).filter(Boolean).join("\n");
+  if (!dica) return `<span class="hora-lida">${escapar(texto)}</span>`;
+  return `<span class="hora-tip" tabindex="0" data-dica="${escapar(dica)}">${escapar(texto)}</span>`;
+}
+
+function linhasDicaRecepcao(senha) {
+  const quando = hora(senha.hora_recepcao);
+  if (!quando) return [];
+  const quem = senha.created_by ? nomeOperador(senha.created_by) : "";
+  return [`Recepção ${quando}`, quem ? `por ${quem}` : ""];
+}
+
+function linhasDicaAtendimento(senha) {
+  const lista = senha.chamadas || [];
+  if (!lista.length) return senha.hora_atendimento ? [`Atendimento ${hora(senha.hora_atendimento)}`] : [];
+  return lista.map((c, i) => {
+    const quem = c.chamado_por === sessao.id ? "você" : nomeOperador(c.chamado_por);
+    const onde = c.local || tipoDe(c.tipo_id)?.nome || "";
+    const n = i === 0 ? "1ª chamada" : `${i + 1}ª`;
+    return `${n} ${hora(c.chamado_em) || "—"} · ${quem}${onde ? " · " + onde : ""}`;
+  });
+}
+
 function htmlHistorico(senha) {
   const lista = senha.chamadas || [];
   const quando = hora(senha.hora_atendimento) || hora(lista[0]?.chamado_em);
-  if (!quando) return `<span class="hora-lida">—</span>`;
-  const dica = lista.map((c) => {
-    const quem = c.chamado_por === sessao.id ? "você" : nomeOperador(c.chamado_por);
-    const onde = c.local || tipoDe(c.tipo_id)?.nome || "";
-    return `${hora(c.chamado_em) || "—"} · ${quem}${onde ? " · " + onde : ""}`;
-  }).join("\n");
-  return `<div class="hist-chamadas"${dica ? ` title="${escapar(dica)}"` : ""}>
-    <span class="hora-lida">${escapar(quando)}</span>
-    ${lista.length > 1 ? `<span class="chip pref">${lista.length}x</span>` : ""}
-  </div>`;
+  const dica = linhasDicaAtendimento(senha);
+  const extra = lista.length > 1 ? `<span class="chip pref">${lista.length}x</span>` : "";
+  return `<span class="hist-chamadas">${htmlHoraDica(quando || "—", dica)}${extra}</span>`;
 }
 
 function botoesAcaoTipo(senha) {
@@ -489,7 +509,7 @@ function linhaSenha(senha, { chamar = false } = {}) {
   const acao = chamar ? `<td class="cel-acao" data-label="Ação">${botoesAcaoTipo(senha)}</td>` : "";
   return `<tr class="${classe} ${senha.preferencial ? "pref" : ""} ${faltou && !finalizada && !emAtend ? "faltou" : ""}">
     <td class="cel-num col-num" data-label="Senha"><span class="senha-com-ico"><span class="senha-num">${escapar(rotuloSenha(senha))}</span>${iconePref(senha.preferencial_tipo, "pref-ico-planilha")}</span>${faltou ? `<span class="chip ausente">${senha.nao_respondeu}x não resp.</span>` : ""}${emAtend ? `<span class="chip em-atendimento">em atendimento</span>` : ""}</td>
-    <td class="cel-rec" data-label="Recepção"><span class="hora-lida">${escapar(hora(senha.hora_recepcao) || "—")}</span></td>
+    <td class="cel-rec" data-label="Recepção">${htmlHoraDica(hora(senha.hora_recepcao) || "—", linhasDicaRecepcao(senha))}</td>
     <td class="cel-atend" data-label="Atendimento">${htmlHistorico(senha)}</td>
     <td class="cel-nome" data-label="Nome"><span class="hora-lida">${escapar(senha.nome || "—")}</span></td>
     <td class="cel-tipo" data-label="Tipo">${badgeTipo(senha)}</td>
@@ -715,6 +735,223 @@ function senhasDash() {
   });
 }
 
+function rotuloStatus(s) {
+  if (estaFinalizada(s)) return "Finalizada";
+  if (estaEmAtendimento(s)) return "Em atendimento";
+  return "Na fila";
+}
+
+function bateSenhaBusca(s, q) {
+  const t = String(q || "").trim().toLowerCase().replace(/\s+/g, "");
+  if (!t) return true;
+  const rotulo = rotuloSenha(s).toLowerCase();
+  const num = String(s.numero);
+  const soNum = t.replace(/^p/, "");
+  return rotulo.includes(t) || num === soNum || padSenha(s.numero).includes(soNum);
+}
+
+function senhasRelatorio() {
+  const nomeQ = String(relFiltro.nome || "").trim().toLowerCase();
+  return ordenarFila(senhas.filter((s) => {
+    if (!bateSenhaBusca(s, relFiltro.senha)) return false;
+    if (nomeQ && !(s.nome || "").toLowerCase().includes(nomeQ)) return false;
+    if (relFiltro.tipo && s.tipo_id !== relFiltro.tipo) return false;
+    if (relFiltro.status === "fila" && !estaNaFila(s)) return false;
+    if (relFiltro.status === "atendimento" && !estaEmAtendimento(s)) return false;
+    if (relFiltro.status === "atendidas" && !estaFinalizada(s)) return false;
+    if (relFiltro.pref === "nao" && s.preferencial) return false;
+    if (relFiltro.pref !== "todos" && relFiltro.pref !== "nao") {
+      if (s.preferencial_tipo !== relFiltro.pref) return false;
+    }
+    if (relFiltro.pessoa) {
+      const chamou = (s.chamadas || []).some((c) => c.chamado_por === relFiltro.pessoa);
+      if (s.created_by !== relFiltro.pessoa && s.atendido_por !== relFiltro.pessoa && !chamou) return false;
+    }
+    return true;
+  }));
+}
+
+function historicoTexto(senha) {
+  const lista = senha.chamadas || [];
+  if (!lista.length) return "";
+  return lista.map((c, i) => {
+    const quem = nomeOperador(c.chamado_por);
+    const onde = c.local || "";
+    return `${i + 1}ª ${hora(c.chamado_em) || "—"} ${quem}${onde ? " " + onde : ""}`;
+  }).join(" | ");
+}
+
+function htmlRelatorioTabela(lista) {
+  if (!lista.length) {
+    return `<p class="empty">Nada neste recorte. Limpa os filtros ou troca a data no topo.</p>`;
+  }
+  return `<div class="planilha-wrap rel-wrap">
+    <table class="planilha rel-tabela table-cartoes">
+      <thead>
+        <tr>
+          <th>Senha</th>
+          <th>Nome</th>
+          <th>Tipo</th>
+          <th>Situação</th>
+          <th>Recepção</th>
+          <th>Atendimento</th>
+          <th>Finalizou</th>
+          <th>Espera</th>
+          <th>Chamadas</th>
+          <th>Processo</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${lista.map((s) => {
+          const t = tipoDe(s.tipo_id);
+          const pref = prefTipo(s.preferencial_tipo);
+          const espera = fmtMin(minutosEntre(s.hora_recepcao, s.hora_atendimento));
+          return `<tr class="${estaFinalizada(s) ? "atendida" : estaEmAtendimento(s) ? "em-atendimento" : "aguardando"}">
+            <td data-label="Senha"><span class="senha-num">${escapar(rotuloSenha(s))}</span>${pref ? ` <span class="meta">${escapar(pref.nome)}</span>` : ""}</td>
+            <td data-label="Nome">${escapar(s.nome || "—")}</td>
+            <td data-label="Tipo">${t ? `<span class="sigla" style="background:${escapar(t.cor)}">${escapar(t.sigla)}</span> ${escapar(t.nome)}` : "—"}</td>
+            <td data-label="Situação">${escapar(rotuloStatus(s))}${Number(s.nao_respondeu) ? ` · ${s.nao_respondeu}x não resp.` : ""}</td>
+            <td data-label="Recepção">${escapar(hora(s.hora_recepcao) || "—")}<div class="meta">${escapar(s.created_by ? nomeOperador(s.created_by) : "")}</div></td>
+            <td data-label="Atendimento">${escapar(hora(s.hora_atendimento) || "—")}<div class="meta">${escapar(s.atendido_por ? nomeOperador(s.atendido_por) : "")}</div></td>
+            <td data-label="Finalizou">${escapar(hora(s.hora_fim) || "—")}</td>
+            <td data-label="Espera">${escapar(espera)}</td>
+            <td data-label="Chamadas">${escapar(historicoTexto(s) || "—")}</td>
+            <td data-label="Processo">${escapar(s.processo || "—")}</td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function csvCel(v) {
+  const s = String(v ?? "");
+  if (/[;"\n]/.test(s)) return `"${s.replaceAll('"', '""')}"`;
+  return s;
+}
+
+function baixarRelatorio() {
+  const lista = senhasRelatorio();
+  const cols = ["Senha", "Nome", "Tipo", "Preferencial", "Situação", "Recepção", "Quem registrou", "Atendimento", "Quem atendeu", "Finalizou", "Espera", "Chamadas", "Não respondeu", "Processo"];
+  const linhas = lista.map((s) => {
+    const t = tipoDe(s.tipo_id);
+    const pref = prefTipo(s.preferencial_tipo);
+    return [
+      rotuloSenha(s),
+      s.nome || "",
+      t ? `${t.sigla} ${t.nome}` : "",
+      pref ? pref.nome : "",
+      rotuloStatus(s),
+      hora(s.hora_recepcao) || "",
+      s.created_by ? nomeOperador(s.created_by) : "",
+      hora(s.hora_atendimento) || "",
+      s.atendido_por ? nomeOperador(s.atendido_por) : "",
+      hora(s.hora_fim) || "",
+      fmtMin(minutosEntre(s.hora_recepcao, s.hora_atendimento)),
+      historicoTexto(s),
+      s.nao_respondeu || 0,
+      s.processo || "",
+    ].map(csvCel).join(";");
+  });
+  const csv = "\uFEFF" + [cols.join(";"), ...linhas].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `senha-jec-${diaAtual()}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function ligarRelatorio() {
+  const bind = (id, key) => {
+    document.getElementById(id)?.addEventListener("change", (ev) => {
+      relFiltro[key] = ev.target.value;
+      atualizarRelatorio();
+    });
+  };
+  bind("rel-tipo", "tipo");
+  bind("rel-status", "status");
+  bind("rel-pref", "pref");
+  bind("rel-pessoa", "pessoa");
+  document.getElementById("rel-senha")?.addEventListener("input", (ev) => {
+    relFiltro.senha = ev.target.value;
+    atualizarRelatorio();
+  });
+  document.getElementById("rel-nome")?.addEventListener("input", (ev) => {
+    relFiltro.nome = ev.target.value;
+    atualizarRelatorio();
+  });
+}
+
+function atualizarRelatorio() {
+  const lista = senhasRelatorio();
+  const box = document.getElementById("rel-lista");
+  const qtd = document.getElementById("rel-qtd");
+  if (box) box.innerHTML = htmlRelatorioTabela(lista);
+  if (qtd) qtd.textContent = `${lista.length} de ${senhas.length} senhas no dia`;
+  const qtdPrint = document.getElementById("rel-qtd-print");
+  if (qtdPrint) qtdPrint.textContent = lista.length;
+}
+
+function telaRelatorio() {
+  const lista = senhasRelatorio();
+  const optsTipo = tipos.map((t) => `<option value="${t.id}" ${relFiltro.tipo === t.id ? "selected" : ""}>${escapar(t.nome)}</option>`).join("");
+  const optsPessoa = operadores
+    .filter((o) => o.ativo || senhas.some((s) => s.created_by === o.id || s.atendido_por === o.id))
+    .map((o) => `<option value="${o.id}" ${relFiltro.pessoa === o.id ? "selected" : ""}>${escapar(o.nome)}</option>`)
+    .join("");
+  return `<section class="card rel-card">
+    <div class="card-topo">
+      <div>
+        <h2>Relatório</h2>
+        <p class="muted form-dica">Detalhe do dia ${escapar(dataLegivel(diaAtual()))}. Filtra e tira CSV ou imprime. A data no topo troca o dia.</p>
+      </div>
+      <div class="topo-acoes rel-acoes">
+        <button type="button" class="btn ghost" data-acao="baixar-relatorio">Baixar CSV</button>
+        <button type="button" class="btn primary" data-acao="imprimir-relatorio">Imprimir</button>
+      </div>
+    </div>
+    <p class="so-print">Senha JEC — ${escapar(dataLegivel(diaAtual()))} — <span id="rel-qtd-print">${lista.length}</span> senhas</p>
+    <div class="dash-filtros rel-filtros">
+      <label>Senha
+        <input id="rel-senha" type="text" inputmode="search" placeholder="01 ou P01" value="${escapar(relFiltro.senha)}" autocomplete="off">
+      </label>
+      <label>Nome
+        <input id="rel-nome" type="text" placeholder="Nome" value="${escapar(relFiltro.nome)}" autocomplete="off">
+      </label>
+      <label>Tipo
+        <select id="rel-tipo">
+          <option value="">Todos</option>
+          ${optsTipo}
+        </select>
+      </label>
+      <label>Situação
+        <select id="rel-status">
+          <option value="todos" ${relFiltro.status === "todos" ? "selected" : ""}>Todas</option>
+          <option value="fila" ${relFiltro.status === "fila" ? "selected" : ""}>Na fila</option>
+          <option value="atendimento" ${relFiltro.status === "atendimento" ? "selected" : ""}>Em atendimento</option>
+          <option value="atendidas" ${relFiltro.status === "atendidas" ? "selected" : ""}>Finalizadas</option>
+        </select>
+      </label>
+      <label>Preferencial
+        <select id="rel-pref">
+          <option value="todos" ${relFiltro.pref === "todos" ? "selected" : ""}>Todas</option>
+          <option value="nao" ${relFiltro.pref === "nao" ? "selected" : ""}>Sem preferencial</option>
+          ${PREF_TIPOS.map((p) => `<option value="${p.id}" ${relFiltro.pref === p.id ? "selected" : ""}>${escapar(p.nome)}</option>`).join("")}
+        </select>
+      </label>
+      <label>Pessoa
+        <select id="rel-pessoa">
+          <option value="">Todo mundo</option>
+          ${optsPessoa}
+        </select>
+      </label>
+    </div>
+    <p id="rel-qtd" class="muted form-dica">${lista.length} de ${senhas.length} senhas no dia</p>
+    <div id="rel-lista">${htmlRelatorioTabela(lista)}</div>
+  </section>`;
+}
+
 function svgDonut(fatias) {
   const total = fatias.reduce((s, f) => s + f.valor, 0);
   const r = 15.5;
@@ -831,6 +1068,9 @@ function telaControle() {
       <div>
         <h2>Dashboard</h2>
         <p class="muted form-dica">${ehHoje() ? "Produção de hoje, ao vivo." : `Produção de ${dataLegivel(diaAtual())}.`} A data no topo troca o dia. Os filtros abaixo recortam o que está na tela.</p>
+      </div>
+      <div class="topo-acoes">
+        <button type="button" class="btn ghost" data-acao="ir-relatorio">Relatório detalhado</button>
       </div>
     </div>
     <div class="dash-filtros">
@@ -1053,6 +1293,11 @@ function desenhar() {
     }
     app.innerHTML = telaControle();
     ligarDash();
+    return;
+  }
+  if (aba === "relatorio") {
+    app.innerHTML = telaRelatorio();
+    ligarRelatorio();
     return;
   }
   if (aba === "tipos") {
@@ -1371,6 +1616,20 @@ async function onAcao(ev) {
   const id = btn.dataset.id;
   const acao = btn.dataset.acao;
 
+  if (acao === "ir-relatorio") {
+    aba = "relatorio";
+    desenhar();
+    return;
+  }
+  if (acao === "baixar-relatorio") {
+    baixarRelatorio();
+    return;
+  }
+  if (acao === "imprimir-relatorio") {
+    window.print();
+    return;
+  }
+
   if (acao === "chamar-senha") {
     if (!podeChamar()) return;
     btn.disabled = true;
@@ -1584,6 +1843,56 @@ async function salvarSetup() {
   if (await conectar()) pedirLogin();
 }
 
+function esconderTipHora() {
+  const box = document.getElementById("tip-hora");
+  if (!box) return;
+  box.classList.add("hidden");
+  box.innerHTML = "";
+}
+
+function mostrarTipHora(el) {
+  const box = document.getElementById("tip-hora");
+  const dica = el?.getAttribute("data-dica");
+  if (!box || !dica) return;
+  box.innerHTML = dica.split("\n").map((l) => `<div>${escapar(l)}</div>`).join("");
+  box.classList.remove("hidden");
+  const r = el.getBoundingClientRect();
+  const h = box.offsetHeight;
+  const w = box.offsetWidth;
+  let top = r.bottom + 8;
+  if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 8);
+  let left = r.left;
+  if (left + w > window.innerWidth - 8) left = Math.max(8, window.innerWidth - w - 8);
+  box.style.top = `${top}px`;
+  box.style.left = `${left}px`;
+}
+
+function ligarDicasHora() {
+  let atual = null;
+  document.addEventListener("pointerover", (ev) => {
+    const el = ev.target.closest?.(".hora-tip");
+    if (!el || el === atual) return;
+    atual = el;
+    mostrarTipHora(el);
+  });
+  document.addEventListener("pointerout", (ev) => {
+    const el = ev.target.closest?.(".hora-tip");
+    if (!el) return;
+    const to = ev.relatedTarget;
+    if (to && el.contains(to)) return;
+    if (atual === el) atual = null;
+    esconderTipHora();
+  });
+  document.addEventListener("focusin", (ev) => {
+    const el = ev.target.closest?.(".hora-tip");
+    if (el) mostrarTipHora(el);
+  });
+  document.addEventListener("focusout", (ev) => {
+    if (ev.target.closest?.(".hora-tip")) esconderTipHora();
+  });
+  window.addEventListener("scroll", esconderTipHora, true);
+}
+
 function ligarEventos() {
   document.getElementById("tabs").addEventListener("click", (ev) => {
     const tab = ev.target.closest("[data-aba]");
@@ -1630,8 +1939,12 @@ function ligarEventos() {
     if (ev.target.id === "aviso") fecharAviso();
   });
   document.addEventListener("keydown", (ev) => {
-    if (ev.key === "Escape") fecharAviso();
+    if (ev.key === "Escape") {
+      fecharAviso();
+      esconderTipHora();
+    }
   });
+  ligarDicasHora();
 }
 
 async function init() {

@@ -778,6 +778,32 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
+.hora-tip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: help;
+  border-bottom: 1px dotted rgba(13, 59, 94, 0.35);
+}
+
+.tip-hora-flutuante {
+  position: fixed;
+  z-index: 90;
+  max-width: min(280px, calc(100vw - 16px));
+  padding: 10px 12px;
+  background: var(--dark);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+.tip-hora-flutuante div + div { margin-top: 4px; }
+
 .filtro-tudo .chip-check-ui { min-width: 108px; }
 .topo-acoes {
   display: flex;
@@ -1903,3 +1929,28 @@ textarea {
 @media (max-width: 720px) {
   .table:not(.table-cartoes) { display: block; overflow-x: auto; }
 }
+
+.so-print { display: none; }
+.rel-tabela td { vertical-align: top; }
+.rel-tabela td .meta { margin-top: 2px; }
+
+@media print {
+  .chrome,
+  .tabs,
+  .foot,
+  .pwa-bar,
+  .rel-acoes,
+  .rel-filtros,
+  #rel-qtd,
+  .overlay,
+  .tip-hora-flutuante { display: none !important; }
+  .so-print { display: block; font-weight: 700; color: #000; margin: 0 0 12px; }
+  body, html { background: #fff; }
+  .shell { padding: 0; }
+  .card { box-shadow: none; border: 0; padding: 0; }
+  .planilha { min-width: 0; font-size: 11px; }
+  .planilha-wrap { overflow: visible; }
+  .planilha th, .planilha td { padding: 4px 6px; }
+  .hora-tip { border: 0; min-height: 0; }
+}
+

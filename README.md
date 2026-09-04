@@ -64,12 +64,15 @@ Cores da linha:
 | Aba | Quem usa | Para quê |
 |---|---|---|
 | Dashboard / Painel | Admin | Volume do dia, espera, preferencial, produção por pessoa |
+| Relatório | Todo mundo | Filtro do dia, inclusive por senha; imprimir e CSV |
 | Senha geral | Recepção | Registrar quem chegou |
 | T, C, A (ou os tipos que você cadastrar) | Quem atende | Chamar, finalizar, não respondeu |
 | Configurações → Tipos | Admin | Nome, sigla, cor, ativar/desativar |
 | Configurações → Operadores | Admin | Incluir, perfil, senha, ativar/desativar |
 
 No celular o site vira PWA: no Android o Chrome oferece **Instalar**; no iPhone é Compartilhar → Adicionar à Tela de Início. No computador o convite de instalar não aparece.
+
+Na planilha, recepção e atendimento mostram só a hora. Passa o mouse (ou toca) para ver quem registrou e cada chamada. O detalhe do dia inteiro fica na aba **Relatório**: filtro por senha, nome, tipo, situação, preferencial e pessoa; dá para imprimir ou baixar CSV.
 
 ## Subir o seu
 
