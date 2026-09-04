@@ -635,7 +635,7 @@ function telaGeral() {
 
 function telaTipo(tipo) {
   const lista = senhas.filter((s) => s.tipo_id === tipo.id);
-  return `<section class="card">
+  return `<section class="card card-fila">
     <div class="card-topo">
       <div>
         <h2>${escapar(tipo.nome)}</h2>

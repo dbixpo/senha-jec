@@ -20,15 +20,17 @@
 
 html, body {
   margin: 0;
-  min-height: 100%;
-  min-height: 100dvh;
+  height: 100%;
+  height: 100dvh;
   background: var(--bg);
   color: var(--ink);
   font-family: Inter, "Segoe UI", system-ui, sans-serif;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 body {
+  display: flex;
+  flex-direction: column;
   padding: 0;
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -39,6 +41,7 @@ a { color: var(--dark); }
   position: sticky;
   top: 0;
   z-index: 40;
+  flex-shrink: 0;
   background: var(--bg);
 }
 
@@ -233,7 +236,12 @@ h2 { font-size: 18px; color: var(--ink); }
 .top .btn.ghost:hover { background: rgba(13, 59, 94, 0.08); }
 
 .shell {
-  padding: 16px 20px 32px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 16px 20px 16px;
   padding-left: max(20px, env(safe-area-inset-left));
   padding-right: max(20px, env(safe-area-inset-right));
 }
@@ -361,7 +369,20 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
-.app { display: grid; gap: 16px; }
+.app {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.app:has(.card-fila),
+.app:has(.rel-card) {
+  overflow: hidden;
+}
 
 .card {
   background: var(--paper);
@@ -369,6 +390,24 @@ textarea {
   border-radius: var(--radius-card);
   box-shadow: var(--shadow);
   padding: 18px;
+}
+
+.card-fila,
+.rel-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#fila-lista,
+#rel-lista {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .card h2 { margin-bottom: 6px; }
@@ -421,6 +460,7 @@ textarea {
   background: #f8fafc;
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  flex-shrink: 0;
 }
 
 .form-chegada .campo,
@@ -858,6 +898,7 @@ textarea {
   flex-wrap: wrap;
   gap: 10px;
   margin: 14px 0 4px;
+  flex-shrink: 0;
 }
 .dash-filtros label {
   display: grid;
@@ -1050,11 +1091,10 @@ textarea {
 .hist-lista { display: none; }
 .cel-acao {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 6px;
   align-items: center;
-  white-space: nowrap;
-  width: 1%;
+  white-space: normal;
 }
 .cel-acao .btn { white-space: nowrap; }
 .btn-ausente {
@@ -1113,6 +1153,8 @@ textarea {
   padding: 28px 20px 20px;
   padding-top: max(28px, env(safe-area-inset-top));
   z-index: 50;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 .overlay:not(.overlay-aviso)::before {
   content: "";
@@ -1281,7 +1323,7 @@ textarea {
   margin: 8px 0 0;
 }
 
-.foot { text-align: center; margin-top: 24px; }
+.foot { text-align: center; margin: 12px 0 0; flex-shrink: 0; }
 
 .tab-dot {
   display: inline-block;
@@ -1299,6 +1341,7 @@ textarea {
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .legenda {
@@ -1351,13 +1394,16 @@ textarea {
 }
 
 .planilha-wrap {
-  overflow-x: auto;
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
 .planilha {
   width: 100%;
-  min-width: 720px;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 14px;
 }
@@ -1369,13 +1415,39 @@ textarea {
   padding: 10px 8px;
   font-size: 12px;
   font-weight: 600;
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.25;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .planilha td {
   padding: 6px 8px;
   vertical-align: middle;
   border-bottom: 1px solid #edf2f7;
+}
+
+.planilha .col-num { width: 7rem; }
+.planilha .cel-rec { width: 6.2rem; }
+.planilha .cel-atend { width: 7.2rem; }
+.planilha .cel-tipo { width: 4.4rem; }
+.planilha .cel-acao { width: 11.5rem; }
+.planilha .cel-nome,
+.planilha .cel-proc {
+  width: auto;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.planilha .cel-nome .hora-lida,
+.planilha .cel-proc .hora-lida {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-height: 0;
+  line-height: 1.3;
+  font-variant-numeric: normal;
 }
 
 .planilha tr.aguardando td { background: #fde8ec; }
@@ -1393,8 +1465,6 @@ textarea {
   padding: 0 8px;
 }
 
-.planilha .col-num { width: 108px; }
-.planilha .col-pref { width: 72px; }
 .num-btn {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -1646,7 +1716,7 @@ textarea {
   }
   .cfg-menu button { height: 44px; }
 
-  .shell { padding: 12px 12px 80px; }
+  .shell { padding: 12px; }
   h1 { font-size: 18px; }
   h2 { font-size: 17px; }
   .card { padding: 14px; }
@@ -1675,15 +1745,12 @@ textarea {
 
   .tabs {
     display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    flex-wrap: wrap;
+    overflow: hidden;
     gap: 8px;
     margin: 0;
     padding: 12px 12px 10px;
-    scrollbar-width: none;
   }
-  .tabs::-webkit-scrollbar { display: none; }
   .tab {
     flex: 0 0 auto;
     white-space: nowrap;
@@ -1801,8 +1868,11 @@ textarea {
     font-size: 14px;
   }
 
-  .planilha-wrap { overflow: visible; }
-  .planilha { min-width: 0; width: 100%; }
+  .planilha-wrap {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  .planilha { min-width: 0; width: 100%; table-layout: auto; }
   .planilha thead { display: none; }
   .planilha, .planilha tbody { display: block; width: 100%; }
   .planilha tbody { display: grid; gap: 10px; }
@@ -1889,11 +1959,10 @@ textarea {
   .dash-split { flex-direction: column; }
   .donut { width: 112px; height: 112px; flex: none; }
   .chart-hours {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
     padding-bottom: 4px;
   }
-  .chart-col { min-width: 28px; flex: 1 0 28px; }
+  .chart-col { min-width: 0; flex: 1 1 0; }
   .filtro-tudo { width: 100%; }
   .filtro-tudo .chip-check-ui { width: 100%; min-width: 0; height: 44px; }
   .table-cartoes thead { display: none; }
@@ -1990,23 +2059,24 @@ textarea {
 }
 
 @media (max-width: 720px) {
-  .table:not(.table-cartoes) { display: block; overflow-x: auto; }
+  .table:not(.table-cartoes) { display: block; overflow-x: hidden; }
 }
 
 .so-print { display: none; }
 
 .rel-wrap {
-  overflow-x: auto;
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   margin-top: 8px;
 }
 .rel-tabela {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 14px;
-}
-@media (min-width: 801px) {
-  .rel-tabela { min-width: 920px; }
 }
 .rel-tabela th {
   background: var(--dark);
@@ -2015,12 +2085,18 @@ textarea {
   padding: 10px 8px;
   font-size: 12px;
   font-weight: 600;
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.25;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 .rel-tabela td {
   padding: 8px 8px;
   vertical-align: top;
   border-bottom: 1px solid #edf2f7;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .rel-tabela td .meta { margin-top: 2px; }
 .rel-tabela tr.aguardando,
@@ -2041,7 +2117,17 @@ textarea {
   .overlay,
   .tip-hora-flutuante { display: none !important; }
   .so-print { display: block; font-weight: 700; color: #000; margin: 0 0 12px; }
-  body, html { background: #fff; overflow: visible; }
+  body, html {
+    background: #fff;
+    overflow: visible;
+    height: auto;
+    display: block;
+  }
+  .shell, .app, .card-fila, .rel-card, #fila-lista, #rel-lista, .planilha-wrap, .rel-wrap {
+    overflow: visible !important;
+    height: auto;
+    flex: none;
+  }
   .shell { padding: 0; }
   .card { box-shadow: none; border: 0; padding: 0; }
   .rel-wrap { overflow: visible; }
