@@ -488,8 +488,13 @@ textarea {
 }
 
 .pref-chegada .chip-check-ui {
-  min-width: 118px;
-  padding: 0 12px;
+  min-width: 0;
+  height: 26px;
+  min-height: 26px;
+  padding: 0 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   background: #ffd4b8;
   border-color: #f0a36a;
   color: #9a4a12;
@@ -1109,12 +1114,16 @@ textarea {
   }
   .form-chegada .tipo-nome { display: none; }
   .form-chegada .tab-dot { margin-right: 0; }
-  .form-chegada .chip-check-ui,
+  .form-chegada .chip-check:not(.pref-chegada) .chip-check-ui,
   .form-chegada .form-submit,
   .form-chegada #btn-chamar-recepcao,
   .form-chegada input[type="text"] {
     height: 36px;
     min-height: 36px;
+  }
+  .form-chegada .pref-chegada .chip-check-ui {
+    height: 26px;
+    min-height: 26px;
   }
   .form-chegada .senha-valor {
     height: 36px;
@@ -1276,10 +1285,8 @@ textarea {
     width: 100%;
     max-width: none;
   }
-  .chip-check,
-  .chip-check-ui,
-  .pref-chegada,
-  .pref-chegada .chip-check-ui {
+  .chip-check:not(.pref-chegada),
+  .chip-check:not(.pref-chegada) .chip-check-ui {
     width: 100%;
   }
   .form-submit {
@@ -1302,6 +1309,12 @@ textarea {
     min-height: 44px;
     height: 44px;
     font-size: 16px;
+  }
+  .pref-chegada .chip-check-ui {
+    width: auto;
+    height: 28px;
+    min-height: 28px;
+    font-size: 11px;
   }
   textarea { height: auto; min-height: 88px; }
   .senha-valor { height: 44px; min-height: 44px; }
