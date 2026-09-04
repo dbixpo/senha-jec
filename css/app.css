@@ -492,11 +492,6 @@ textarea {
   border-color: var(--amarelo);
   color: var(--dark);
 }
-.pref-chegada input:checked + .chip-check-ui {
-  background: var(--amarelo);
-  border-color: var(--amarelo);
-  color: var(--dark);
-}
 
 .chip-check.mini .chip-check-ui {
   min-width: 36px;
@@ -519,10 +514,30 @@ textarea {
 }
 
 .campo-senha { flex: 0 0 56px; }
+.campo-senha-bloco { flex: 0 0 auto; }
+.senha-com-pref {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .campo-hora { flex: 0 0 64px; }
-.campo-nome { flex: 1 1 200px; }
-.campo-processo { flex: 0 1 150px; }
-.form-chegada .form-submit { flex: 0 0 auto; }
+.campo-nome,
+.campo-processo {
+  flex: 0 0 140px;
+  width: 140px;
+  max-width: 140px;
+}
+.form-chegada .form-submit,
+.form-chegada #btn-chamar-recepcao {
+  flex: 0 0 auto;
+}
+.form-chegada.aguardando-chamada .campo-nome,
+.form-chegada.aguardando-chamada .campo-tipos,
+.form-chegada.aguardando-chamada .campo-processo,
+.form-chegada.aguardando-chamada .form-submit {
+  opacity: 0.45;
+  pointer-events: none;
+}
 
 .senha-valor {
   height: var(--control-h);
@@ -1060,6 +1075,7 @@ textarea {
   .form-chegada .tab-dot { margin-right: 0; }
   .form-chegada .chip-check-ui,
   .form-chegada .form-submit,
+  .form-chegada #btn-chamar-recepcao,
   .form-chegada input[type="text"] {
     height: 36px;
     min-height: 36px;
@@ -1074,7 +1090,8 @@ textarea {
     font-weight: 600;
     letter-spacing: 0;
   }
-  .form-chegada .form-submit { padding: 0 14px; }
+  .form-chegada .form-submit,
+  .form-chegada #btn-chamar-recepcao { padding: 0 14px; }
   .card-fila .form-dica { margin-bottom: 0; }
 }
 
@@ -1215,8 +1232,13 @@ textarea {
   .form-chegada .campo-tipos,
   .form-chegada .campo-processo,
   .form-chegada .form-submit,
-  .form-chegada .pref-chegada {
+  .form-chegada #btn-chamar-recepcao {
     grid-column: 1 / -1;
+  }
+  .form-chegada .campo-nome,
+  .form-chegada .campo-processo {
+    width: 100%;
+    max-width: none;
   }
   .chip-check,
   .chip-check-ui,

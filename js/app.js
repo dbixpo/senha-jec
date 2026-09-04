@@ -12,6 +12,14 @@ let aba = "geral";
 let canal = null;
 let verTudo = false;
 let enviandoChegada = false;
+let rascunhoChegada = {
+  chamado: false,
+  horaIso: null,
+  preferencial: false,
+  nome: "",
+  tipoId: "",
+  processo: "",
+};
 let dashFiltro = { tipo: "", status: "todos", pref: "todos", pessoa: "" };
 
 function hojeISO() {
@@ -322,10 +330,11 @@ function desenharAbas() {
 
 function checksTipoForm() {
   const ativos = tipos.filter((t) => t.ativo);
+  const travado = !rascunhoChegada.chamado;
   if (!ativos.length) return `<p class="muted">${ehAdmin() ? "Cadastre um tipo primeiro, em Configurações → Tipos." : "Peça a um administrador para cadastrar um tipo."}</p>`;
   return ativos.map((t) => `
     <label class="chip-check mini" title="${escapar(t.nome)}" style="--tipo:${escapar(t.cor)}">
-      <input type="checkbox" name="tipo-chegada" value="${t.id}">
+      <input type="checkbox" name="tipo-chegada" value="${t.id}" ${travado ? "disabled" : ""} ${rascunhoChegada.tipoId === t.id ? "checked" : ""}>
       <span class="chip-check-ui"><i class="tab-dot" style="background:${escapar(t.cor)}"></i>${escapar(t.sigla)}<span class="tipo-nome"> · ${escapar(t.nome)}</span></span>
     </label>`).join("");
 }
@@ -420,32 +429,36 @@ function legendaTipos() {
 }
 
 function telaGeral() {
+  const travado = !rascunhoChegada.chamado;
   const form = ehHoje()
-    ? `<form id="form-chegada" class="form-chegada">
-        <input type="hidden" id="campo-tipo" value="">
-        <div class="campo campo-senha">
+    ? `<form id="form-chegada" class="form-chegada${travado ? " aguardando-chamada" : ""}">
+        <input type="hidden" id="campo-tipo" value="${escapar(rascunhoChegada.tipoId)}">
+        <div class="campo campo-senha-bloco">
           <span>Senha</span>
-          <strong id="campo-senha-rotulo" class="senha-valor">${rotuloProxima(false)}</strong>
+          <div class="senha-com-pref">
+            <strong id="campo-senha-rotulo" class="senha-valor">${rotuloProxima(rascunhoChegada.preferencial)}</strong>
+            <label class="chip-check pref-chegada" title="Preferencial">
+              <input id="campo-pref" type="checkbox" ${rascunhoChegada.preferencial ? "checked" : ""}>
+              <span class="chip-check-ui"><span class="pref-curto">P</span><span class="pref-longo">Preferencial</span></span>
+            </label>
+          </div>
         </div>
+        <button type="button" class="btn primary" id="btn-chamar-recepcao">Chamar</button>
         <div class="campo campo-hora">
           <span>Recepção</span>
-          <strong class="senha-valor senha-hora-dica">agora</strong>
+          <strong id="campo-hora-rotulo" class="senha-valor senha-hora-dica">${rascunhoChegada.horaIso ? escapar(hora(rascunhoChegada.horaIso)) : "—"}</strong>
         </div>
         <label class="campo campo-nome">Nome
-          <input id="campo-nome" type="text" placeholder="Nome da pessoa" required autocomplete="off">
+          <input id="campo-nome" type="text" placeholder="Nome" required autocomplete="off" ${travado ? "disabled" : ""} value="${escapar(rascunhoChegada.nome)}">
         </label>
         <fieldset class="campo campo-tipos">
           <legend>Tipo</legend>
           <div class="tipo-checks">${checksTipoForm()}</div>
         </fieldset>
-        <label class="chip-check pref-chegada" title="Preferencial">
-          <input id="campo-pref" type="checkbox">
-          <span class="chip-check-ui"><span class="pref-curto">P</span><span class="pref-longo">Preferencial</span></span>
-        </label>
         <label class="campo campo-processo">Nº processo
-          <input id="campo-processo" type="text" placeholder="Nº, CPF, voltou…" autocomplete="off">
+          <input id="campo-processo" type="text" placeholder="Nº processo" autocomplete="off" ${travado ? "disabled" : ""} value="${escapar(rascunhoChegada.processo)}">
         </label>
-        <button class="btn primary form-submit" type="submit">Registrar</button>
+        <button class="btn primary form-submit" id="btn-registrar" type="submit" ${travado ? "disabled" : ""}>Registrar</button>
       </form>
       <p id="form-erro" class="erro hidden"></p>`
     : `<p class="muted form-dica">Consultando ${dataLegivel(diaAtual())}. Para registrar senha, volta a data para hoje.</p>`;
@@ -454,7 +467,7 @@ function telaGeral() {
       <div class="card-topo">
         <div>
           <h2>Senha geral</h2>
-          <p class="muted form-dica">${ehHoje() ? "Preenche a linha e registra. Senha e hora saem na hora. Para chamar, usa a aba do tipo." : "Fila de outro dia. Só consulta."}</p>
+          <p class="muted form-dica">${ehHoje() ? "Chamar anota a hora da recepção. Aí preenche e registra — vai para a fila do tipo." : "Fila de outro dia. Só consulta."}</p>
         </div>
         <div class="topo-acoes">
           ${legendaTipos()}
@@ -865,6 +878,8 @@ function desenhar() {
     app.innerHTML = telaGeral();
     document.getElementById("form-chegada")?.addEventListener("submit", onChegada);
     document.getElementById("form-chegada")?.addEventListener("change", onChegadaCampos);
+    document.getElementById("form-chegada")?.addEventListener("input", onChegadaCampos);
+    document.getElementById("btn-chamar-recepcao")?.addEventListener("click", onChamarRecepcao);
     ligarFiltro(senhas, { chamar: false });
     return;
   }
@@ -916,13 +931,53 @@ function tipoChegadaSelecionado() {
   return document.querySelector("#form-chegada input[name=tipo-chegada]:checked")?.value || "";
 }
 
+function limparRascunho() {
+  rascunhoChegada = {
+    chamado: false,
+    horaIso: null,
+    preferencial: false,
+    nome: "",
+    tipoId: "",
+    processo: "",
+  };
+}
+
+function guardarRascunho() {
+  rascunhoChegada.preferencial = !!document.getElementById("campo-pref")?.checked;
+  rascunhoChegada.nome = document.getElementById("campo-nome")?.value || "";
+  rascunhoChegada.processo = document.getElementById("campo-processo")?.value || "";
+  rascunhoChegada.tipoId = tipoChegadaSelecionado() || rascunhoChegada.tipoId;
+}
+
+function aplicarEstadoChegada() {
+  const travado = !rascunhoChegada.chamado;
+  const form = document.getElementById("form-chegada");
+  form?.classList.toggle("aguardando-chamada", travado);
+  document.getElementById("campo-nome")?.toggleAttribute("disabled", travado);
+  document.getElementById("campo-processo")?.toggleAttribute("disabled", travado);
+  document.getElementById("btn-registrar")?.toggleAttribute("disabled", travado);
+  document.querySelectorAll("#form-chegada input[name=tipo-chegada]").forEach((el) => {
+    el.disabled = travado;
+  });
+  const horaEl = document.getElementById("campo-hora-rotulo");
+  if (horaEl) horaEl.textContent = rascunhoChegada.horaIso ? hora(rascunhoChegada.horaIso) : "—";
+}
+
+function onChamarRecepcao() {
+  if (!ehHoje()) return;
+  guardarRascunho();
+  rascunhoChegada.chamado = true;
+  rascunhoChegada.horaIso = new Date().toISOString();
+  aplicarEstadoChegada();
+  document.getElementById("campo-nome")?.focus();
+}
+
 function atualizarChegada() {
-  const tipoId = tipoChegadaSelecionado();
-  const pref = document.getElementById("campo-pref")?.checked;
+  guardarRascunho();
   const hidden = document.getElementById("campo-tipo");
   const rotulo = document.getElementById("campo-senha-rotulo");
-  if (hidden) hidden.value = tipoId;
-  if (rotulo) rotulo.textContent = rotuloProxima(pref);
+  if (hidden) hidden.value = rascunhoChegada.tipoId;
+  if (rotulo) rotulo.textContent = rotuloProxima(rascunhoChegada.preferencial);
 }
 
 function onChegadaCampos(ev) {
@@ -932,10 +987,13 @@ function onChegadaCampos(ev) {
     document.querySelectorAll("#form-chegada input[name=tipo-chegada]").forEach((box) => {
       box.checked = box.value === escolhido;
     });
+    rascunhoChegada.tipoId = escolhido;
     atualizarChegada();
     return;
   }
-  if (el.id === "campo-pref") atualizarChegada();
+  if (el.id === "campo-pref" || el.id === "campo-nome" || el.id === "campo-processo") {
+    atualizarChegada();
+  }
 }
 
 async function onChegada(ev) {
@@ -943,10 +1001,16 @@ async function onChegada(ev) {
   if (enviandoChegada || !ehHoje()) return;
   const erro = document.getElementById("form-erro");
   erro.classList.add("hidden");
-  const nome = document.getElementById("campo-nome").value.trim();
-  const tipoId = tipoChegadaSelecionado() || document.getElementById("campo-tipo").value;
-  const preferencial = document.getElementById("campo-pref").checked;
-  const processo = document.getElementById("campo-processo").value.trim();
+  if (!rascunhoChegada.chamado || !rascunhoChegada.horaIso) {
+    erro.textContent = "Clica em Chamar para anotar a hora da recepção.";
+    erro.classList.remove("hidden");
+    return;
+  }
+  guardarRascunho();
+  const nome = rascunhoChegada.nome.trim();
+  const tipoId = rascunhoChegada.tipoId;
+  const preferencial = rascunhoChegada.preferencial;
+  const processo = rascunhoChegada.processo.trim();
   if (!tipoId) {
     erro.textContent = "Marca o tipo de atendimento para gerar a senha.";
     erro.classList.remove("hidden");
@@ -958,7 +1022,7 @@ async function onChegada(ev) {
     return;
   }
   enviandoChegada = true;
-  const btn = ev.target.querySelector("[type=submit]");
+  const btn = document.getElementById("btn-registrar");
   if (btn) btn.disabled = true;
   const payload = {
     data: hojeISO(),
@@ -966,21 +1030,21 @@ async function onChegada(ev) {
     tipo_id: tipoId,
     preferencial,
     processo,
-    hora_recepcao: new Date().toISOString(),
+    hora_recepcao: rascunhoChegada.horaIso,
     status: "na_fila",
     created_by: sessao.id,
     updated_by: sessao.id,
   };
   const { error } = await sb.from("senhas").insert(payload);
   enviandoChegada = false;
-  if (btn) btn.disabled = false;
   if (error) {
+    if (btn) btn.disabled = false;
     erro.textContent = error.code === "23505" ? "Esse número bateu com outra senha. Tenta de novo." : error.message;
     erro.classList.remove("hidden");
     return;
   }
+  limparRascunho();
   await carregar();
-  document.getElementById("campo-nome")?.focus();
 }
 
 async function onTipo(ev) {
