@@ -32,6 +32,6 @@ Login: `diego.bispo` e `flavia.abes`. A senha de cada um é o CPF.
 
 ## Identidade
 
-Amarelo **#FFD32C**. Sem brasão do Tribunal, para ninguém achar que é sistema oficial.
+Amarelo **#FFD32C** nos botões. Layout e tipografia no jeito do SIGUS: Inter, barra #0D3B5E, fundo #F4F6F9, cards brancos.
 
 No celular o site sugere **Instalar** (Android/Chrome) ou, no iPhone, Compartilhar → Adicionar à Tela de Início.
