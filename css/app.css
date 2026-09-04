@@ -487,11 +487,23 @@ textarea {
   outline-offset: 2px;
 }
 
-.pref-chegada .chip-check-ui { min-width: 40px; padding: 0 10px; }
-.pref-chegada input:checked + .chip-check-ui {
-  background: var(--amarelo);
-  border-color: var(--amarelo);
-  color: var(--dark);
+.pref-chegada .chip-check-ui {
+  min-width: 118px;
+  padding: 0 12px;
+  background: #ffd4b8;
+  border-color: #f0a36a;
+  color: #9a4a12;
+}
+.pref-chegada:hover .chip-check-ui {
+  background: #ffb066;
+  border-color: #ee7a28;
+  color: #7a3208;
+}
+.pref-chegada input:checked + .chip-check-ui,
+.pref-chegada:hover input:checked + .chip-check-ui {
+  background: #e56a17;
+  border-color: #c44f0a;
+  color: #fff;
 }
 
 .chip-check.mini .chip-check-ui {
@@ -575,6 +587,7 @@ textarea {
   border-bottom: 1px solid var(--line);
   vertical-align: top;
 }
+.table tr.editando td { background: #fff4e5; }
 
 .empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
 

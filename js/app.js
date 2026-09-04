@@ -21,6 +21,7 @@ let rascunhoChegada = {
   processo: "",
 };
 let dashFiltro = { tipo: "", status: "todos", pref: "todos", pessoa: "" };
+let tipoEditandoId = null;
 
 function hojeISO() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -444,9 +445,9 @@ function telaGeral() {
           <span>Senha</span>
           <div class="senha-com-pref">
             <strong id="campo-senha-rotulo" class="senha-valor">${rotuloProxima(rascunhoChegada.preferencial)}</strong>
-            <label class="chip-check pref-chegada" title="Preferencial">
+            <label class="chip-check pref-chegada">
               <input id="campo-pref" type="checkbox" ${rascunhoChegada.preferencial ? "checked" : ""}>
-              <span class="chip-check-ui"><span class="pref-curto">P</span><span class="pref-longo">Preferencial</span></span>
+              <span class="chip-check-ui">Preferencial</span>
             </label>
           </div>
         </div>
@@ -511,20 +512,23 @@ function telaTipo(tipo) {
 }
 
 function telaTipos() {
+  const editando = tipos.find((t) => t.id === tipoEditandoId) || null;
   return `<section class="card">
     <h2>Tipos de atendimento</h2>
-    <p class="muted form-dica">Configurações do sistema. Cada tipo vira uma aba na fila. Sigla e cor identificam na planilha.</p>
+    <p class="muted form-dica">${editando ? `Editando <strong>${escapar(editando.nome)}</strong>. Os tipos já vêm prontos (Triagem, Consulta, Ajuizamento) e você pode mudar nome, sigla e cor.` : "Os tipos já vêm cadastrados. Pode editar, incluir outros ou desativar."}</p>
     <form id="form-tipo" class="form-grid cadastro">
+      <input type="hidden" id="tipo-id" value="${editando ? escapar(editando.id) : ""}">
       <label>Nome
-        <input id="tipo-nome" required placeholder="Ex.: Triagem">
+        <input id="tipo-nome" required placeholder="Ex.: Triagem" value="${editando ? escapar(editando.nome) : ""}">
       </label>
       <label>Sigla
-        <input id="tipo-sigla" required maxlength="3" placeholder="T">
+        <input id="tipo-sigla" required maxlength="3" placeholder="T" value="${editando ? escapar(editando.sigla) : ""}">
       </label>
       <label>Cor
-        <input id="tipo-cor" type="color" value="#6B3FA0">
+        <input id="tipo-cor" type="color" value="${editando ? escapar(editando.cor) : "#6B3FA0"}">
       </label>
-      <button class="btn primary" type="submit">Incluir tipo</button>
+      <button class="btn primary" type="submit">${editando ? "Salvar" : "Incluir tipo"}</button>
+      ${editando ? `<button type="button" class="btn ghost" data-acao="cancelar-tipo">Cancelar</button>` : ""}
     </form>
     <p id="tipo-erro" class="erro hidden"></p>
     <table class="table">
@@ -534,10 +538,11 @@ function telaTipos() {
           tipos.length
             ? tipos
                 .map(
-                  (t) => `<tr>
+                  (t) => `<tr class="${t.id === tipoEditandoId ? "editando" : ""}">
                     <td><span class="sigla" style="background:${escapar(t.cor)}">${escapar(t.sigla)}</span> <strong>${escapar(t.nome)}</strong>${t.ativo ? "" : " · inativo"}</td>
                     <td class="meta">${auditoria(t)}</td>
                     <td>
+                      <button type="button" class="btn ghost small" data-acao="editar-tipo" data-id="${t.id}">Editar</button>
                       <button type="button" class="btn ghost small" data-acao="toggle-tipo" data-id="${t.id}" data-ativo="${t.ativo ? "1" : "0"}">${t.ativo ? "Desativar" : "Ativar"}</button>
                     </td>
                   </tr>`
@@ -1058,17 +1063,27 @@ async function onTipo(ev) {
   ev.preventDefault();
   const erro = document.getElementById("tipo-erro");
   erro.classList.add("hidden");
-  const { error } = await sb.from("tipos_atendimento").insert({
-    nome: document.getElementById("tipo-nome").value.trim(),
-    sigla: document.getElementById("tipo-sigla").value.trim().toUpperCase(),
-    cor: document.getElementById("tipo-cor").value,
-    ordem: tipos.length + 1,
-  });
+  const nome = document.getElementById("tipo-nome").value.trim();
+  const sigla = document.getElementById("tipo-sigla").value.trim().toUpperCase();
+  const cor = document.getElementById("tipo-cor").value;
+  const id = document.getElementById("tipo-id")?.value || tipoEditandoId;
+  let error;
+  if (id) {
+    ({ error } = await sb.from("tipos_atendimento").update({ nome, sigla, cor }).eq("id", id));
+  } else {
+    ({ error } = await sb.from("tipos_atendimento").insert({
+      nome,
+      sigla,
+      cor,
+      ordem: tipos.length + 1,
+    }));
+  }
   if (error) {
-    erro.textContent = error.message;
+    erro.textContent = error.code === "23505" ? "Essa sigla já existe. Escolhe outra." : error.message;
     erro.classList.remove("hidden");
     return;
   }
+  tipoEditandoId = null;
   ev.target.reset();
   await carregar();
 }
@@ -1239,6 +1254,19 @@ async function onAcao(ev) {
       return;
     }
     await patch(id, { numero });
+    return;
+  }
+  if (acao === "editar-tipo") {
+    if (!ehAdmin()) return;
+    tipoEditandoId = id;
+    aba = "tipos";
+    desenhar();
+    document.getElementById("tipo-nome")?.focus();
+    return;
+  }
+  if (acao === "cancelar-tipo") {
+    tipoEditandoId = null;
+    desenhar();
     return;
   }
   if (acao === "toggle-tipo") {
