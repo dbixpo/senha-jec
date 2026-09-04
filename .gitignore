@@ -6,4 +6,5 @@ Thumbs.db
 .env
 .env.local
 manutencao.env
+js/config.js
 supabase/seed.sql

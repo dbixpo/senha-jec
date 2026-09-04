@@ -2,9 +2,10 @@
 
 Fila de recepção para um balcão pequeno: senha de papel, nome, tipo de atendimento e quem está chamando. Feito para o Juizado Especial Cível de Sorocaba, **sem ser sistema oficial do Tribunal**.
 
-- Site: https://dbixpo.github.io/senha-jec/
 - Código: https://github.com/dbixpo/senha-jec
 - Licença: [MIT](LICENSE)
+
+O repositório é o **programa**. O banco Postgres de quem já usa no balcão **não está aqui** — nem URL, nem chave, nem senha. Quem for usar monta o **próprio** projeto no Supabase, cola o `supabase/schema.sql` e aponta o `js/config.js` local para esse projeto.
 
 Qualquer núcleo, cartório ou recepção parecida pode copiar, hospedar o seu e adaptar os tipos.
 
@@ -72,10 +73,10 @@ No celular o site vira PWA: no Android o Chrome oferece **Instalar**; no iPhone 
 
 ## Subir o seu
 
-Precisa de um projeto [Supabase](https://supabase.com) (Postgres + Realtime) e de um lugar para o HTML estático (GitHub Pages serve).
+Cada instalação tem o **seu** Supabase. Não existe banco compartilhado neste repositório.
 
-1. Crie o projeto no Supabase.
-2. SQL Editor: rode `supabase/schema.sql` inteiro (tabelas, RLS, RPCs).
+1. Crie um projeto no [Supabase](https://supabase.com).
+2. SQL Editor: rode `supabase/schema.sql` inteiro (tabelas, RLS, RPCs). Esse arquivo **pode** (e deve) ser usado: é o esquema, não os dados de ninguém.
 3. Crie **os seus** operadores no SQL Editor, por exemplo:
 
 ```sql
@@ -84,13 +85,13 @@ values
   ('maria.silva', 'Maria Silva', crypt('senha-que-voce-escolher', gen_salt('bf')), 'admin');
 ```
 
-Não use o `seed.sql` de outra instalação. Esse arquivo, se existir, fica só na máquina local e está no `.gitignore` de propósito.
+Não use seed de outra mesa. `supabase/seed.sql` e `js/config.js`, se existirem na máquina de alguém, estão no `.gitignore` de propósito.
 
-4. Em **Project Settings → API**, copie a URL e a chave **anon** (pode ser a publishable). Elas são públicas: a segurança está no RLS e nas RPCs, não em esconder a chave.
-5. Copie `js/config.example.js` para `js/config.js` e cole URL + chave.
+4. Em **Project Settings → API**, copie a URL e a chave **anon** (pode ser a publishable) **do projeto que você criou**.
+5. Copie `js/config.example.js` para `js/config.js` e cole **a sua** URL e chave. Esse arquivo não vai para o Git.
 6. Publique a pasta (GitHub Pages, Netlify, pasta num servidor). Abra o site e entre com o usuário criado.
 
-A senha do **Postgres** (Settings → Database) não vai para o repositório. Se for aplicar SQL por script, guarde num `manutencao.env` local, igual ao `.env.example`.
+A senha do **Postgres** (Settings → Database) também não vai para o repositório. Script local de manutenção usa `manutencao.env`, igual ao `.env.example`.
 
 Realtime: em Database → Replication, as tabelas `senhas`, `historico_chamadas` e `tipos_atendimento` precisam estar no publication `supabase_realtime` (o `schema.sql` já tenta ligar).
 
@@ -117,6 +118,6 @@ Migrações extras ficam em `supabase/migrations/`. O arquivo canônico para um 
 
 ## Contribuir
 
-Issue e PR no GitHub são bem-vindos: fila, acessibilidade no celular, tipos, dashboard. Não abra PR com senha, CPF, `.env` ou `manutencao.env`.
+Issue e PR no GitHub são bem-vindos: fila, acessibilidade no celular, tipos, dashboard. Não abra PR com senha, CPF, `.env`, `manutencao.env`, `js/config.js` nem URL de banco de ninguém.
 
 Se for usar em outro órgão, troque o nome na interface e os tipos — e deixe claro que **não é sistema oficial**.
