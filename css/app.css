@@ -86,18 +86,45 @@ h2 { font-size: 18px; color: var(--ink); }
 }
 
 .date-wrap {
-  display: grid;
-  gap: 2px;
-  font-size: 11px;
-  color: #9bb4c8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  height: 36px;
+  font-size: 12px;
   font-weight: 600;
+  color: #9bb4c8;
 }
 
-.date-wrap input {
-  background: #fff;
-  color: var(--ink);
+.date-wrap input[type="date"] {
+  width: 10.6rem;
   height: 36px;
   min-height: 36px;
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  color-scheme: dark;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.date-wrap input[type="date"]:focus {
+  outline: 2px solid var(--amarelo);
+  outline-offset: 1px;
+}
+
+.date-wrap input[type="date"]::-webkit-datetime-edit {
+  padding: 0;
+}
+
+.date-wrap input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.75;
+  filter: invert(1);
 }
 
 .top .btn {
@@ -649,6 +676,13 @@ textarea {
   input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
   select, textarea, .btn, .chip-check-ui { min-height: 44px; height: 44px; font-size: 16px; }
   textarea { height: auto; min-height: 88px; }
+  .date-wrap,
+  .date-wrap input[type="date"],
+  .top .btn {
+    height: 36px;
+    min-height: 36px;
+    font-size: 13px;
+  }
   .chip-check.mini .chip-check-ui,
   .btn.small,
   .planilha input[type="text"],
