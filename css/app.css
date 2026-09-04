@@ -833,7 +833,8 @@ textarea {
   .shell { padding: 10px 12px 96px; }
   h1 { font-size: 18px; }
   h2 { font-size: 16px; }
-  .card { padding: 14px; border-radius: 12px; }
+  .topo-acoes { width: 100%; }
+  .topo-acoes .btn.primary { width: 100%; height: 48px; min-height: 48px; }
   .kpis { grid-template-columns: 1fr 1fr; }
   .card-topo { margin-bottom: 10px; }
   .legenda { font-size: 12px; }
