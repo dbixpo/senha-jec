@@ -197,6 +197,15 @@ function fecharAviso() {
   document.getElementById("aviso")?.classList.add("hidden");
 }
 
+function abrirSobre() {
+  document.getElementById("sobre")?.classList.remove("hidden");
+  document.getElementById("sobre-ok")?.focus();
+}
+
+function fecharSobre() {
+  document.getElementById("sobre")?.classList.add("hidden");
+}
+
 function mostrarErro(msg) {
   abrirAviso({ titulo: "Atenção", texto: msg });
 }
@@ -1938,9 +1947,16 @@ function ligarEventos() {
   document.getElementById("aviso")?.addEventListener("click", (ev) => {
     if (ev.target.id === "aviso") fecharAviso();
   });
+  document.getElementById("btn-ajuda")?.addEventListener("click", abrirSobre);
+  document.getElementById("login-ajuda")?.addEventListener("click", abrirSobre);
+  document.getElementById("sobre-ok")?.addEventListener("click", fecharSobre);
+  document.getElementById("sobre")?.addEventListener("click", (ev) => {
+    if (ev.target.id === "sobre") fecharSobre();
+  });
   document.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape") {
       fecharAviso();
+      fecharSobre();
       esconderTipHora();
     }
   });

@@ -1206,6 +1206,9 @@ textarea {
   padding: 20px;
   z-index: 80;
 }
+.overlay-sobre {
+  z-index: 90;
+}
 .aviso-card {
   width: min(420px, 100%);
   display: grid;
@@ -1228,6 +1231,48 @@ textarea {
 }
 .aviso-card .eyebrow { color: var(--muted); }
 .aviso-card .btn { width: 100%; }
+
+.sobre-card {
+  width: min(560px, 100%);
+  max-height: min(88vh, 760px);
+  overflow: auto;
+  gap: 8px;
+}
+.sobre-card h3 {
+  margin: 12px 0 4px;
+  color: var(--dark);
+  font-size: 15px;
+}
+.sobre-card ol {
+  margin: 0;
+  padding-left: 1.2em;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.sobre-card li { margin: 0 0 4px; }
+.sobre-card a { color: #1a82b8; font-weight: 600; }
+.credito {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.credito a, .link-ajuda {
+  color: #1a82b8;
+  font-weight: 600;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+}
+.credito-sobre {
+  margin: 12px 0 4px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.foot a { color: #1a82b8; font-weight: 600; }
 
 .disclaimer {
   color: var(--muted);
@@ -1583,12 +1628,14 @@ textarea {
   .cfg-wrap { flex: none; }
   .top-dia .btn,
   #btn-sair,
-  #btn-cfg {
+  #btn-cfg,
+  #btn-ajuda {
     height: 40px;
     min-height: 40px;
   }
   #btn-cfg { padding: 0 12px; font-size: 14px; }
-  #btn-sair, #btn-cfg { white-space: nowrap; }
+  #btn-ajuda { min-width: 40px; padding: 0 12px; }
+  #btn-sair, #btn-cfg, #btn-ajuda { white-space: nowrap; }
   .cfg-menu {
     right: 0;
     left: auto;
@@ -1732,7 +1779,8 @@ textarea {
     font-size: 16px;
   }
   #btn-sair,
-  #btn-cfg {
+  #btn-cfg,
+  #btn-ajuda {
     height: 40px;
     min-height: 40px;
     font-size: 14px;

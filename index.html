@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/app.css?v=35">
+  <link rel="stylesheet" href="css/app.css?v=36">
 </head>
 <body>
   <div id="setup" class="overlay hidden">
@@ -58,6 +58,10 @@
           <button class="btn primary" type="submit">Entrar</button>
         </form>
         <p class="disclaimer">Sistema de controle de Fila Interna</p>
+        <p class="credito">
+          <button type="button" class="link-ajuda" id="login-ajuda">Como funciona</button>
+          · <a href="https://github.com/dbixpo/senha-jec" target="_blank" rel="noopener noreferrer">github.com/dbixpo</a>
+        </p>
       </div>
     </div>
   </div>
@@ -81,6 +85,7 @@
             <button type="button" role="menuitem" data-cfg="operadores">Operadores</button>
           </div>
         </div>
+        <button type="button" class="btn ghost" id="btn-ajuda" aria-haspopup="dialog"><span class="lab-wide">Como funciona</span><span class="lab-narrow">?</span></button>
         <button type="button" class="btn ghost" id="btn-sair">Sair</button>
       </div>
       <div class="top-dia">
@@ -94,7 +99,7 @@
 
   <div class="shell">
   <main id="app" class="app"></main>
-  <p class="disclaimer foot">Sistema de controle de Fila Interna</p>
+  <p class="disclaimer foot">Sistema de controle de Fila Interna · <a href="https://github.com/dbixpo/senha-jec" target="_blank" rel="noopener noreferrer">dbixpo</a></p>
   </div>
 
   <div id="pwa-bar" class="pwa-bar hidden" role="status">
@@ -114,11 +119,46 @@
     </div>
   </div>
 
+  <div id="sobre" class="overlay overlay-aviso overlay-sobre hidden" role="dialog" aria-modal="true" aria-labelledby="sobre-titulo">
+    <div class="aviso-card sobre-card">
+      <p class="eyebrow">Senha JEC</p>
+      <h2 id="sobre-titulo">Como funciona</h2>
+      <p>Painel interno de fila. <strong>Não é sistema oficial do Tribunal.</strong></p>
+
+      <h3>Recepção — Senha geral</h3>
+      <ol>
+        <li><strong>Chamar</strong> anota a hora. Ainda não grava.</li>
+        <li>Preenche nome, tipo (T, C, A…) e, se for o caso, preferencial e nº de processo.</li>
+        <li><strong>Registrar</strong> manda a pessoa para a fila daquele tipo.</li>
+        <li><strong>Não veio</strong> descarta o rascunho, sem criar senha.</li>
+      </ol>
+      <p>A numeração é uma só no dia: 01, 02… Preferencial vira P01 e <strong>sobe</strong> na fila.</p>
+
+      <h3>Atendimento — aba do tipo</h3>
+      <ol>
+        <li><strong>Chamar</strong> (ou Chamar próxima) deixa a senha com você, em amarelo.</li>
+        <li><strong>Finalizar</strong> encerra.</li>
+        <li><strong>Não respondeu</strong> devolve pra fila e chama a próxima.</li>
+        <li><strong>Chamar de novo</strong> se a pessoa voltou a ser chamada.</li>
+      </ol>
+      <p>Rosa = espera · amarelo = em atendimento · azul = finalizado. Passa o mouse na hora para ver o histórico. Duas pessoas não pegam a mesma senha.</p>
+
+      <h3>Relatório</h3>
+      <p>Filtra o dia (senha, nome, tipo, situação, pessoa), imprime ou baixa CSV. A data no topo troca o dia — chamada só vale hoje.</p>
+
+      <h3>Login</h3>
+      <p>Usuário é <strong>primeiro.sobrenome</strong>. A senha desta mesa é o CPF.</p>
+
+      <p class="credito-sobre">Projeto aberto: <a href="https://github.com/dbixpo/senha-jec" target="_blank" rel="noopener noreferrer">github.com/dbixpo/senha-jec</a><br>Feito por <strong>dbixpo</strong>.</p>
+      <button type="button" class="btn primary" id="sobre-ok">Entendi</button>
+    </div>
+  </div>
+
   <div id="tip-hora" class="tip-hora-flutuante hidden" role="tooltip"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
   <script src="js/config.js"></script>
-  <script src="js/app.js?v=35"></script>
+  <script src="js/app.js?v=36"></script>
   <script src="js/pwa.js"></script>
 </body>
 </html>
