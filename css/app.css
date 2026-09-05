@@ -69,11 +69,11 @@ h2 { font-size: 18px; color: var(--ink); }
 .muted { color: var(--muted); margin: 0; }
 
 .top {
-  display: flex;
-  justify-content: flex-start;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "brand dia actions";
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
   padding: 10px 20px;
   padding-left: max(20px, env(safe-area-inset-left));
   padding-right: max(20px, env(safe-area-inset-right));
@@ -85,6 +85,8 @@ h2 { font-size: 18px; color: var(--ink); }
 .brand {
   display: flex;
   align-items: center;
+  grid-area: brand;
+  justify-self: start;
   min-width: 0;
   min-height: 0;
   margin: 0;
@@ -123,24 +125,41 @@ h2 { font-size: 18px; color: var(--ink); }
 .top-actions {
   display: flex;
   align-items: center;
+  grid-area: actions;
+  justify-self: end;
   gap: 8px;
-  flex-wrap: wrap;
-  margin-left: auto;
+  flex-wrap: nowrap;
+  min-width: min-content;
+  max-width: 100%;
+  margin-left: 0;
 }
 .top-actions.hidden ~ .top-dia { display: none; }
+.top-actions .btn,
+.top-actions .cfg-wrap {
+  flex: none;
+}
 
 .quem {
   display: grid;
+  flex: none;
   gap: 1px;
   margin: 0 8px 0 0;
   color: var(--dark);
   line-height: 1.15;
 }
 
+.quem-nome,
+.quem-papel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .quem-nome {
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
+  max-width: 14rem;
 }
 
 .quem-papel {
@@ -159,7 +178,7 @@ h2 { font-size: 18px; color: var(--ink); }
   top: calc(100% + 6px);
   right: 0;
   z-index: 50;
-  min-width: 180px;
+  min-width: 220px;
   padding: 6px;
   background: #fff;
   border: 1px solid var(--line);
@@ -186,8 +205,14 @@ h2 { font-size: 18px; color: var(--ink); }
   background: #f4f6f9;
 }
 
-#btn-cfg.on,
-#btn-relatorio.on {
+.cfg-sep {
+  height: 1px;
+  margin: 6px 8px;
+  border: 0;
+  background: var(--line);
+}
+
+#btn-cfg.on {
   background: rgba(13, 59, 94, 0.1);
 }
 
@@ -1487,14 +1512,15 @@ textarea {
   border-bottom: 1px solid #edf2f7;
 }
 
-.planilha .col-num { width: 7rem; }
-.planilha .cel-rec { width: 6.2rem; }
-.planilha .cel-atend { width: 7.2rem; }
-.planilha .cel-tipo { width: 4.4rem; }
-.planilha .cel-acao { width: 11.5rem; }
+.planilha .col-num { width: 8rem; }
+.planilha .col-rec { width: 7.2rem; }
+.planilha .col-atend { width: 8rem; }
+.planilha .col-tipo { width: 4.8rem; }
+.planilha .col-acao { width: 8.5rem; }
+.planilha .col-nome { width: auto; }
+.planilha .col-proc { width: 18%; }
 .planilha .cel-nome,
 .planilha .cel-proc {
-  width: auto;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
@@ -1512,6 +1538,36 @@ textarea {
 .planilha tr.aguardando td { background: #fde8ec; }
 .planilha tr.em-atendimento td { background: #fff8d6; }
 .planilha tr.atendida td { background: #e7f2fa; }
+
+.linha-atender td {
+  padding: 0;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.form-atender {
+  width: 100%;
+  margin: 0;
+  background: #fff8d6;
+  border: 0;
+  border-radius: 0;
+}
+
+.atender-rotulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  min-height: 36px;
+}
+
+.atender-rotulo .senha-valor {
+  font-size: 22px;
+}
+
+.form-atender .chegada-acoes .btn {
+  height: 36px;
+  min-height: 36px;
+}
 
 .planilha input[type="text"],
 .planilha input[type="time"],
@@ -1581,17 +1637,9 @@ textarea {
 .top-dia {
   display: flex;
   align-items: center;
+  grid-area: dia;
+  justify-self: center;
   gap: 8px;
-}
-
-@media (min-width: 801px) {
-  .top-dia {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 2;
-  }
 }
 
 .n-passo, .dica-mobile, .pref-longo { display: none; }
@@ -1606,6 +1654,11 @@ textarea {
 
 @media (hover: hover) and (pointer: fine) and (min-width: 901px) {
   .pwa-bar { display: none !important; }
+}
+
+@media (max-width: 1280px) and (min-width: 801px) {
+  .top-actions .lab-wide { display: none; }
+  .top-actions .lab-narrow { display: inline; }
 }
 
 @media (min-width: 801px) {
@@ -1753,20 +1806,16 @@ textarea {
   .cfg-wrap { flex: none; }
   .top-dia .btn,
   #btn-sair,
-  #btn-cfg,
-  #btn-ajuda,
-  #btn-relatorio {
+  #btn-cfg {
     height: 40px;
     min-height: 40px;
   }
   #btn-cfg { padding: 0 12px; font-size: 14px; }
-  #btn-ajuda { min-width: 40px; padding: 0 12px; }
-  #btn-relatorio { padding: 0 10px; font-size: 14px; }
-  #btn-sair, #btn-cfg, #btn-ajuda, #btn-relatorio { white-space: nowrap; }
+  #btn-sair, #btn-cfg { white-space: nowrap; }
   .cfg-menu {
     right: 0;
     left: auto;
-    min-width: 200px;
+    min-width: 240px;
   }
   .cfg-menu button { height: 44px; }
 
@@ -1830,7 +1879,8 @@ textarea {
   .form-chegada .campo-nome,
   .form-chegada .campo-tipos,
   .form-chegada .campo-processo,
-  .form-chegada .chegada-acoes {
+  .form-chegada .chegada-acoes,
+  .form-chegada .atender-rotulo {
     grid-column: 1 / -1;
   }
   .form-chegada .campo-nome,
@@ -1874,10 +1924,12 @@ textarea {
     height: 44px;
     min-height: 44px;
   }
-  .chegada-acoes {
-    margin: 4px 0 0;
-    padding: 0;
-    background: none;
+  .chegada-acoes .btn-rechamada {
+    grid-column: 1 / -1;
+  }
+  .form-atender .chegada-acoes .btn {
+    height: 44px;
+    min-height: 44px;
   }
   .form-submit {
     position: static;
@@ -1914,9 +1966,7 @@ textarea {
     font-size: 16px;
   }
   #btn-sair,
-  #btn-cfg,
-  #btn-ajuda,
-  #btn-relatorio {
+  #btn-cfg {
     height: 40px;
     min-height: 40px;
     font-size: 14px;
@@ -1945,6 +1995,18 @@ textarea {
     border: 1px solid var(--line);
     padding: 2px 0 8px;
   }
+  .linha-atender {
+    display: block;
+    padding: 0;
+    overflow: visible;
+  }
+  .linha-atender td {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+  }
+  .linha-atender td::before { display: none; }
   .planilha tr.aguardando,
   .planilha tr.aguardando td { background: #fde8ec; }
   .planilha tr.em-atendimento,

@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/app.css?v=49">
+  <link rel="stylesheet" href="css/app.css?v=52">
 </head>
 <body>
   <div id="setup" class="overlay hidden">
@@ -37,7 +37,7 @@
   <div id="login" class="overlay hidden">
     <div class="login-card">
       <div class="login-body">
-        <img class="logo-login" src="img/logo-login.png?v=49" alt="Senha JEC">
+        <img class="logo-login" src="img/logo-login.png?v=52" alt="Senha JEC">
         <form id="form-login">
           <div class="campo-login">
             <span class="lab-linha">
@@ -75,20 +75,21 @@
     <div class="faixa" aria-hidden="true"></div>
     <header class="top">
       <button type="button" class="brand" id="btn-home" aria-label="Ir para Senha geral">
-        <img class="logo-top logo-top-web" src="img/logo-topbar.png?v=49" alt="">
-        <img class="logo-top logo-top-cel" src="img/simbolo-rolo.png?v=49" alt="">
+        <img class="logo-top logo-top-web" src="img/logo-topbar.png?v=52" alt="">
+        <img class="logo-top logo-top-cel" src="img/simbolo-rolo.png?v=52" alt="">
       </button>
       <div class="top-actions hidden">
         <div id="quem" class="quem"></div>
         <div id="cfg-wrap" class="cfg-wrap hidden">
-          <button type="button" class="btn ghost" id="btn-cfg" aria-haspopup="true" aria-expanded="false"><span class="lab-wide">Configurações</span><span class="lab-narrow">Config</span></button>
+          <button type="button" class="btn ghost" id="btn-cfg" aria-haspopup="true" aria-expanded="false">Opções</button>
           <div id="cfg-menu" class="cfg-menu hidden" role="menu">
-            <button type="button" role="menuitem" data-cfg="tipos">Tipos</button>
-            <button type="button" role="menuitem" data-cfg="operadores">Operadores</button>
+            <button type="button" role="menuitem" class="cfg-admin" data-cfg="tipos">Tipos de Atendimento</button>
+            <button type="button" role="menuitem" class="cfg-admin" data-cfg="operadores">Operadores</button>
+            <hr class="cfg-sep cfg-admin">
+            <button type="button" role="menuitem" data-cfg="relatorio">Relatório</button>
+            <button type="button" role="menuitem" data-acao="ajuda">Como funciona</button>
           </div>
         </div>
-        <button type="button" class="btn ghost" id="btn-relatorio"><span class="lab-wide">Relatório</span><span class="lab-narrow">Relat.</span></button>
-        <button type="button" class="btn ghost" id="btn-ajuda" aria-haspopup="dialog"><span class="lab-wide">Como funciona</span><span class="lab-narrow">?</span></button>
         <button type="button" class="btn ghost" id="btn-sair">Sair</button>
       </div>
       <div class="top-dia">
@@ -139,7 +140,7 @@
 
       <h3>Atendimento — aba do tipo</h3>
       <ol>
-        <li><strong>Chamar</strong> (ou Chamar próxima) deixa a senha com você, em amarelo.</li>
+        <li><strong>Chamar</strong> na linha deixa a senha com você, em amarelo. Dá para ajustar nome, tipo e nº de processo.</li>
         <li><strong>Finalizar</strong> encerra.</li>
         <li><strong>Não respondeu</strong> devolve pra fila e chama a próxima.</li>
         <li><strong>Chamar de novo</strong> se a pessoa voltou a ser chamada.</li>
@@ -147,7 +148,7 @@
       <p>Rosa = espera · amarelo = em atendimento · azul = finalizado. Passa o mouse na hora para ver o histórico. Duas pessoas não pegam a mesma senha.</p>
 
       <h3>Relatório</h3>
-      <p>No topo, o botão Relatório abre o dia na tela. Filtra, lê a lista e, se precisar, imprime ou salva em PDF. A data no topo troca o dia — chamada só vale hoje.</p>
+      <p>No topo, em <strong>Opções → Relatório</strong>, abre o dia na tela. Filtra, lê a lista e, se precisar, imprime ou salva em PDF. A data no topo troca o dia — chamada só vale hoje.</p>
 
       <h3>Login</h3>
       <p>O usuário junta o primeiro nome e o sobrenome com um ponto: Nelson Salvador Teixeira vira <strong>nelson.salvador</strong>. A senha padrão é o CPF do usuário.</p>
@@ -161,7 +162,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
   <script src="js/config.js"></script>
-  <script src="js/app.js?v=49"></script>
-  <script src="js/pwa.js?v=49"></script>
+  <script src="js/app.js?v=52"></script>
+  <script src="js/pwa.js?v=52"></script>
 </body>
 </html>

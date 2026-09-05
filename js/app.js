@@ -25,6 +25,7 @@ let relFiltro = { senha: "", nome: "", tipo: "", status: "todos", pref: "todos",
 let tipoEditandoId = null;
 let carregarTimer = 0;
 let carregarSeq = 0;
+let focarAtenderId = null;
 
 const PREF_TIPOS = [
   { id: "cadeira", nome: "Deficiência" },
@@ -133,9 +134,9 @@ function aplicarTopoSessao() {
   actions?.classList.remove("hidden");
   aplicarDiaSessao();
   preencherQuem();
-  document.getElementById("cfg-wrap")?.classList.toggle("hidden", !ehAdmin());
-  document.getElementById("btn-cfg")?.classList.toggle("on", aba === "tipos" || aba === "operadores");
-  document.getElementById("btn-relatorio")?.classList.toggle("on", aba === "relatorio");
+  document.getElementById("cfg-wrap")?.classList.remove("hidden");
+  document.querySelectorAll(".cfg-admin").forEach((el) => el.classList.toggle("hidden", !ehAdmin()));
+  document.getElementById("btn-cfg")?.classList.toggle("on", aba === "tipos" || aba === "operadores" || aba === "relatorio");
   document.getElementById("cfg-menu")?.querySelectorAll("[data-cfg]").forEach((btn) => {
     btn.classList.toggle("on", aba === btn.dataset.cfg);
   });
@@ -305,7 +306,7 @@ function ordenarFila(lista) {
 function estaEditando() {
   const el = document.activeElement;
   if (!el || !el.matches("input, select, textarea")) return false;
-  return !!(el.closest(".planilha-wrap") || el.closest("#form-chegada"));
+  return !!(el.closest(".planilha-wrap") || el.closest("#form-chegada") || el.closest(".form-atender"));
 }
 
 async function conectar() {
@@ -442,7 +443,7 @@ function desenharAbas() {
 function checksTipoForm() {
   const ativos = tipos.filter((t) => t.ativo);
   const travado = !rascunhoChegada.chamado;
-  if (!ativos.length) return `<p class="muted">${ehAdmin() ? "Cadastre um tipo primeiro, em Configurações → Tipos." : "Peça a um administrador para cadastrar um tipo."}</p>`;
+  if (!ativos.length) return `<p class="muted">${ehAdmin() ? "Cadastre um tipo primeiro, em Opções → Tipos de Atendimento." : "Peça a um administrador para cadastrar um tipo."}</p>`;
   return ativos.map((t) => `
     <label class="chip-check mini" title="${escapar(t.nome)}" style="--tipo:${escapar(t.cor)}">
       <input type="checkbox" name="tipo-chegada" value="${t.id}" ${travado ? "disabled" : ""} ${rascunhoChegada.tipoId === t.id ? "checked" : ""}>
@@ -505,11 +506,51 @@ function botoesAcaoTipo(senha) {
   return `<button type="button" class="btn primary small" data-acao="chamar-senha" data-id="${senha.id}">Chamar</button>`;
 }
 
+function checksTipoAtender(senha) {
+  return tipos
+    .filter((t) => t.ativo)
+    .map(
+      (t) => `
+    <label class="chip-check mini" title="${escapar(t.nome)}" style="--tipo:${escapar(t.cor)}">
+      <input type="checkbox" name="tipo-atender" data-campo="tipo_id" data-id="${senha.id}" value="${t.id}" ${senha.tipo_id === t.id ? "checked" : ""}>
+      <span class="chip-check-ui"><i class="tab-dot" style="background:${escapar(t.cor)}"></i>${escapar(t.sigla)}<span class="tipo-nome"> · ${escapar(t.nome)}</span></span>
+    </label>`
+    )
+    .join("");
+}
+
+function linhaAtender(senha) {
+  return `<tr class="em-atendimento linha-atender">
+    <td colspan="7">
+      <form class="form-chegada form-atender" data-id="${senha.id}">
+        <div class="atender-rotulo">
+          <strong class="senha-valor">${escapar(rotuloSenha(senha))}</strong>
+          ${iconePref(senha.preferencial_tipo, "pref-ico-planilha")}
+          <span class="muted">${escapar(hora(senha.hora_atendimento) || "—")}</span>
+        </div>
+        <label class="campo campo-nome">Nome
+          <input type="text" data-campo="nome" data-id="${senha.id}" value="${escapar(senha.nome || "")}" placeholder="Nome" autocomplete="off">
+        </label>
+        <fieldset class="campo campo-tipos">
+          <legend>Tipo</legend>
+          <div class="tipo-checks">${checksTipoAtender(senha)}</div>
+        </fieldset>
+        <label class="campo campo-processo">Nº processo
+          <input type="text" data-campo="processo" data-id="${senha.id}" value="${escapar(senha.processo || "")}" placeholder="Nº processo" autocomplete="off">
+        </label>
+        <div class="chegada-acoes">${botoesAcaoTipo(senha)}</div>
+      </form>
+    </td>
+  </tr>`;
+}
+
 function linhaSenha(senha, { chamar = false } = {}) {
   const finalizada = estaFinalizada(senha);
   const emAtend = estaEmAtendimento(senha);
   const faltou = Number(senha.nao_respondeu) > 0;
   const classe = finalizada ? "atendida" : emAtend ? "em-atendimento" : "aguardando";
+  const minha = chamar && ehHoje() && emAtend && senha.atendido_por === sessao.id;
+  if (minha) return linhaAtender(senha);
   const acao = chamar ? `<td class="cel-acao" data-label="Ação">${botoesAcaoTipo(senha)}</td>` : "";
   return `<tr class="${classe} ${senha.preferencial ? "pref" : ""} ${faltou && !finalizada && !emAtend ? "faltou" : ""}">
     <td class="cel-num col-num" data-label="Senha"><span class="senha-com-ico"><span class="senha-num">${escapar(rotuloSenha(senha))}</span>${iconePref(senha.preferencial_tipo, "pref-ico-planilha")}</span>${faltou ? `<span class="chip ausente">${senha.nao_respondeu}x não resp.</span>` : ""}${emAtend ? `<span class="chip em-atendimento">em atendimento</span>` : ""}</td>
@@ -536,6 +577,15 @@ function tabelaFila(lista, { chamar = false } = {}) {
   }
   return `<div class="planilha-wrap">
     <table class="planilha">
+      <colgroup>
+        <col class="col-num">
+        <col class="col-rec">
+        <col class="col-atend">
+        <col class="col-nome">
+        <col class="col-tipo">
+        <col class="col-proc">
+        ${chamar ? `<col class="col-acao">` : ""}
+      </colgroup>
       <thead>
         <tr>
           <th>Senha</th>
@@ -634,12 +684,11 @@ function telaTipo(tipo) {
     <div class="card-topo">
       <div>
         <h2>${escapar(tipo.nome)}</h2>
-        <p class="muted form-dica dica-web">${ehHoje() ? "Chamar coloca em atendimento. <strong>Finalizar</strong> encerra. <strong>Não respondeu</strong> devolve pra fila e chama a próxima." : `Consultando ${dataLegivel(diaAtual())}. Chamada só no dia de hoje.`}</p>
-        <p class="muted form-dica dica-mobile">${ehHoje() ? "Chamar → atender. Finalizar quando acabar. Não respondeu devolve pra fila." : "Só consulta."}</p>
+        <p class="muted form-dica dica-web">${ehHoje() ? "Chamar na linha coloca em atendimento. Aí dá para mudar nome, tipo e nº de processo. <strong>Finalizar</strong> encerra. <strong>Não respondeu</strong> devolve pra fila." : `Consultando ${dataLegivel(diaAtual())}. Chamada só no dia de hoje.`}</p>
+        <p class="muted form-dica dica-mobile">${ehHoje() ? "Chamar na linha para atender. Aí ajusta nome, tipo e processo. Finalizar quando acabar." : "Só consulta."}</p>
         <p id="fila-dica" class="muted form-dica dica-web">${verTudo ? "Inclui quem já foi finalizado." : "Só quem ainda está na fila ou em atendimento."}</p>
       </div>
       <div class="topo-acoes">
-        ${ehHoje() ? `<button type="button" class="btn primary" data-acao="chamar-proxima" data-tipo="${tipo.id}">Chamar próxima</button>` : ""}
         ${barraFiltro()}
         <span class="sigla grande" style="background:${escapar(tipo.cor)}">${escapar(tipo.sigla)}</span>
       </div>
@@ -1328,6 +1377,10 @@ function desenhar() {
     const tipo = tipos.find((t) => t.id === aba.slice(5));
     app.innerHTML = tipo ? telaTipo(tipo) : "<p>Tipo não encontrado.</p>";
     if (tipo) ligarFiltro(senhas.filter((s) => s.tipo_id === tipo.id), { chamar: ehHoje() });
+    if (focarAtenderId) {
+      document.querySelector(`.form-atender[data-id="${focarAtenderId}"] [data-campo=nome]`)?.focus();
+      focarAtenderId = null;
+    }
     return;
   }
   aba = "geral";
@@ -1644,25 +1697,8 @@ async function onAcao(ev) {
       await carregar();
       return;
     }
+    focarAtenderId = id;
     aplicarRespostaFila(data, senhas.find((s) => s.id === id) || data?.senha);
-    return;
-  }
-
-  if (acao === "chamar-proxima") {
-    if (!podeChamar()) return;
-    btn.disabled = true;
-    const { data, error } = await sb.rpc("chamar_proxima", {
-      p_tipo_id: btn.dataset.tipo,
-      p_operador: sessao.id,
-      p_data: diaAtual(),
-    });
-    btn.disabled = false;
-    if (error) {
-      mostrarErro(error.message);
-      await carregar();
-      return;
-    }
-    aplicarRespostaFila(data, data?.senha);
     return;
   }
 
@@ -1791,6 +1827,16 @@ async function onCampo(ev) {
   if (!el || !el.dataset.id || el.disabled) return;
   const id = el.dataset.id;
   const campo = el.dataset.campo;
+  if (campo === "tipo_id") {
+    const form = el.closest(".form-atender");
+    form?.querySelectorAll("input[name=tipo-atender]").forEach((box) => {
+      box.checked = box.value === el.value;
+    });
+    if (el.value && senhas.find((s) => s.id === id)?.tipo_id === el.value) return;
+    if (aba.startsWith("tipo-") && el.value) aba = "tipo-" + el.value;
+    await patch(id, { tipo_id: el.value });
+    return;
+  }
   let valor;
   if (el.type === "checkbox") valor = el.checked;
   else if (el.type === "time") valor = isoDoDia(el.value);
@@ -1907,6 +1953,9 @@ function ligarEventos() {
   const app = document.getElementById("app");
   app.addEventListener("click", onAcao);
   app.addEventListener("change", onCampo);
+  app.addEventListener("submit", (ev) => {
+    if (ev.target.closest(".form-atender")) ev.preventDefault();
+  });
   app.addEventListener("blur", (ev) => {
     if (ev.target.matches("input[data-campo=nome], input[data-campo=processo]")) onCampo(ev);
   }, true);
@@ -1924,6 +1973,13 @@ function ligarEventos() {
   });
   cfgMenu?.addEventListener("click", (ev) => {
     ev.stopPropagation();
+    const ajuda = ev.target.closest("[data-acao=ajuda]");
+    if (ajuda) {
+      cfgMenu.classList.add("hidden");
+      cfgBtn?.setAttribute("aria-expanded", "false");
+      abrirSobre();
+      return;
+    }
     const item = ev.target.closest("[data-cfg]");
     if (!item) return;
     aba = item.dataset.cfg;
@@ -1953,11 +2009,6 @@ function ligarEventos() {
   document.getElementById("aviso")?.addEventListener("click", (ev) => {
     if (ev.target.id === "aviso") fecharAviso();
   });
-  document.getElementById("btn-relatorio")?.addEventListener("click", () => {
-    aba = "relatorio";
-    desenhar();
-  });
-  document.getElementById("btn-ajuda")?.addEventListener("click", abrirSobre);
   document.getElementById("login-ajuda")?.addEventListener("click", abrirSobre);
   document.getElementById("sobre-ok")?.addEventListener("click", fecharSobre);
   document.getElementById("sobre")?.addEventListener("click", (ev) => {
@@ -1968,6 +2019,8 @@ function ligarEventos() {
       fecharAviso();
       fecharSobre();
       esconderTipHora();
+      cfgMenu?.classList.add("hidden");
+      cfgBtn?.setAttribute("aria-expanded", "false");
     }
   });
   ligarDicasHora();
