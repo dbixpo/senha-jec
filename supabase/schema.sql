@@ -79,6 +79,7 @@ create table if not exists senhas (
   status text not null default 'recepcao'
     check (status in ('recepcao', 'na_fila', 'em_atendimento', 'resolvido', 'cancelado')),
   resolucao text,
+  observacao text not null default '',
   hora_chegada timestamptz not null default now(),
   hora_encaminhamento timestamptz,
   hora_inicio timestamptz,
@@ -88,8 +89,13 @@ create table if not exists senhas (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   nao_respondeu integer not null default 0,
-  constraint senhas_numero_por_dia unique (data, numero)
+  constraint senhas_numero_por_dia unique (data, numero),
+  constraint senhas_observacao_len check (char_length(observacao) <= 200)
 );
+
+alter table senhas add column if not exists observacao text not null default '';
+alter table senhas drop constraint if exists senhas_observacao_len;
+alter table senhas add constraint senhas_observacao_len check (char_length(observacao) <= 200);
 
 create index if not exists senhas_dia_status_idx on senhas (data, status);
 create index if not exists senhas_dia_setor_idx on senhas (data, setor_id, status);
@@ -350,6 +356,7 @@ declare
   alvo senhas%rowtype;
   eh_admin boolean;
   destino uuid;
+  origem_nome text;
   destino_nome text;
   obs text;
 begin
@@ -379,21 +386,23 @@ begin
     return json_build_object('ok', false, 'motivo', 'nao_e_sua');
   end if;
 
-  obs := nullif(left(trim(coalesce(p_observacao, '')), 200), '');
+  obs := left(trim(coalesce(p_observacao, alvo.observacao, '')), 200);
   destino := coalesce(p_tipo_id, alvo.tipo_id);
 
   if destino is distinct from alvo.tipo_id then
-    select nome into destino_nome from tipos_atendimento where id = destino and ativo = true;
+    select t.nome into destino_nome from tipos_atendimento t where t.id = destino and t.ativo = true;
     if destino_nome is null then
       return json_build_object('ok', false, 'motivo', 'tipo_invalido');
     end if;
+    select t.nome into origem_nome from tipos_atendimento t where t.id = alvo.tipo_id;
 
     insert into historico_chamadas (senha_id, tipo_id, chamado_por, local)
     values (
       alvo.id,
-      destino,
+      alvo.tipo_id,
       p_operador,
-      'Encaminhado para ' || destino_nome || coalesce(' · ' || obs, '')
+      'Encaminhado de ' || coalesce(origem_nome, '?') || ' para ' || destino_nome
+        || case when obs <> '' then ' · ' || obs else '' end
     );
 
     update senhas
@@ -402,8 +411,9 @@ begin
         hora_atendimento = null,
         hora_inicio = null,
         hora_fim = null,
+        hora_encaminhamento = timezone('utc', now()),
         atendido_por = null,
-        resolucao = obs,
+        observacao = obs,
         updated_by = p_operador
     where id = p_id
     returning * into alvo;
@@ -414,7 +424,7 @@ begin
   update senhas
   set status = 'resolvido',
       hora_fim = timezone('utc', now()),
-      resolucao = case when p_observacao is null then resolucao else obs end,
+      observacao = obs,
       updated_by = p_operador
   where id = p_id
   returning * into alvo;
@@ -599,3 +609,5 @@ begin
   end;
 end;
 $$;
+
+notify pgrst, 'reload schema';

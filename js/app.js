@@ -468,7 +468,9 @@ function linhasDicaRecepcao(senha) {
   const quando = hora(senha.hora_recepcao);
   if (!quando) return [];
   const quem = senha.created_by ? nomeOperador(senha.created_by) : "";
-  return [`Recepção ${quando}`, quem ? `por ${quem}` : ""];
+  const linhas = [`Recepção ${quando}`, quem ? `por ${quem}` : ""];
+  if (senha.hora_encaminhamento) linhas.push(`Encaminhada ${hora(senha.hora_encaminhamento)}`);
+  return linhas;
 }
 
 function linhasDicaAtendimento(senha) {
@@ -535,7 +537,7 @@ function htmlObservacao(texto) {
 }
 
 function linhaAtender(senha) {
-  const obs = String(senha.resolucao || "").slice(0, 200);
+  const obs = String(senha.observacao || "").slice(0, 200);
   return `<tr class="em-atendimento linha-atender">
     <td colspan="7">
       <form class="form-chegada form-atender" data-id="${senha.id}" data-origem="${escapar(senha.tipo_id)}">
@@ -576,7 +578,7 @@ function linhaSenha(senha, { chamar = false } = {}) {
     <td class="cel-num col-num" data-label="Senha"><span class="senha-com-ico"><span class="senha-num">${escapar(rotuloSenha(senha))}</span>${iconePref(senha.preferencial_tipo, "pref-ico-planilha")}</span>${faltou ? `<span class="chip ausente">${senha.nao_respondeu}x não resp.</span>` : ""}${emAtend ? `<span class="chip em-atendimento">em atendimento</span>` : ""}</td>
     <td class="cel-rec" data-label="Recepção">${htmlHoraDica(hora(senha.hora_recepcao) || "—", linhasDicaRecepcao(senha))}</td>
     <td class="cel-atend" data-label="Atendimento">${htmlHistorico(senha)}</td>
-    <td class="cel-nome" data-label="Nome"><span class="hora-lida">${escapar(senha.nome || "—")}</span>${htmlObservacao(senha.resolucao)}</td>
+    <td class="cel-nome" data-label="Nome"><span class="hora-lida">${escapar(senha.nome || "—")}</span>${htmlObservacao(senha.observacao)}</td>
     <td class="cel-tipo" data-label="Tipo">${badgeTipo(senha)}</td>
     <td class="cel-proc" data-label="Processo"><span class="hora-lida">${escapar(senha.processo || "—")}</span></td>
     ${acao}
@@ -891,7 +893,7 @@ function htmlRelatorioTabela(lista) {
             <td data-label="Espera">${escapar(espera)}</td>
             <td data-label="Chamadas">${escapar(historicoTexto(s) || "—")}</td>
             <td data-label="Processo">${escapar(s.processo || "—")}</td>
-            <td data-label="Observação">${escapar(s.resolucao || "—")}</td>
+            <td data-label="Observação">${escapar(s.observacao || "—")}</td>
           </tr>`;
         }).join("")}
       </tbody>
@@ -926,7 +928,7 @@ function baixarRelatorio() {
       historicoTexto(s),
       s.nao_respondeu || 0,
       s.processo || "",
-      s.resolucao || "",
+      s.observacao || "",
     ].map(csvCel).join(";");
   });
   const csv = "\uFEFF" + [cols.join(";"), ...linhas].join("\n");
@@ -1874,7 +1876,7 @@ async function onCampo(ev) {
     return;
   }
   if (campo === "observacao") {
-    await patch(id, { resolucao: String(el.value || "").slice(0, 200) }, false);
+    await patch(id, { observacao: String(el.value || "").slice(0, 200) }, false);
     return;
   }
   let valor;
