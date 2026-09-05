@@ -1,4 +1,4 @@
-const CACHE = "senha-jec-v48";
+const CACHE = "senha-jec-v49";
 const SHELL = [
   "./",
   "./index.html",
@@ -8,6 +8,7 @@ const SHELL = [
   "./img/favicon.png",
   "./img/logo-topbar.png",
   "./img/logo-login.png",
+  "./img/simbolo-rolo.png",
   "./img/preferencial.png",
   "./img/pref/cadeira.png",
   "./img/pref/idoso.png",

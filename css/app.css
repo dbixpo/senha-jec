@@ -86,12 +86,18 @@ h2 { font-size: 18px; color: var(--ink); }
   display: flex;
   align-items: center;
   min-width: 0;
+  min-height: 0;
   margin: 0;
   padding: 0;
   border: 0;
   background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 0;
   cursor: pointer;
   border-radius: 6px;
+  appearance: none;
+  -webkit-appearance: none;
 }
 .brand:hover { opacity: 0.88; }
 .brand:focus-visible {
@@ -104,6 +110,7 @@ h2 { font-size: 18px; color: var(--ink); }
   width: auto;
   max-width: min(280px, 46vw);
 }
+.logo-top-cel { display: none; }
 .logo-login {
   display: block;
   width: min(200px, 72%);
@@ -1701,8 +1708,14 @@ textarea {
     gap: 8px 8px;
     padding: 8px 12px 10px;
   }
-  .brand { grid-area: brand; min-width: 0; }
-  .logo-top { height: 34px; max-width: min(200px, 52vw); }
+  .brand { grid-area: brand; min-width: 0; align-self: center; }
+  .logo-top-web { display: none; }
+  .logo-top-cel {
+    display: block;
+    height: 38px;
+    width: auto;
+    max-width: 54px;
+  }
   .top-actions {
     grid-area: actions;
     display: flex;
