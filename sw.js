@@ -1,4 +1,4 @@
-const CACHE = "senha-jec-v54";
+const CACHE = "senha-jec-v55";
 const SHELL = [
   "./",
   "./index.html",

@@ -2205,6 +2205,36 @@ textarea {
     height: 40px;
     min-height: 40px;
   }
+
+  html, body {
+    height: auto;
+    min-height: 100dvh;
+    min-height: 100svh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  .shell,
+  .app,
+  .app:has(.card-fila),
+  .app:has(.rel-card),
+  .card-fila,
+  .rel-card,
+  #fila-lista,
+  #rel-lista {
+    overflow: visible;
+    height: auto;
+    min-height: 0;
+  }
+  .planilha-wrap,
+  .rel-wrap {
+    overflow: visible;
+    flex: none;
+    max-height: none;
+  }
+  .form-atender,
+  .form-chegada {
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
+  }
 }
 
 @media (max-width: 720px) {

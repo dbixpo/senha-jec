@@ -36,6 +36,10 @@ const PREF_TIPOS = [
   { id: "autismo", nome: "Autismo" },
 ];
 
+function ehCelular() {
+  return window.matchMedia("(max-width: 800px)").matches;
+}
+
 function hojeISO() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: TZ,
@@ -1403,8 +1407,10 @@ function desenhar() {
     app.innerHTML = tipo ? telaTipo(tipo) : "<p>Tipo não encontrado.</p>";
     if (tipo) ligarFiltro(senhas.filter((s) => s.tipo_id === tipo.id), { chamar: ehHoje() });
     if (focarAtenderId) {
-      document.querySelector(`.form-atender[data-id="${focarAtenderId}"] [data-campo=nome]`)?.focus();
+      const form = document.querySelector(`.form-atender[data-id="${focarAtenderId}"]`);
       focarAtenderId = null;
+      if (ehCelular()) form?.scrollIntoView({ block: "start", behavior: "smooth" });
+      else form?.querySelector("[data-campo=nome]")?.focus();
     }
     return;
   }
@@ -2001,6 +2007,14 @@ function ligarEventos() {
     if (el.value.length > 200) el.value = el.value.slice(0, 200);
     const n = el.closest(".campo-obs")?.querySelector(".obs-n");
     if (n) n.textContent = String(el.value.length);
+  });
+  app.addEventListener("focusin", (ev) => {
+    if (!ehCelular()) return;
+    const campo = ev.target.closest?.(".form-atender input, .form-atender textarea, #form-chegada input, #form-chegada textarea");
+    if (!campo) return;
+    setTimeout(() => {
+      campo.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+    }, 350);
   });
   app.addEventListener("submit", (ev) => {
     if (ev.target.closest(".form-atender")) ev.preventDefault();
