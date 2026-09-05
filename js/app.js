@@ -490,7 +490,7 @@ function htmlHistorico(senha) {
   return `<span class="hist-chamadas">${htmlHoraDica(quando || "—", dica)}${extra}</span>`;
 }
 
-function botoesAcaoTipo(senha) {
+function botoesAcaoTipo(senha, tipoDestinoId) {
   if (!ehHoje()) return "";
   const minha = estaEmAtendimento(senha) && senha.atendido_por === sessao.id;
   const deOutro = estaEmAtendimento(senha) && senha.atendido_por && senha.atendido_por !== sessao.id;
@@ -499,7 +499,8 @@ function botoesAcaoTipo(senha) {
     return `<span class="com-quem">Com ${escapar(nomeOperador(senha.atendido_por))}</span>`;
   }
   if (minha) {
-    return `<button type="button" class="btn ok small" data-acao="finalizar-senha" data-id="${senha.id}">Finalizar</button>
+    const encaminha = tipoDestinoId && tipoDestinoId !== senha.tipo_id;
+    return `<button type="button" class="btn ok small" data-acao="finalizar-senha" data-id="${senha.id}">${encaminha ? "Encaminhar" : "Finalizar"}</button>
       <button type="button" class="btn stamp small" data-acao="nao-respondeu" data-id="${senha.id}"><span class="lab-wide">Não respondeu</span><span class="lab-narrow">Não veio</span></button>
       <button type="button" class="btn ghost small btn-rechamada" data-acao="chamar-senha" data-id="${senha.id}">Chamar de novo</button>`;
   }
@@ -519,10 +520,25 @@ function checksTipoAtender(senha) {
     .join("");
 }
 
+function pintarBotaoAtender(form) {
+  if (!form) return;
+  const destino = form.querySelector("input[name=tipo-atender]:checked")?.value || "";
+  const origem = form.dataset.origem || "";
+  const btn = form.querySelector("[data-acao=finalizar-senha]");
+  if (btn) btn.textContent = destino && destino !== origem ? "Encaminhar" : "Finalizar";
+}
+
+function htmlObservacao(texto) {
+  const t = String(texto || "").trim();
+  if (!t) return "";
+  return `<span class="obs-lida">${escapar(t)}</span>`;
+}
+
 function linhaAtender(senha) {
+  const obs = String(senha.resolucao || "").slice(0, 200);
   return `<tr class="em-atendimento linha-atender">
     <td colspan="7">
-      <form class="form-chegada form-atender" data-id="${senha.id}">
+      <form class="form-chegada form-atender" data-id="${senha.id}" data-origem="${escapar(senha.tipo_id)}">
         <div class="atender-rotulo">
           <strong class="senha-valor">${escapar(rotuloSenha(senha))}</strong>
           ${iconePref(senha.preferencial_tipo, "pref-ico-planilha")}
@@ -538,7 +554,11 @@ function linhaAtender(senha) {
         <label class="campo campo-processo">Nº processo
           <input type="text" data-campo="processo" data-id="${senha.id}" value="${escapar(senha.processo || "")}" placeholder="Nº processo" autocomplete="off">
         </label>
-        <div class="chegada-acoes">${botoesAcaoTipo(senha)}</div>
+        <label class="campo campo-obs">Observação
+          <textarea data-campo="observacao" data-id="${senha.id}" maxlength="200" rows="2" placeholder="O que rolou, o que a próxima fila precisa saber…">${escapar(obs)}</textarea>
+          <span class="obs-conta"><span class="obs-n">${obs.length}</span>/200</span>
+        </label>
+        <div class="chegada-acoes">${botoesAcaoTipo(senha, senha.tipo_id)}</div>
       </form>
     </td>
   </tr>`;
@@ -556,7 +576,7 @@ function linhaSenha(senha, { chamar = false } = {}) {
     <td class="cel-num col-num" data-label="Senha"><span class="senha-com-ico"><span class="senha-num">${escapar(rotuloSenha(senha))}</span>${iconePref(senha.preferencial_tipo, "pref-ico-planilha")}</span>${faltou ? `<span class="chip ausente">${senha.nao_respondeu}x não resp.</span>` : ""}${emAtend ? `<span class="chip em-atendimento">em atendimento</span>` : ""}</td>
     <td class="cel-rec" data-label="Recepção">${htmlHoraDica(hora(senha.hora_recepcao) || "—", linhasDicaRecepcao(senha))}</td>
     <td class="cel-atend" data-label="Atendimento">${htmlHistorico(senha)}</td>
-    <td class="cel-nome" data-label="Nome"><span class="hora-lida">${escapar(senha.nome || "—")}</span></td>
+    <td class="cel-nome" data-label="Nome"><span class="hora-lida">${escapar(senha.nome || "—")}</span>${htmlObservacao(senha.resolucao)}</td>
     <td class="cel-tipo" data-label="Tipo">${badgeTipo(senha)}</td>
     <td class="cel-proc" data-label="Processo"><span class="hora-lida">${escapar(senha.processo || "—")}</span></td>
     ${acao}
@@ -684,8 +704,8 @@ function telaTipo(tipo) {
     <div class="card-topo">
       <div>
         <h2>${escapar(tipo.nome)}</h2>
-        <p class="muted form-dica dica-web">${ehHoje() ? "Chamar na linha coloca em atendimento. Aí dá para mudar nome, tipo e nº de processo. <strong>Finalizar</strong> encerra. <strong>Não respondeu</strong> devolve pra fila." : `Consultando ${dataLegivel(diaAtual())}. Chamada só no dia de hoje.`}</p>
-        <p class="muted form-dica dica-mobile">${ehHoje() ? "Chamar na linha para atender. Aí ajusta nome, tipo e processo. Finalizar quando acabar." : "Só consulta."}</p>
+        <p class="muted form-dica dica-web">${ehHoje() ? "Chamar na linha coloca em atendimento. Trocar o tipo e <strong>Encaminhar</strong> manda pra outra fila. <strong>Finalizar</strong> encerra neste tipo. A observação (até 200 caracteres) segue com a senha." : `Consultando ${dataLegivel(diaAtual())}. Chamada só no dia de hoje.`}</p>
+        <p class="muted form-dica dica-mobile">${ehHoje() ? "Chamar na linha. Troca o tipo e encaminha, ou finaliza. Observação vai junto." : "Só consulta."}</p>
         <p id="fila-dica" class="muted form-dica dica-web">${verTudo ? "Inclui quem já foi finalizado." : "Só quem ainda está na fila ou em atendimento."}</p>
       </div>
       <div class="topo-acoes">
@@ -852,6 +872,7 @@ function htmlRelatorioTabela(lista) {
           <th>Espera</th>
           <th>Chamadas</th>
           <th>Processo</th>
+          <th>Observação</th>
         </tr>
       </thead>
       <tbody>
@@ -870,6 +891,7 @@ function htmlRelatorioTabela(lista) {
             <td data-label="Espera">${escapar(espera)}</td>
             <td data-label="Chamadas">${escapar(historicoTexto(s) || "—")}</td>
             <td data-label="Processo">${escapar(s.processo || "—")}</td>
+            <td data-label="Observação">${escapar(s.resolucao || "—")}</td>
           </tr>`;
         }).join("")}
       </tbody>
@@ -885,7 +907,7 @@ function csvCel(v) {
 
 function baixarRelatorio() {
   const lista = senhasRelatorio();
-  const cols = ["Senha", "Nome", "Tipo", "Preferencial", "Situação", "Recepção", "Quem registrou", "Atendimento", "Quem atendeu", "Finalizou", "Espera", "Chamadas", "Não respondeu", "Processo"];
+  const cols = ["Senha", "Nome", "Tipo", "Preferencial", "Situação", "Recepção", "Quem registrou", "Atendimento", "Quem atendeu", "Finalizou", "Espera", "Chamadas", "Não respondeu", "Processo", "Observação"];
   const linhas = lista.map((s) => {
     const t = tipoDe(s.tipo_id);
     const pref = prefTipo(s.preferencial_tipo);
@@ -904,6 +926,7 @@ function baixarRelatorio() {
       historicoTexto(s),
       s.nao_respondeu || 0,
       s.processo || "",
+      s.resolucao || "",
     ].map(csvCel).join(";");
   });
   const csv = "\uFEFF" + [cols.join(";"), ...linhas].join("\n");
@@ -1620,6 +1643,8 @@ function avisoChamada(res, senha) {
     abrirAviso({ titulo: "Fila vazia", texto: "Não tem ninguém esperando neste tipo." });
   } else if (res?.motivo === "nao_chamada") {
     abrirAviso({ titulo: "Ainda na fila", texto: "Chama a senha antes. Não respondeu só vale em atendimento." });
+  } else if (res?.motivo === "tipo_invalido") {
+    abrirAviso({ titulo: "Tipo inválido", texto: "Esse tipo de atendimento não está ativo." });
   } else if (res?.motivo === "outro_dia") {
     abrirAviso({ titulo: "Outro dia", texto: "Chamada só no dia de hoje. Volta a data no topo." });
   } else {
@@ -1704,8 +1729,21 @@ async function onAcao(ev) {
 
   if (acao === "finalizar-senha") {
     if (!podeChamar()) return;
+    const form = btn.closest(".form-atender");
+    const tipoId = form?.querySelector("input[name=tipo-atender]:checked")?.value || "";
+    const obs = form?.querySelector("[data-campo=observacao]")?.value || "";
+    if (form) {
+      const nome = form.querySelector("[data-campo=nome]")?.value ?? "";
+      const processo = form.querySelector("[data-campo=processo]")?.value ?? "";
+      await sb.from("senhas").update({ nome, processo, ...carimbo() }).eq("id", id);
+    }
     btn.disabled = true;
-    const { data, error } = await sb.rpc("finalizar_senha", { p_id: id, p_operador: sessao.id });
+    const { data, error } = await sb.rpc("finalizar_senha", {
+      p_id: id,
+      p_operador: sessao.id,
+      p_tipo_id: tipoId || null,
+      p_observacao: String(obs).slice(0, 200),
+    });
     btn.disabled = false;
     if (error) {
       mostrarErro(error.message);
@@ -1832,9 +1870,11 @@ async function onCampo(ev) {
     form?.querySelectorAll("input[name=tipo-atender]").forEach((box) => {
       box.checked = box.value === el.value;
     });
-    if (el.value && senhas.find((s) => s.id === id)?.tipo_id === el.value) return;
-    if (aba.startsWith("tipo-") && el.value) aba = "tipo-" + el.value;
-    await patch(id, { tipo_id: el.value });
+    pintarBotaoAtender(form);
+    return;
+  }
+  if (campo === "observacao") {
+    await patch(id, { resolucao: String(el.value || "").slice(0, 200) }, false);
     return;
   }
   let valor;
@@ -1953,11 +1993,18 @@ function ligarEventos() {
   const app = document.getElementById("app");
   app.addEventListener("click", onAcao);
   app.addEventListener("change", onCampo);
+  app.addEventListener("input", (ev) => {
+    const el = ev.target.closest?.("[data-campo=observacao]");
+    if (!el) return;
+    if (el.value.length > 200) el.value = el.value.slice(0, 200);
+    const n = el.closest(".campo-obs")?.querySelector(".obs-n");
+    if (n) n.textContent = String(el.value.length);
+  });
   app.addEventListener("submit", (ev) => {
     if (ev.target.closest(".form-atender")) ev.preventDefault();
   });
   app.addEventListener("blur", (ev) => {
-    if (ev.target.matches("input[data-campo=nome], input[data-campo=processo]")) onCampo(ev);
+    if (ev.target.matches("input[data-campo=nome], input[data-campo=processo], [data-campo=observacao]")) onCampo(ev);
   }, true);
   document.getElementById("dia").addEventListener("change", () => {
     if (!ehAdmin()) document.getElementById("dia").value = hojeISO();

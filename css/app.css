@@ -1569,6 +1569,38 @@ textarea {
   min-height: 36px;
 }
 
+.campo-obs {
+  flex: 1 1 100%;
+  width: 100%;
+}
+
+.campo-obs textarea {
+  width: 100%;
+  height: auto;
+  min-height: 64px;
+  padding: 8px 10px;
+  resize: vertical;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.obs-conta {
+  justify-self: end;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.obs-lida {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
 .planilha input[type="text"],
 .planilha input[type="time"],
 .planilha select {
@@ -1880,7 +1912,8 @@ textarea {
   .form-chegada .campo-tipos,
   .form-chegada .campo-processo,
   .form-chegada .chegada-acoes,
-  .form-chegada .atender-rotulo {
+  .form-chegada .atender-rotulo,
+  .form-chegada .campo-obs {
     grid-column: 1 / -1;
   }
   .form-chegada .campo-nome,
