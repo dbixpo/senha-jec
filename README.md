@@ -34,8 +34,10 @@ Cada linha da planilha é uma senha.
 
 | Botão | O que faz |
 |---|---|
-| **Chamar** / **Chamar próxima** | A senha fica *em atendimento* com você. A hora da primeira chamada é a hora de atendimento. |
-| **Finalizar** | Encerra. Sai da fila. |
+| **Chamar próximo** | No topo da aba. Pega o **primeiro** da fila daquele tipo (preferencial sobe; quem não respondeu vai para o fim do grupo). |
+| **Chamar** | Na linha. A senha fica *em atendimento* com você. Se **não** for o próximo, o sistema avisa quem deveria ser e pergunta se quer chamar fora de ordem. Só chama se confirmar. |
+| **Finalizar** | Encerra neste tipo. Sai da fila. |
+| **Encaminhar** | Se trocar o tipo antes de finalizar, manda a pessoa para a outra fila, com a observação (até 200 caracteres). |
 | **Não respondeu** / **Não veio** | Devolve para a fila (conta como não respondeu) e chama a próxima daquele tipo. |
 | **Chamar de novo** | Nova entrada no histórico, continua com você. |
 
@@ -51,6 +53,7 @@ Cores da linha:
 
 - **Uma senha, um atendente.** Quem chamou é dono até finalizar ou devolver.
 - **Preferencial primeiro**, na ordem do número. Quem não respondeu volta para o fim da prioridade daquele grupo.
+- **Fora de ordem só com confirmação.** Chamar na linha uma senha que não é a próxima abre um aviso com quem deveria ser; Cancelar não chama.
 - **Chamada só no dia de hoje.** Trocar a data no topo é para olhar o histórico, não para chamar.
 - **Usuário** é sempre `primeiro.sobrenome` (ponto no meio). **Senha de acesso** nesta instalação é o CPF — no seu fork, use o que fizer sentido e **nunca** commite CPF nem hash no GitHub público.
 - Operador comum não cadastra tipo nem gente. Admin sim.
@@ -62,7 +65,7 @@ Cores da linha:
 | Dashboard / Painel | Admin | Volume do dia, espera, preferencial, produção por pessoa |
 | Relatório | Todo mundo | Filtro do dia, inclusive por senha; imprimir e CSV |
 | Senha geral | Recepção | Registrar quem chegou |
-| T, C, A (ou os tipos que você cadastrar) | Quem atende | Chamar, finalizar, não respondeu |
+| T, C, A (ou os tipos que você cadastrar) | Quem atende | Chamar próximo, chamar na linha, finalizar, não respondeu |
 | Configurações → Tipos | Admin | Nome, sigla, cor, ativar/desativar |
 | Configurações → Operadores | Admin | Incluir, perfil, senha, ativar/desativar |
 
