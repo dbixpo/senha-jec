@@ -8,6 +8,9 @@ let tipos = [];
 let operadores = [];
 let senhas = [];
 let chamadas = [];
+let senhasLev = [];
+let chamadasLev = [];
+let periodo = { de: "", ate: "" };
 let aba = "geral";
 let canal = null;
 let verTudo = false;
@@ -101,6 +104,48 @@ function dataLegivel(iso) {
   if (!iso) return "";
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
+}
+
+function ehLevantamento() {
+  return aba === "controle" || aba === "relatorio";
+}
+
+function somarDiasISO(iso, n) {
+  const [y, m, d] = String(iso).split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + n));
+  return dt.toISOString().slice(0, 10);
+}
+
+function periodoDe() {
+  return periodo.de || diaAtual();
+}
+
+function periodoAte() {
+  return periodo.ate || diaAtual();
+}
+
+function periodoEhUmDia() {
+  return periodoDe() === periodoAte();
+}
+
+function rotuloPeriodo() {
+  const de = periodoDe();
+  const ate = periodoAte();
+  if (de === ate) return dataLegivel(de);
+  return `${dataLegivel(de)} a ${dataLegivel(ate)}`;
+}
+
+function garantirPeriodo() {
+  if (!periodo.de) periodo.de = diaAtual();
+  if (!periodo.ate) periodo.ate = diaAtual();
+}
+
+function irAba(nova) {
+  const eraLev = ehLevantamento();
+  aba = nova;
+  if (ehLevantamento()) garantirPeriodo();
+  if (eraLev !== ehLevantamento()) carregar();
+  else desenhar();
 }
 
 function aplicarDiaSessao() {
@@ -361,11 +406,11 @@ function proximaEsperaDoTipo(tipoId) {
 async function confirmarVoltarFila(senha) {
   if (!senha) return false;
   return perguntarConfirmacao({
-    titulo: "Voltar para a fila",
-    html: `<p>A senha <strong>${escapar(descreverSenhaFila(senha))}</strong> volta para a espera, na ordem. Não conta como não respondeu.</p>
-      <p>Chamou errado e quer desfazer o atendimento?</p>`,
-    ok: "Voltar para a fila",
-    cancelar: "Continuar atendendo",
+    titulo: "Devolver à fila",
+    html: `<p>A senha <strong>${escapar(descreverSenhaFila(senha))}</strong> sai do atendimento e volta para a espera, na ordem original.</p>
+      <p>Isso não registra falta: é só desfazer a chamada.</p>`,
+    ok: "Devolver à fila",
+    cancelar: "Seguir atendendo",
   });
 }
 
@@ -374,13 +419,13 @@ async function confirmarForaDeOrdem(senha) {
   const proxima = proximaEsperaDoTipo(senha.tipo_id);
   if (!proxima || proxima.id === senha.id) return true;
   return perguntarConfirmacao({
-    titulo: "Não é o próximo",
-    html: `<p>Essa senha <strong>não é a próxima</strong> da fila.</p>
-      <span class="aviso-destaque">Próximo: ${escapar(descreverSenhaFila(proxima))}</span>
-      <span class="aviso-destaque">Você escolheu: ${escapar(descreverSenhaFila(senha))}</span>
-      <p>Quer chamar fora de ordem mesmo?</p>`,
+    titulo: "Fora da ordem da fila",
+    html: `<p>A próxima da fila é outra senha. Se confirmar, esta será atendida antes.</p>
+      <span class="aviso-destaque">Próxima da fila: ${escapar(descreverSenhaFila(proxima))}</span>
+      <span class="aviso-destaque">Você selecionou: ${escapar(descreverSenhaFila(senha))}</span>
+      <p>Deseja chamar mesmo assim?</p>`,
     ok: "Chamar mesmo assim",
-    cancelar: "Cancelar",
+    cancelar: "Manter a ordem",
   });
 }
 
@@ -420,24 +465,72 @@ function pedirLogin() {
   return true;
 }
 
+function ligarChamadas(lista, hist) {
+  const porSenha = new Map();
+  for (const c of hist) {
+    const item = porSenha.get(c.senha_id) || [];
+    item.push(c);
+    porSenha.set(c.senha_id, item);
+  }
+  for (const s of lista) {
+    s.chamadas = porSenha.get(s.id) || [];
+  }
+}
+
+async function buscarPaginas(fazerQuery) {
+  const tam = 1000;
+  let de = 0;
+  const tudo = [];
+  for (;;) {
+    const { data, error } = await fazerQuery().range(de, de + tam - 1);
+    if (error) return { data: null, error };
+    const lote = data || [];
+    tudo.push(...lote);
+    if (lote.length < tam) return { data: tudo, error: null };
+    de += tam;
+    if (de >= 20000) return { data: tudo, error: null };
+  }
+}
+
+async function buscarPeriodo(de, ate) {
+  const inicio = new Date(`${de}T00:00:00-03:00`).toISOString();
+  const fim = new Date(`${somarDiasISO(ate, 1)}T00:00:00-03:00`).toISOString();
+  const [sen, hist] = await Promise.all([
+    buscarPaginas(() =>
+      sb.from("senhas").select("*").gte("data", de).lte("data", ate).order("data").order("numero")
+    ),
+    buscarPaginas(() =>
+      sb.from("historico_chamadas").select("*").gte("chamado_em", inicio).lt("chamado_em", fim).order("chamado_em")
+    ),
+  ]);
+  if (sen.error) return sen;
+  if (hist.error) return hist;
+  const lista = sen.data || [];
+  ligarChamadas(lista, hist.data || []);
+  return { data: { senhas: lista, chamadas: hist.data || [] }, error: null };
+}
+
 async function carregar(opts = {}) {
   if (!sessao) return;
   const seq = ++carregarSeq;
   const soFila = !!opts.soFila && tipos.length;
   const data = diaAtual();
-  const inicioDia = new Date(`${data}T00:00:00-03:00`).toISOString();
+  const precisaLev = ehLevantamento();
+  if (precisaLev) garantirPeriodo();
   const ops = [
     soFila
       ? Promise.resolve({ data: tipos, error: null })
       : sb.from("tipos_atendimento").select("*").order("ordem"),
-    sb.from("senhas").select("*").eq("data", data).order("numero"),
+    buscarPeriodo(data, data),
     soFila
       ? Promise.resolve({ data: operadores, error: null })
       : sb.from("operadores").select(ehAdmin()
         ? "id, usuario, nome, papel, ativo, ultimo_acesso, created_at, updated_at"
         : "id, nome").order("nome"),
-    sb.from("historico_chamadas").select("*").gte("chamado_em", inicioDia).order("chamado_em"),
   ];
+  if (precisaLev && (periodoDe() !== data || periodoAte() !== data)) {
+    ops.push(buscarPeriodo(periodoDe(), periodoAte()));
+  }
   const resultados = await Promise.all(ops);
   if (seq !== carregarSeq) return;
   const erro = resultados.find((r) => r.error)?.error;
@@ -449,16 +542,15 @@ async function carregar(opts = {}) {
     tipos = resultados[0].data || [];
     operadores = resultados[2]?.data || [];
   }
-  senhas = resultados[1].data || [];
-  chamadas = resultados[3].data || [];
-  const porSenha = new Map();
-  for (const c of chamadas) {
-    const lista = porSenha.get(c.senha_id) || [];
-    lista.push(c);
-    porSenha.set(c.senha_id, lista);
-  }
-  for (const s of senhas) {
-    s.chamadas = porSenha.get(s.id) || [];
+  const dia = resultados[1].data || { senhas: [], chamadas: [] };
+  senhas = dia.senhas || [];
+  chamadas = dia.chamadas || [];
+  if (precisaLev && resultados[3]?.data) {
+    senhasLev = resultados[3].data.senhas || [];
+    chamadasLev = resultados[3].data.chamadas || [];
+  } else if (precisaLev) {
+    senhasLev = senhas;
+    chamadasLev = chamadas;
   }
   if (!estaEditando()) desenhar();
 }
@@ -878,7 +970,7 @@ function fmtMin(n) {
 }
 
 function senhasDash() {
-  return senhas.filter((s) => {
+  return senhasLev.filter((s) => {
     if (dashFiltro.tipo && s.tipo_id !== dashFiltro.tipo) return false;
     if (dashFiltro.status === "fila" && !estaNaFila(s)) return false;
     if (dashFiltro.status === "atendimento" && !estaEmAtendimento(s)) return false;
@@ -912,7 +1004,7 @@ function bateSenhaBusca(s, q) {
 
 function senhasRelatorio() {
   const nomeQ = String(relFiltro.nome || "").trim().toLowerCase();
-  return ordenarFila(senhas.filter((s) => {
+  return senhasLev.filter((s) => {
     if (!bateSenhaBusca(s, relFiltro.senha)) return false;
     if (nomeQ && !(s.nome || "").toLowerCase().includes(nomeQ)) return false;
     if (relFiltro.tipo && s.tipo_id !== relFiltro.tipo) return false;
@@ -928,7 +1020,92 @@ function senhasRelatorio() {
       if (s.created_by !== relFiltro.pessoa && s.atendido_por !== relFiltro.pessoa && !chamou) return false;
     }
     return true;
-  }));
+  }).sort((a, b) => {
+    if (a.data !== b.data) return String(a.data).localeCompare(String(b.data));
+    return (a.numero || 0) - (b.numero || 0);
+  });
+}
+
+function htmlPeriodo() {
+  const de = periodoDe();
+  const ate = periodoAte();
+  return `<div class="periodo-wrap">
+    <label>De
+      <input id="periodo-de" type="date" value="${escapar(de)}">
+    </label>
+    <label>Até
+      <input id="periodo-ate" type="date" value="${escapar(ate)}">
+    </label>
+    <div class="periodo-atalhos" role="group" aria-label="Atalhos de período">
+      <button type="button" class="btn ghost small" data-periodo="hoje">Hoje</button>
+      <button type="button" class="btn ghost small" data-periodo="7">7 dias</button>
+      <button type="button" class="btn ghost small" data-periodo="30">30 dias</button>
+      <button type="button" class="btn ghost small" data-periodo="mes">Este mês</button>
+    </div>
+  </div>`;
+}
+
+function aplicarPeriodo(de, ate) {
+  de = de || periodoDe();
+  ate = ate || periodoAte();
+  if (de > ate) {
+    const t = de;
+    de = ate;
+    ate = t;
+  }
+  let n = 0;
+  for (let d = de; d <= ate; d = somarDiasISO(d, 1)) {
+    n += 1;
+    if (n > 366) {
+      mostrarErro("O período pode ter no máximo 12 meses.");
+      return;
+    }
+  }
+  periodo.de = de;
+  periodo.ate = ate;
+  carregar();
+}
+
+function ligarPeriodo() {
+  document.getElementById("periodo-de")?.addEventListener("change", (ev) => {
+    aplicarPeriodo(ev.target.value, periodoAte());
+  });
+  document.getElementById("periodo-ate")?.addEventListener("change", (ev) => {
+    aplicarPeriodo(periodoDe(), ev.target.value);
+  });
+  document.querySelectorAll("[data-periodo]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const hoje = hojeISO();
+      const qual = btn.getAttribute("data-periodo");
+      if (qual === "hoje") aplicarPeriodo(hoje, hoje);
+      else if (qual === "7") aplicarPeriodo(somarDiasISO(hoje, -6), hoje);
+      else if (qual === "30") aplicarPeriodo(somarDiasISO(hoje, -29), hoje);
+      else if (qual === "mes") aplicarPeriodo(`${hoje.slice(0, 8)}01`, hoje);
+    });
+  });
+}
+
+function htmlPorDia(lista) {
+  if (periodoEhUmDia()) return "";
+  const dias = [...new Set(lista.map((s) => s.data).filter(Boolean))].sort();
+  if (!dias.length) return "";
+  const max = Math.max(1, ...dias.map((d) => lista.filter((s) => s.data === d).length));
+  return `<section class="card">
+    <h2>Por dia</h2>
+    <div class="por-dia">
+      ${dias.map((d) => {
+        const doDia = lista.filter((s) => s.data === d);
+        const feitas = doDia.filter(estaFinalizada).length;
+        const prefs = doDia.filter((s) => s.preferencial).length;
+        return `<div class="por-dia-row">
+          <div class="bar-h-lab"><span>${escapar(dataLegivel(d))}</span><span>${doDia.length} senhas · ${feitas} final. · ${prefs} pref.</span></div>
+          <div class="bar-h" title="${doDia.length} senhas">
+            <i style="width:${(doDia.length / max) * 100}%;background:#1a82b8"></i>
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+  </section>`;
 }
 
 function historicoTexto(senha) {
@@ -942,13 +1119,15 @@ function historicoTexto(senha) {
 }
 
 function htmlRelatorioTabela(lista) {
+  const umDia = periodoEhUmDia();
   if (!lista.length) {
-    return `<p class="empty">Nada neste recorte. Limpa os filtros ou troca a data no topo.</p>`;
+    return `<p class="empty">Nada neste recorte. Troca o período ou os filtros.</p>`;
   }
   return `<div class="rel-wrap">
     <table class="rel-tabela table-cartoes">
       <thead>
         <tr>
+          ${umDia ? "" : "<th>Data</th>"}
           <th>Senha</th>
           <th>Nome</th>
           <th>Tipo</th>
@@ -968,6 +1147,7 @@ function htmlRelatorioTabela(lista) {
           const pref = prefTipo(s.preferencial_tipo);
           const espera = fmtMin(minutosEntre(s.hora_recepcao, s.hora_atendimento));
           return `<tr class="${estaFinalizada(s) ? "atendida" : estaEmAtendimento(s) ? "em-atendimento" : "aguardando"}">
+            ${umDia ? "" : `<td data-label="Data">${escapar(dataLegivel(s.data))}</td>`}
             <td data-label="Senha"><span class="senha-num">${escapar(rotuloSenha(s))}</span>${pref ? ` <span class="meta">${escapar(pref.nome)}</span>` : ""}</td>
             <td data-label="Nome">${escapar(s.nome || "—")}</td>
             <td data-label="Tipo">${t ? `<span class="sigla" style="background:${escapar(t.cor)}">${escapar(t.sigla)}</span> ${escapar(t.nome)}` : "—"}</td>
@@ -994,11 +1174,12 @@ function csvCel(v) {
 
 function baixarRelatorio() {
   const lista = senhasRelatorio();
-  const cols = ["Senha", "Nome", "Tipo", "Preferencial", "Situação", "Recepção", "Quem registrou", "Atendimento", "Quem atendeu", "Finalizou", "Espera", "Chamadas", "Não respondeu", "Processo", "Observação"];
+  const cols = ["Data", "Senha", "Nome", "Tipo", "Preferencial", "Situação", "Recepção", "Quem registrou", "Atendimento", "Quem atendeu", "Finalizou", "Espera", "Chamadas", "Não respondeu", "Processo", "Observação"];
   const linhas = lista.map((s) => {
     const t = tipoDe(s.tipo_id);
     const pref = prefTipo(s.preferencial_tipo);
     return [
+      s.data || "",
       rotuloSenha(s),
       s.nome || "",
       t ? `${t.sigla} ${t.nome}` : "",
@@ -1020,12 +1201,15 @@ function baixarRelatorio() {
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `senha-jec-${diaAtual()}.csv`;
+  const de = periodoDe();
+  const ate = periodoAte();
+  a.download = de === ate ? `senha-jec-${de}.csv` : `senha-jec-${de}_${ate}.csv`;
   a.click();
   URL.revokeObjectURL(a.href);
 }
 
 function ligarRelatorio() {
+  ligarPeriodo();
   const bind = (id, key) => {
     document.getElementById(id)?.addEventListener("change", (ev) => {
       relFiltro[key] = ev.target.value;
@@ -1051,7 +1235,7 @@ function atualizarRelatorio() {
   const box = document.getElementById("rel-lista");
   const qtd = document.getElementById("rel-qtd");
   if (box) box.innerHTML = htmlRelatorioTabela(lista);
-  if (qtd) qtd.textContent = `${lista.length} de ${senhas.length} senhas no dia`;
+  if (qtd) qtd.textContent = `${lista.length} de ${senhasLev.length} senhas no período`;
   const qtdPrint = document.getElementById("rel-qtd-print");
   if (qtdPrint) qtdPrint.textContent = lista.length;
 }
@@ -1060,21 +1244,22 @@ function telaRelatorio() {
   const lista = senhasRelatorio();
   const optsTipo = tipos.map((t) => `<option value="${t.id}" ${relFiltro.tipo === t.id ? "selected" : ""}>${escapar(t.nome)}</option>`).join("");
   const optsPessoa = operadores
-    .filter((o) => o.ativo || senhas.some((s) => s.created_by === o.id || s.atendido_por === o.id))
+    .filter((o) => o.ativo || senhasLev.some((s) => s.created_by === o.id || s.atendido_por === o.id))
     .map((o) => `<option value="${o.id}" ${relFiltro.pessoa === o.id ? "selected" : ""}>${escapar(o.nome)}</option>`)
     .join("");
   return `<section class="card rel-card">
     <div class="card-topo">
       <div>
         <h2>Relatório</h2>
-        <p class="muted form-dica">Dia ${escapar(dataLegivel(diaAtual()))} na tela. Filtra aqui. A data no topo troca o dia. Imprimir também serve para salvar em PDF.</p>
+        <p class="muted form-dica">Levantamento de ${escapar(rotuloPeriodo())}. Escolhe o período, filtra e, se precisar, imprime ou salva em PDF. A data no topo é só da fila do dia.</p>
       </div>
       <div class="topo-acoes rel-acoes">
         <button type="button" class="btn ghost" data-acao="baixar-relatorio">Baixar CSV</button>
         <button type="button" class="btn primary" data-acao="imprimir-relatorio">Imprimir / PDF</button>
       </div>
     </div>
-    <p class="so-print">Senha JEC — ${escapar(dataLegivel(diaAtual()))} — <span id="rel-qtd-print">${lista.length}</span> senhas</p>
+    <p class="so-print">Senha JEC — ${escapar(rotuloPeriodo())} — <span id="rel-qtd-print">${lista.length}</span> senhas</p>
+    ${htmlPeriodo()}
     <div class="dash-filtros rel-filtros">
       <label>Senha
         <input id="rel-senha" type="text" inputmode="search" placeholder="01 ou P01" value="${escapar(relFiltro.senha)}" autocomplete="off">
@@ -1110,7 +1295,7 @@ function telaRelatorio() {
         </select>
       </label>
     </div>
-    <p id="rel-qtd" class="muted form-dica">${lista.length} de ${senhas.length} senhas no dia</p>
+    <p id="rel-qtd" class="muted form-dica">${lista.length} de ${senhasLev.length} senhas no período</p>
     <div id="rel-lista">${htmlRelatorioTabela(lista)}</div>
   </section>`;
 }
@@ -1136,6 +1321,7 @@ function svgDonut(fatias) {
 }
 
 function ligarDash() {
+  ligarPeriodo();
   const bind = (id, key) => {
     document.getElementById(id)?.addEventListener("change", (ev) => {
       dashFiltro[key] = ev.target.value;
@@ -1209,7 +1395,7 @@ function telaControle() {
   ];
 
   const idsLista = new Set(lista.map((s) => s.id));
-  const chamadasDash = chamadas.filter((c) => idsLista.has(c.senha_id));
+  const chamadasDash = chamadasLev.filter((c) => idsLista.has(c.senha_id));
   const porPessoa = operadores
     .map((o) => {
       const registrou = lista.filter((s) => s.created_by === o.id).length;
@@ -1230,12 +1416,13 @@ function telaControle() {
     <div class="card-topo">
       <div>
         <h2>Dashboard</h2>
-        <p class="muted form-dica">${ehHoje() ? "Produção de hoje, ao vivo." : `Produção de ${dataLegivel(diaAtual())}.`} A data no topo troca o dia. Os filtros abaixo recortam o que está na tela.</p>
+        <p class="muted form-dica">Produção de ${escapar(rotuloPeriodo())}. Escolhe o período abaixo. A data no topo é só da fila do dia. Os outros filtros recortam o que está na tela.</p>
       </div>
       <div class="topo-acoes">
         <button type="button" class="btn ghost" data-acao="ir-relatorio">Relatório detalhado</button>
       </div>
     </div>
+    ${htmlPeriodo()}
     <div class="dash-filtros">
       <label>Tipo
         <select id="dash-tipo">
@@ -1266,7 +1453,7 @@ function telaControle() {
       </label>
     </div>
     <div class="kpis">
-      <div class="kpi"><span>Senhas</span><strong>${total}</strong><small>${senhas.length === total ? "no dia" : `de ${senhas.length} no dia`}</small></div>
+      <div class="kpi"><span>Senhas</span><strong>${total}</strong><small>${senhasLev.length === total ? (periodoEhUmDia() ? "no dia" : "no período") : `de ${senhasLev.length} no período`}</small></div>
       <div class="kpi fila"><span>Na fila</span><strong>${espera}</strong><small>${emAtend ? emAtend + " em atendimento" : maisAntiga == null ? "ninguém esperando" : "mais antiga " + fmtMin(maisAntiga)}</small></div>
       <div class="kpi ok"><span>Finalizadas</span><strong>${feitas}</strong><small>${total ? Math.round((feitas / total) * 100) + "% do recorte" : "—"}</small></div>
       <div class="kpi pref"><span>Preferencial</span><strong>${prefs}</strong><small>${total ? Math.round((prefs / total) * 100) + "% do recorte" : "—"}</small></div>
@@ -1291,6 +1478,7 @@ function telaControle() {
       }
     </div>
   </section>
+  ${htmlPorDia(lista)}
   <div class="dash-grid">
     <section class="card">
       <h2>Por tipo</h2>
@@ -1327,7 +1515,7 @@ function telaControle() {
       }
     </section>
     <section class="card">
-      <h2>Ao longo do dia</h2>
+      <h2>${periodoEhUmDia() ? "Ao longo do dia" : "Por horário (dias somados)"}</h2>
       <p class="dash-chips"><span><i></i>Recepção</span><span><i class="at"></i>Atendimento</span></p>
       ${
         total
@@ -1347,7 +1535,7 @@ function telaControle() {
                 .join("")}
             </div>
             <p class="muted form-dica" style="margin-top:12px">${recPorHora[picoRec] ? `Pico de chegada às ${String(horas[picoRec]).padStart(2, "0")}h (${recPorHora[picoRec]}).` : "Ainda sem pico de chegada neste recorte."}</p>`
-          : `<p class="dash-vazio">Quando as senhas começarem a entrar, o movimento do dia aparece aqui.</p>`
+          : `<p class="dash-vazio">Quando as senhas começarem a entrar, o movimento aparece aqui.</p>`
       }
     </section>
   </div>
@@ -1712,32 +1900,32 @@ async function patch(id, valores, redesenhar = true) {
 function avisoChamada(res, senha) {
   if (res?.ok) return true;
   if (res?.motivo === "ja_chamada") {
-    const rotulo = senha ? rotuloSenha(senha) : "Essa senha";
+    const rotulo = senha ? rotuloSenha(senha) : "Esta senha";
     abrirAviso({
-      titulo: "Já está em atendimento",
+      titulo: "Já em atendimento",
       texto: `${rotulo} já foi chamada por ${res.com || "outra pessoa"}.`,
     });
   } else if (res?.motivo === "ja_finalizada") {
-    abrirAviso({ titulo: "Já finalizada", texto: "Essa senha já foi finalizada." });
+    abrirAviso({ titulo: "Senha encerrada", texto: "Esta senha já foi finalizada." });
   } else if (res?.motivo === "nao_em_atendimento") {
-    abrirAviso({ titulo: "Ainda na fila", texto: "Chama a senha antes de finalizar." });
+    abrirAviso({ titulo: "Ainda na espera", texto: "Chame a senha antes de finalizar o atendimento." });
   } else if (res?.motivo === "nao_e_sua") {
     abrirAviso({
-      titulo: "Já está em atendimento",
+      titulo: "Já em atendimento",
       texto: senha?.atendido_por
         ? `${rotuloSenha(senha)} já está com ${nomeOperador(senha.atendido_por)}.`
-        : "Essa senha está com outra pessoa.",
+        : "Esta senha já está com outra pessoa.",
     });
   } else if (res?.motivo === "fila_vazia") {
-    abrirAviso({ titulo: "Fila vazia", texto: "Não tem ninguém esperando neste tipo." });
+    abrirAviso({ titulo: "Fila vazia", texto: "Não há ninguém aguardando neste tipo de atendimento." });
   } else if (res?.motivo === "nao_chamada") {
-    abrirAviso({ titulo: "Ainda na fila", texto: "Chama a senha antes. Não respondeu só vale em atendimento." });
+    abrirAviso({ titulo: "Ainda na espera", texto: "Chame a senha antes. “Não respondeu” só vale durante o atendimento." });
   } else if (res?.motivo === "tipo_invalido") {
-    abrirAviso({ titulo: "Tipo inválido", texto: "Esse tipo de atendimento não está ativo." });
+    abrirAviso({ titulo: "Tipo inativo", texto: "Este tipo de atendimento não está ativo." });
   } else if (res?.motivo === "outro_dia") {
-    abrirAviso({ titulo: "Outro dia", texto: "Chamada só no dia de hoje. Volta a data no topo." });
+    abrirAviso({ titulo: "Somente hoje", texto: "Chamadas só valem no dia de hoje. Ajuste a data no topo da tela." });
   } else {
-    abrirAviso({ titulo: "Não deu", texto: "Não deu para pegar essa senha. Atualiza a tela." });
+    abrirAviso({ titulo: "Não foi possível", texto: "Não foi possível assumir esta senha. Atualize a tela e tente de novo." });
   }
   return false;
 }
@@ -1798,8 +1986,7 @@ async function onAcao(ev) {
   const acao = btn.dataset.acao;
 
   if (acao === "ir-relatorio") {
-    aba = "relatorio";
-    desenhar();
+    irAba("relatorio");
     return;
   }
   if (acao === "baixar-relatorio") {
@@ -2134,8 +2321,7 @@ function ligarEventos() {
   document.getElementById("tabs").addEventListener("click", (ev) => {
     const tab = ev.target.closest("[data-aba]");
     if (!tab) return;
-    aba = tab.dataset.aba;
-    desenhar();
+    irAba(tab.dataset.aba);
   });
   const app = document.getElementById("app");
   app.addEventListener("click", onAcao);
@@ -2184,10 +2370,9 @@ function ligarEventos() {
     }
     const item = ev.target.closest("[data-cfg]");
     if (!item) return;
-    aba = item.dataset.cfg;
     cfgMenu.classList.add("hidden");
     cfgBtn?.setAttribute("aria-expanded", "false");
-    desenhar();
+    irAba(item.dataset.cfg);
   });
   document.addEventListener("click", () => {
     cfgMenu?.classList.add("hidden");
@@ -2204,8 +2389,7 @@ function ligarEventos() {
   });
   document.getElementById("btn-home")?.addEventListener("click", () => {
     if (!sessao) return;
-    aba = "geral";
-    desenhar();
+    irAba("geral");
   });
   document.getElementById("aviso-ok")?.addEventListener("click", () => fecharAviso(true));
   document.getElementById("aviso-nao")?.addEventListener("click", () => fecharAviso(false));

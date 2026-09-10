@@ -17,7 +17,9 @@ Três papéis na prática:
 2. **Atendimento (Triagem, Consulta, Ajuizamento…)** chama a senha daquele tipo, atende e finaliza.
 3. **Admin** vê o dashboard do dia, cadastra tipos e operadores.
 
-Tudo é do **dia** escolhido no topo. Chamada, finalizar e não respondeu só valem **hoje**. Dia anterior é consulta.
+Tudo da **fila** (chamar, finalizar, não respondeu) é do **dia** escolhido no topo. Chamada só vale **hoje**. Dia anterior na fila é consulta.
+
+**Dashboard e Relatório** aceitam um **período** (de/até, ou atalhos de 7 dias, 30 dias e o mês). A data do topo não troca esse levantamento.
 
 ### Recepção — Senha geral
 
@@ -63,8 +65,8 @@ Cores da linha:
 
 | Aba | Quem usa | Para quê |
 |---|---|---|
-| Dashboard / Painel | Admin | Volume do dia, espera, preferencial, produção por pessoa |
-| Relatório | Todo mundo | Filtro do dia, inclusive por senha; imprimir e CSV |
+| Dashboard / Painel | Admin | Volume, espera, preferencial e produção por pessoa, em um dia ou período |
+| Relatório | Todo mundo | Levantamento do dia ou de um intervalo; filtro, imprimir e CSV |
 | Senha geral | Recepção | Registrar quem chegou |
 | T, C, A (ou os tipos que você cadastrar) | Quem atende | Chamar próximo, chamar na linha, finalizar, cancelar, não respondeu |
 | Configurações → Tipos | Admin | Nome, sigla, cor, ativar/desativar |
@@ -72,7 +74,7 @@ Cores da linha:
 
 No celular o site vira PWA: no Android o Chrome oferece **Instalar**; no iPhone é Compartilhar → Adicionar à Tela de Início. No computador o convite de instalar não aparece.
 
-Na planilha, recepção e atendimento mostram só a hora. Passa o mouse (ou toca) para ver quem registrou e cada chamada. O detalhe do dia inteiro fica na aba **Relatório**: filtro por senha, nome, tipo, situação, preferencial e pessoa; dá para imprimir ou baixar CSV.
+Na planilha, recepção e atendimento mostram só a hora. Passa o mouse (ou toca) para ver quem registrou e cada chamada. O detalhe fica em **Opções → Relatório**: período, filtro por senha, nome, tipo, situação, preferencial e pessoa; dá para imprimir ou baixar CSV.
 
 ## Subir o seu
 
