@@ -19,7 +19,7 @@ Três papéis na prática:
 
 Tudo da **fila** (chamar, finalizar, não respondeu) e o **dashboard** são do **dia** escolhido no topo. Chamada só vale **hoje**. Dia anterior na fila é consulta.
 
-**Relatório** (Opções → Relatório) é outra tela: some a data do topo e as abas da fila. O período (de/até, ou atalhos de 7 dias, 30 dias e o mês) e os filtros ficam só ali.
+**Relatórios** (Opções → Relatórios) é outra tela: some a data do topo e as abas da fila. O período (de/até, ou atalhos de 7 dias, 30 dias e o mês) vale para todos os relatórios. Hoje dá para ver em **Painel** (gráficos) ou **Lista** (senha a senha).
 
 ### Recepção — Senha geral
 
@@ -66,7 +66,7 @@ Cores da linha:
 | Aba | Quem usa | Para quê |
 |---|---|---|
 | Dashboard / Painel | Admin | Volume, espera, preferencial e produção por pessoa **do dia do topo** |
-| Relatório | Todo mundo | Tela própria de levantamento: período, filtro, imprimir e CSV |
+| Relatórios | Todo mundo | Tela própria: período compartilhado, Painel ou Lista; imprimir e CSV |
 | Senha geral | Recepção | Registrar quem chegou |
 | T, C, A (ou os tipos que você cadastrar) | Quem atende | Chamar próximo, chamar na linha, finalizar, cancelar, não respondeu |
 | Configurações → Tipos | Admin | Nome, sigla, cor, ativar/desativar |
@@ -74,7 +74,7 @@ Cores da linha:
 
 No celular o site vira PWA: no Android o Chrome oferece **Instalar**; no iPhone é Compartilhar → Adicionar à Tela de Início. No computador o convite de instalar não aparece.
 
-Na planilha, recepção e atendimento mostram só a hora. Passa o mouse (ou toca) para ver quem registrou e cada chamada. O detalhe fica em **Opções → Relatório**: tela só de levantamento, com período, filtro por senha, nome, tipo, situação, preferencial e pessoa; dá para imprimir ou baixar CSV.
+Na planilha, recepção e atendimento mostram só a hora. Passa o mouse (ou toca) para ver quem registrou e cada chamada. O detalhe fica em **Opções → Relatórios**: tela só de levantamento, com período, Painel ou Lista, filtro por senha, nome, tipo, situação, preferencial e pessoa; dá para imprimir ou baixar CSV.
 
 ## Subir o seu
 

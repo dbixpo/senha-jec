@@ -13,6 +13,11 @@ let chamadasLev = [];
 let periodo = { de: "", ate: "" };
 let aba = "geral";
 let abaAntesRelatorio = "geral";
+const REL_VISTAS = [
+  { id: "painel", nome: "Painel" },
+  { id: "lista", nome: "Lista" },
+];
+let relVista = "painel";
 let canal = null;
 let verTudo = false;
 let enviandoChegada = false;
@@ -111,21 +116,46 @@ function ehRelatorio() {
   return aba === "relatorio";
 }
 
-function abaDoHash() {
+function hashVistaRelatorio() {
   const h = String(location.hash || "").replace(/^#\/?/, "");
-  return h === "relatorio" ? "relatorio" : "";
+  if (h !== "relatorio" && !h.startsWith("relatorio/")) return null;
+  const vista = h.split("/")[1] || "";
+  return REL_VISTAS.some((v) => v.id === vista) ? vista : "painel";
+}
+
+function aplicarHashRelatorio() {
+  const vista = hashVistaRelatorio();
+  if (vista == null) return false;
+  aba = "relatorio";
+  relVista = vistaRelatorioOk(vista);
+  return true;
+}
+
+function vistaRelatorioOk(vista) {
+  return REL_VISTAS.some((v) => v.id === vista) ? vista : "painel";
+}
+
+function irVistaRelatorio(vista) {
+  relVista = vistaRelatorioOk(vista);
+  sincronizarHash();
+  desenhar();
 }
 
 function sincronizarHash() {
-  const want = ehRelatorio() ? "#relatorio" : "";
-  const have = abaDoHash() === "relatorio" ? "#relatorio" : "";
+  const want = ehRelatorio() ? `#relatorio/${vistaRelatorioOk(relVista)}` : "";
+  const have = hashVistaRelatorio() != null ? `#relatorio/${hashVistaRelatorio()}` : "";
   if (want === have) return;
   history.replaceState(null, "", `${location.pathname}${location.search}${want}`);
 }
 
 function aplicarModoTela() {
   document.body.classList.toggle("tela-relatorio", ehRelatorio());
-  document.title = ehRelatorio() ? "Relatórios · Senha JEC" : "Senha JEC";
+  if (!ehRelatorio()) {
+    document.title = "Senha JEC";
+    return;
+  }
+  const vista = REL_VISTAS.find((v) => v.id === vistaRelatorioOk(relVista));
+  document.title = `Relatórios · ${vista?.nome || "Painel"} · Senha JEC`;
 }
 
 function somarDiasISO(iso, n) {
@@ -162,6 +192,8 @@ function irAba(nova) {
   const eraRel = ehRelatorio();
   if (nova === "relatorio" && aba !== "relatorio") {
     abaAntesRelatorio = aba && aba !== "relatorio" ? aba : "geral";
+    const doHash = hashVistaRelatorio();
+    if (doHash) relVista = doHash;
   }
   aba = nova;
   sincronizarHash();
@@ -1061,9 +1093,21 @@ function senhasRelatorio() {
   });
 }
 
+function periodoAtalhoAtivo() {
+  const de = periodoDe();
+  const ate = periodoAte();
+  const hoje = hojeISO();
+  if (de === hoje && ate === hoje) return "hoje";
+  if (de === somarDiasISO(hoje, -6) && ate === hoje) return "7";
+  if (de === somarDiasISO(hoje, -29) && ate === hoje) return "30";
+  if (de === `${hoje.slice(0, 8)}01` && ate === hoje) return "mes";
+  return "";
+}
+
 function htmlPeriodo() {
   const de = periodoDe();
   const ate = periodoAte();
+  const ativo = periodoAtalhoAtivo();
   return `<div class="periodo-wrap">
     <label>De
       <input id="periodo-de" type="date" value="${escapar(de)}">
@@ -1072,11 +1116,17 @@ function htmlPeriodo() {
       <input id="periodo-ate" type="date" value="${escapar(ate)}">
     </label>
     <div class="periodo-atalhos" role="group" aria-label="Atalhos de período">
-      <button type="button" class="btn ghost small" data-periodo="hoje">Hoje</button>
-      <button type="button" class="btn ghost small" data-periodo="7">7 dias</button>
-      <button type="button" class="btn ghost small" data-periodo="30">30 dias</button>
-      <button type="button" class="btn ghost small" data-periodo="mes">Este mês</button>
+      <button type="button" class="btn ghost small${ativo === "hoje" ? " on" : ""}" data-periodo="hoje">Hoje</button>
+      <button type="button" class="btn ghost small${ativo === "7" ? " on" : ""}" data-periodo="7">7 dias</button>
+      <button type="button" class="btn ghost small${ativo === "30" ? " on" : ""}" data-periodo="30">30 dias</button>
+      <button type="button" class="btn ghost small${ativo === "mes" ? " on" : ""}" data-periodo="mes">Este mês</button>
     </div>
+  </div>`;
+}
+
+function htmlVistasRelatorio() {
+  return `<div class="rel-vistas" role="tablist" aria-label="Tipo de relatório">
+    ${REL_VISTAS.map((v) => `<button type="button" role="tab" class="btn ghost${relVista === v.id ? " on" : ""}" data-acao="rel-vista" data-vista="${v.id}" aria-selected="${relVista === v.id ? "true" : "false"}">${escapar(v.nome)}</button>`).join("")}
   </div>`;
 }
 
@@ -1118,6 +1168,29 @@ function ligarPeriodo() {
       else if (qual === "mes") aplicarPeriodo(`${hoje.slice(0, 8)}01`, hoje);
     });
   });
+}
+
+function htmlPorDia(lista) {
+  if (periodoEhUmDia()) return "";
+  const dias = [...new Set(lista.map((s) => s.data).filter(Boolean))].sort();
+  if (!dias.length) return "";
+  const max = Math.max(1, ...dias.map((d) => lista.filter((s) => s.data === d).length));
+  return `<section class="card">
+    <h2>Por dia</h2>
+    <div class="por-dia">
+      ${dias.map((d) => {
+        const doDia = lista.filter((s) => s.data === d);
+        const feitas = doDia.filter(estaFinalizada).length;
+        const prefs = doDia.filter((s) => s.preferencial).length;
+        return `<div class="por-dia-row">
+          <div class="bar-h-lab"><span>${escapar(dataLegivel(d))}</span><span>${doDia.length} senhas · ${feitas} final. · ${prefs} pref.</span></div>
+          <div class="bar-h" title="${doDia.length} senhas">
+            <i style="width:${(doDia.length / max) * 100}%;background:#1a82b8"></i>
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+  </section>`;
 }
 
 function historicoTexto(senha) {
@@ -1220,26 +1293,75 @@ function baixarRelatorio() {
   URL.revokeObjectURL(a.href);
 }
 
+function htmlFiltrosRecorte(prefix, filtro, lista, extras = "") {
+  const optsTipo = tipos.map((t) => `<option value="${t.id}" ${filtro.tipo === t.id ? "selected" : ""}>${escapar(t.nome)}</option>`).join("");
+  const optsPessoa = operadores
+    .filter((o) => o.ativo || lista.some((s) => s.created_by === o.id || s.atendido_por === o.id))
+    .map((o) => `<option value="${o.id}" ${filtro.pessoa === o.id ? "selected" : ""}>${escapar(o.nome)}</option>`)
+    .join("");
+  return `<div class="dash-filtros${prefix === "rel" ? " rel-filtros" : ""}">
+    ${extras}
+    <label>Tipo
+      <select id="${prefix}-tipo">
+        <option value="">Todos</option>
+        ${optsTipo}
+      </select>
+    </label>
+    <label>Situação
+      <select id="${prefix}-status">
+        <option value="todos" ${filtro.status === "todos" ? "selected" : ""}>Todas</option>
+        <option value="fila" ${filtro.status === "fila" ? "selected" : ""}>Na fila</option>
+        <option value="atendimento" ${filtro.status === "atendimento" ? "selected" : ""}>Em atendimento</option>
+        <option value="atendidas" ${filtro.status === "atendidas" ? "selected" : ""}>Finalizadas</option>
+      </select>
+    </label>
+    <label>Preferencial
+      <select id="${prefix}-pref">
+        <option value="todos" ${filtro.pref === "todos" ? "selected" : ""}>Todas</option>
+        <option value="nao" ${filtro.pref === "nao" ? "selected" : ""}>Sem preferencial</option>
+        ${PREF_TIPOS.map((p) => `<option value="${p.id}" ${filtro.pref === p.id ? "selected" : ""}>${escapar(p.nome)}</option>`).join("")}
+      </select>
+    </label>
+    <label>Pessoa
+      <select id="${prefix}-pessoa">
+        <option value="">Todo mundo</option>
+        ${optsPessoa}
+      </select>
+    </label>
+  </div>`;
+}
+
+function ligarFiltrosPainel(filtro, prefix, aoMudar) {
+  ["tipo", "status", "pref", "pessoa"].forEach((key) => {
+    document.getElementById(`${prefix}-${key}`)?.addEventListener("change", (ev) => {
+      filtro[key] = ev.target.value;
+      aoMudar();
+    });
+  });
+  document.querySelectorAll(".pref-motivo[data-pref]").forEach((el) => {
+    el.addEventListener("click", () => {
+      const id = el.getAttribute("data-pref");
+      filtro.pref = filtro.pref === id ? "todos" : id;
+      aoMudar();
+    });
+  });
+}
+
 function ligarRelatorio() {
   ligarPeriodo();
-  const bind = (id, key) => {
-    document.getElementById(id)?.addEventListener("change", (ev) => {
-      relFiltro[key] = ev.target.value;
+  if (relVista === "lista") {
+    ligarFiltrosPainel(relFiltro, "rel", atualizarRelatorio);
+    document.getElementById("rel-senha")?.addEventListener("input", (ev) => {
+      relFiltro.senha = ev.target.value;
       atualizarRelatorio();
     });
-  };
-  bind("rel-tipo", "tipo");
-  bind("rel-status", "status");
-  bind("rel-pref", "pref");
-  bind("rel-pessoa", "pessoa");
-  document.getElementById("rel-senha")?.addEventListener("input", (ev) => {
-    relFiltro.senha = ev.target.value;
-    atualizarRelatorio();
-  });
-  document.getElementById("rel-nome")?.addEventListener("input", (ev) => {
-    relFiltro.nome = ev.target.value;
-    atualizarRelatorio();
-  });
+    document.getElementById("rel-nome")?.addEventListener("input", (ev) => {
+      relFiltro.nome = ev.target.value;
+      atualizarRelatorio();
+    });
+    return;
+  }
+  ligarFiltrosPainel(relFiltro, "rel", desenhar);
 }
 
 function atualizarRelatorio() {
@@ -1252,65 +1374,54 @@ function atualizarRelatorio() {
   if (qtdPrint) qtdPrint.textContent = lista.length;
 }
 
-function telaRelatorio() {
-  const lista = senhasRelatorio();
-  const optsTipo = tipos.map((t) => `<option value="${t.id}" ${relFiltro.tipo === t.id ? "selected" : ""}>${escapar(t.nome)}</option>`).join("");
-  const optsPessoa = operadores
-    .filter((o) => o.ativo || senhasLev.some((s) => s.created_by === o.id || s.atendido_por === o.id))
-    .map((o) => `<option value="${o.id}" ${relFiltro.pessoa === o.id ? "selected" : ""}>${escapar(o.nome)}</option>`)
-    .join("");
-  return `<section class="card rel-card">
+function htmlCabecaRelatorio(lista) {
+  const naLista = relVista === "lista";
+  return `<section class="card rel-cabeca">
     <div class="card-topo">
       <div>
         <h2>Relatórios</h2>
-        <p class="muted form-dica">Levantamento de ${escapar(rotuloPeriodo())}. O período e os filtros desta tela não mexem na fila do dia.</p>
+        <p class="muted form-dica">Levantamento de ${escapar(rotuloPeriodo())}. Escolhe o tipo de relatório e o período. Isso não mexe na fila do dia.</p>
       </div>
       <div class="topo-acoes rel-acoes">
         <button type="button" class="btn ghost" data-acao="voltar-fila">Voltar à fila</button>
-        <button type="button" class="btn ghost" data-acao="baixar-relatorio">Baixar CSV</button>
-        <button type="button" class="btn primary" data-acao="imprimir-relatorio">Imprimir / PDF</button>
+        ${naLista ? `<button type="button" class="btn ghost" data-acao="baixar-relatorio">Baixar CSV</button>
+        <button type="button" class="btn primary" data-acao="imprimir-relatorio">Imprimir / PDF</button>` : `<button type="button" class="btn primary" data-acao="imprimir-relatorio">Imprimir / PDF</button>`}
       </div>
     </div>
-    <p class="so-print">Senha JEC — ${escapar(rotuloPeriodo())} — <span id="rel-qtd-print">${lista.length}</span> senhas</p>
+    <p class="so-print">Senha JEC — ${escapar(rotuloPeriodo())}${naLista ? ` — <span id="rel-qtd-print">${lista.length}</span> senhas` : ""}</p>
     ${htmlPeriodo()}
-    <div class="dash-filtros rel-filtros">
-      <label>Senha
-        <input id="rel-senha" type="text" inputmode="search" placeholder="01 ou P01" value="${escapar(relFiltro.senha)}" autocomplete="off">
-      </label>
-      <label>Nome
-        <input id="rel-nome" type="text" placeholder="Nome" value="${escapar(relFiltro.nome)}" autocomplete="off">
-      </label>
-      <label>Tipo
-        <select id="rel-tipo">
-          <option value="">Todos</option>
-          ${optsTipo}
-        </select>
-      </label>
-      <label>Situação
-        <select id="rel-status">
-          <option value="todos" ${relFiltro.status === "todos" ? "selected" : ""}>Todas</option>
-          <option value="fila" ${relFiltro.status === "fila" ? "selected" : ""}>Na fila</option>
-          <option value="atendimento" ${relFiltro.status === "atendimento" ? "selected" : ""}>Em atendimento</option>
-          <option value="atendidas" ${relFiltro.status === "atendidas" ? "selected" : ""}>Finalizadas</option>
-        </select>
-      </label>
-      <label>Preferencial
-        <select id="rel-pref">
-          <option value="todos" ${relFiltro.pref === "todos" ? "selected" : ""}>Todas</option>
-          <option value="nao" ${relFiltro.pref === "nao" ? "selected" : ""}>Sem preferencial</option>
-          ${PREF_TIPOS.map((p) => `<option value="${p.id}" ${relFiltro.pref === p.id ? "selected" : ""}>${escapar(p.nome)}</option>`).join("")}
-        </select>
-      </label>
-      <label>Pessoa
-        <select id="rel-pessoa">
-          <option value="">Todo mundo</option>
-          ${optsPessoa}
-        </select>
-      </label>
-    </div>
+    ${htmlVistasRelatorio()}
+  </section>`;
+}
+
+function htmlRelLista() {
+  const lista = senhasRelatorio();
+  const extras = `<label>Senha
+      <input id="rel-senha" type="text" inputmode="search" placeholder="01 ou P01" value="${escapar(relFiltro.senha)}" autocomplete="off">
+    </label>
+    <label>Nome
+      <input id="rel-nome" type="text" placeholder="Nome" value="${escapar(relFiltro.nome)}" autocomplete="off">
+    </label>`;
+  return `<section class="card rel-card">
+    ${htmlFiltrosRecorte("rel", relFiltro, senhasLev, extras)}
     <p id="rel-qtd" class="muted form-dica">${lista.length} de ${senhasLev.length} senhas no período</p>
     <div id="rel-lista">${htmlRelatorioTabela(lista)}</div>
   </section>`;
+}
+
+function telaRelatorio() {
+  const lista = senhasRelatorio();
+  const corpo = relVista === "lista"
+    ? htmlRelLista()
+    : htmlPainel(lista, chamadasLev, relFiltro, {
+      prefix: "rel",
+      base: senhasLev.length,
+      rotuloBase: periodoEhUmDia() ? "no dia" : "no período",
+      tituloHora: periodoEhUmDia() ? "Ao longo do dia" : "Por horário (dias somados)",
+      vazioHora: "Quando houver senha no período, o movimento aparece aqui.",
+      porDia: !periodoEhUmDia(),
+    });
+  return `<div class="rel-hub">${htmlCabecaRelatorio(lista)}${corpo}</div>`;
 }
 
 function svgDonut(fatias) {
@@ -1334,27 +1445,15 @@ function svgDonut(fatias) {
 }
 
 function ligarDash() {
-  const bind = (id, key) => {
-    document.getElementById(id)?.addEventListener("change", (ev) => {
-      dashFiltro[key] = ev.target.value;
-      desenhar();
-    });
-  };
-  bind("dash-tipo", "tipo");
-  bind("dash-status", "status");
-  bind("dash-pref", "pref");
-  bind("dash-pessoa", "pessoa");
-  document.querySelectorAll(".pref-motivo[data-pref]").forEach((el) => {
-    el.addEventListener("click", () => {
-      const id = el.getAttribute("data-pref");
-      dashFiltro.pref = dashFiltro.pref === id ? "todos" : id;
-      desenhar();
-    });
-  });
+  ligarFiltrosPainel(dashFiltro, "dash", desenhar);
 }
 
-function telaControle() {
-  const lista = senhasDash();
+function htmlPainel(lista, chamadasFonte, filtro, opts = {}) {
+  const prefix = opts.prefix || "dash";
+  const base = opts.base ?? lista.length;
+  const rotuloBase = opts.rotuloBase || "no dia";
+  const tituloHora = opts.tituloHora || "Ao longo do dia";
+  const vazioHora = opts.vazioHora || "Quando as senhas começarem a entrar, o movimento do dia aparece aqui.";
   const total = lista.length;
   const espera = lista.filter(estaNaFila).length;
   const emAtend = lista.filter(estaEmAtendimento).length;
@@ -1407,7 +1506,7 @@ function telaControle() {
   ];
 
   const idsLista = new Set(lista.map((s) => s.id));
-  const chamadasDash = chamadas.filter((c) => idsLista.has(c.senha_id));
+  const chamadasDash = (chamadasFonte || []).filter((c) => idsLista.has(c.senha_id));
   const porPessoa = operadores
     .map((o) => {
       const registrou = lista.filter((s) => s.created_by === o.id).length;
@@ -1418,53 +1517,11 @@ function telaControle() {
     .sort((a, b) => b.total - a.total);
   const maxPessoa = Math.max(1, ...porPessoa.map((x) => x.total));
 
-  const optsTipo = tipos.map((t) => `<option value="${t.id}" ${dashFiltro.tipo === t.id ? "selected" : ""}>${escapar(t.nome)}</option>`).join("");
-  const optsPessoa = operadores
-    .filter((o) => o.ativo || lista.some((s) => s.created_by === o.id || s.atendido_por === o.id))
-    .map((o) => `<option value="${o.id}" ${dashFiltro.pessoa === o.id ? "selected" : ""}>${escapar(o.nome)}</option>`)
-    .join("");
-
   return `<section class="card">
-    <div class="card-topo">
-      <div>
-        <h2>Dashboard</h2>
-        <p class="muted form-dica">${ehHoje() ? "Produção de hoje, ao vivo." : `Produção de ${dataLegivel(diaAtual())}.`} A data no topo troca o dia. Os filtros abaixo recortam o que está na tela.</p>
-      </div>
-      <div class="topo-acoes">
-        <button type="button" class="btn ghost" data-acao="ir-relatorio">Relatório detalhado</button>
-      </div>
-    </div>
-    <div class="dash-filtros">
-      <label>Tipo
-        <select id="dash-tipo">
-          <option value="">Todos</option>
-          ${optsTipo}
-        </select>
-      </label>
-      <label>Situação
-        <select id="dash-status">
-          <option value="todos" ${dashFiltro.status === "todos" ? "selected" : ""}>Todas</option>
-          <option value="fila" ${dashFiltro.status === "fila" ? "selected" : ""}>Na fila</option>
-          <option value="atendimento" ${dashFiltro.status === "atendimento" ? "selected" : ""}>Em atendimento</option>
-          <option value="atendidas" ${dashFiltro.status === "atendidas" ? "selected" : ""}>Finalizadas</option>
-        </select>
-      </label>
-      <label>Preferencial
-        <select id="dash-pref">
-          <option value="todos" ${dashFiltro.pref === "todos" ? "selected" : ""}>Todas</option>
-          <option value="nao" ${dashFiltro.pref === "nao" ? "selected" : ""}>Sem preferencial</option>
-          ${PREF_TIPOS.map((p) => `<option value="${p.id}" ${dashFiltro.pref === p.id ? "selected" : ""}>${escapar(p.nome)}</option>`).join("")}
-        </select>
-      </label>
-      <label>Pessoa
-        <select id="dash-pessoa">
-          <option value="">Todo mundo</option>
-          ${optsPessoa}
-        </select>
-      </label>
-    </div>
+    ${opts.topoHtml || ""}
+    ${htmlFiltrosRecorte(prefix, filtro, lista)}
     <div class="kpis">
-      <div class="kpi"><span>Senhas</span><strong>${total}</strong><small>${senhas.length === total ? "no dia" : `de ${senhas.length} no dia`}</small></div>
+      <div class="kpi"><span>Senhas</span><strong>${total}</strong><small>${base === total ? rotuloBase : `de ${base} ${rotuloBase}`}</small></div>
       <div class="kpi fila"><span>Na fila</span><strong>${espera}</strong><small>${emAtend ? emAtend + " em atendimento" : maisAntiga == null ? "ninguém esperando" : "mais antiga " + fmtMin(maisAntiga)}</small></div>
       <div class="kpi ok"><span>Finalizadas</span><strong>${feitas}</strong><small>${total ? Math.round((feitas / total) * 100) + "% do recorte" : "—"}</small></div>
       <div class="kpi pref"><span>Preferencial</span><strong>${prefs}</strong><small>${total ? Math.round((prefs / total) * 100) + "% do recorte" : "—"}</small></div>
@@ -1472,7 +1529,7 @@ function telaControle() {
     <div class="pref-motivos" aria-label="Preferencial por motivo">
       ${porPref
         .map(
-          (x) => `<button type="button" class="pref-motivo${dashFiltro.pref === x.p.id ? " on" : ""}${x.p.id === "autismo" ? " colorido" : ""}" data-pref="${x.p.id}">
+          (x) => `<button type="button" class="pref-motivo${filtro.pref === x.p.id ? " on" : ""}${x.p.id === "autismo" ? " colorido" : ""}" data-pref="${x.p.id}">
             ${iconePref(x.p.id)}
             <span>${escapar(x.p.nome)}</span>
             <strong>${x.n}</strong>
@@ -1489,6 +1546,7 @@ function telaControle() {
       }
     </div>
   </section>
+  ${opts.porDia ? htmlPorDia(lista) : ""}
   <div class="dash-grid">
     <section class="card">
       <h2>Por tipo</h2>
@@ -1525,7 +1583,7 @@ function telaControle() {
       }
     </section>
     <section class="card">
-      <h2>Ao longo do dia</h2>
+      <h2>${escapar(tituloHora)}</h2>
       <p class="dash-chips"><span><i></i>Recepção</span><span><i class="at"></i>Atendimento</span></p>
       ${
         total
@@ -1545,7 +1603,7 @@ function telaControle() {
                 .join("")}
             </div>
             <p class="muted form-dica" style="margin-top:12px">${recPorHora[picoRec] ? `Pico de chegada às ${String(horas[picoRec]).padStart(2, "0")}h (${recPorHora[picoRec]}).` : "Ainda sem pico de chegada neste recorte."}</p>`
-          : `<p class="dash-vazio">Quando as senhas começarem a entrar, o movimento do dia aparece aqui.</p>`
+          : `<p class="dash-vazio">${escapar(vazioHora)}</p>`
       }
     </section>
   </div>
@@ -1585,6 +1643,26 @@ function telaControle() {
       </tbody>
     </table>
   </section>`;
+}
+
+function telaControle() {
+  const lista = senhasDash();
+  return htmlPainel(lista, chamadas, dashFiltro, {
+    prefix: "dash",
+    topoHtml: `<div class="card-topo">
+      <div>
+        <h2>Dashboard</h2>
+        <p class="muted form-dica">${ehHoje() ? "Produção de hoje, ao vivo." : `Produção de ${dataLegivel(diaAtual())}.`} A data no topo troca o dia. Os filtros abaixo recortam o que está na tela.</p>
+      </div>
+      <div class="topo-acoes">
+        <button type="button" class="btn ghost" data-acao="ir-relatorio">Relatórios</button>
+      </div>
+    </div>`,
+    base: senhas.length,
+    rotuloBase: "no dia",
+    tituloHora: "Ao longo do dia",
+    vazioHora: "Quando as senhas começarem a entrar, o movimento do dia aparece aqui.",
+  });
 }
 
 function telaOperadores() {
@@ -1999,6 +2077,10 @@ async function onAcao(ev) {
     irAba("relatorio");
     return;
   }
+  if (acao === "rel-vista") {
+    irVistaRelatorio(btn.dataset.vista);
+    return;
+  }
   if (acao === "voltar-fila") {
     voltarDaRelatorio();
     return;
@@ -2255,7 +2337,7 @@ async function onLogin(ev) {
   localStorage.setItem(SESSAO_KEY, JSON.stringify(data));
   document.getElementById("login").classList.add("hidden");
   document.getElementById("dia").value = hojeISO();
-  if (abaDoHash() === "relatorio") aba = "relatorio";
+  aplicarHashRelatorio();
   aplicarTopoSessao();
   aplicarModoTela();
   await carregar();
@@ -2412,9 +2494,14 @@ function ligarEventos() {
   });
   window.addEventListener("hashchange", () => {
     if (!sessao) return;
-    const noHash = abaDoHash();
-    if (noHash === "relatorio" && aba !== "relatorio") irAba("relatorio");
-    else if (!noHash && aba === "relatorio") voltarDaRelatorio();
+    const vista = hashVistaRelatorio();
+    if (vista != null) {
+      relVista = vistaRelatorioOk(vista);
+      if (aba !== "relatorio") irAba("relatorio");
+      else desenhar();
+      return;
+    }
+    if (aba === "relatorio") voltarDaRelatorio();
   });
   document.getElementById("aviso-ok")?.addEventListener("click", () => fecharAviso(true));
   document.getElementById("aviso-nao")?.addEventListener("click", () => fecharAviso(false));
@@ -2444,7 +2531,7 @@ async function init() {
   if (!(await conectar())) return;
   if (!pedirLogin()) return;
   aplicarTopoSessao();
-  if (abaDoHash() === "relatorio") aba = "relatorio";
+  aplicarHashRelatorio();
   aplicarModoTela();
   await carregar();
   escutar();
