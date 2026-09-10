@@ -26,6 +26,7 @@ let tipoEditandoId = null;
 let carregarTimer = 0;
 let carregarSeq = 0;
 let focarAtenderId = null;
+let avisoPendencia = null;
 
 const PREF_TIPOS = [
   { id: "cadeira", nome: "Deficiência" },
@@ -185,19 +186,58 @@ function escapar(texto) {
     .replaceAll('"', "&quot;");
 }
 
-function abrirAviso({ titulo = "Atenção", texto }) {
+function resolverAviso(valor) {
+  const fn = avisoPendencia;
+  avisoPendencia = null;
+  if (fn) fn(valor);
+}
+
+function resetAvisoBotoes() {
+  const nao = document.getElementById("aviso-nao");
+  const ok = document.getElementById("aviso-ok");
+  const acoes = document.querySelector(".aviso-acoes");
+  if (nao) nao.classList.add("hidden");
+  if (ok) ok.textContent = "Entendi";
+  acoes?.classList.remove("aviso-duas");
+}
+
+function abrirAviso({ titulo = "Atenção", texto, html, okTexto = "Entendi", cancelarTexto = null } = {}) {
   const box = document.getElementById("aviso");
   const tit = document.getElementById("aviso-titulo");
   const p = document.getElementById("aviso-texto");
+  const nao = document.getElementById("aviso-nao");
+  const ok = document.getElementById("aviso-ok");
+  const acoes = document.querySelector(".aviso-acoes");
   if (!box || !tit || !p) return;
+  if (avisoPendencia && !cancelarTexto) resolverAviso(false);
   tit.textContent = titulo;
-  p.textContent = texto;
+  if (html) p.innerHTML = html;
+  else p.textContent = texto || "";
+  if (cancelarTexto) {
+    nao?.classList.remove("hidden");
+    if (nao) nao.textContent = cancelarTexto;
+    acoes?.classList.add("aviso-duas");
+  } else {
+    nao?.classList.add("hidden");
+    acoes?.classList.remove("aviso-duas");
+  }
+  if (ok) ok.textContent = okTexto;
   box.classList.remove("hidden");
-  document.getElementById("aviso-ok")?.focus();
+  (cancelarTexto ? nao : ok)?.focus();
 }
 
-function fecharAviso() {
+function fecharAviso(confirmou = false) {
   document.getElementById("aviso")?.classList.add("hidden");
+  resetAvisoBotoes();
+  resolverAviso(!!confirmou);
+}
+
+function perguntarConfirmacao({ titulo, texto, html, ok = "Confirmar", cancelar = "Cancelar" }) {
+  return new Promise((resolve) => {
+    resolverAviso(false);
+    avisoPendencia = resolve;
+    abrirAviso({ titulo, texto, html, okTexto: ok, cancelarTexto: cancelar });
+  });
 }
 
 function abrirSobre() {
@@ -304,6 +344,32 @@ function ordenarFila(lista) {
     if (sa !== sb) return sa - sb;
     if (!!a.preferencial !== !!b.preferencial) return a.preferencial ? -1 : 1;
     return (a.numero || 0) - (b.numero || 0);
+  });
+}
+
+function descreverSenhaFila(senha) {
+  if (!senha) return "—";
+  const nome = String(senha.nome || "").trim();
+  return nome ? `${rotuloSenha(senha)} · ${nome}` : rotuloSenha(senha);
+}
+
+function proximaEsperaDoTipo(tipoId) {
+  if (!tipoId) return null;
+  return ordenarFila(senhas.filter((s) => s.tipo_id === tipoId && estaNaFila(s)))[0] || null;
+}
+
+async function confirmarForaDeOrdem(senha) {
+  if (!senha || !estaNaFila(senha)) return true;
+  const proxima = proximaEsperaDoTipo(senha.tipo_id);
+  if (!proxima || proxima.id === senha.id) return true;
+  return perguntarConfirmacao({
+    titulo: "Não é o próximo",
+    html: `<p>Essa senha <strong>não é a próxima</strong> da fila.</p>
+      <span class="aviso-destaque">Próximo: ${escapar(descreverSenhaFila(proxima))}</span>
+      <span class="aviso-destaque">Você escolheu: ${escapar(descreverSenhaFila(senha))}</span>
+      <p>Quer chamar fora de ordem mesmo?</p>`,
+    ok: "Chamar mesmo assim",
+    cancelar: "Cancelar",
   });
 }
 
@@ -706,15 +772,18 @@ function telaGeral() {
 
 function telaTipo(tipo) {
   const lista = senhas.filter((s) => s.tipo_id === tipo.id);
+  const proxima = ehHoje() ? proximaEsperaDoTipo(tipo.id) : null;
+  const rotuloProx = proxima ? escapar(rotuloSenha(proxima)) : "";
   return `<section class="card card-fila">
     <div class="card-topo">
       <div>
         <h2>${escapar(tipo.nome)}</h2>
-        <p class="muted form-dica dica-web">${ehHoje() ? "Chamar na linha coloca em atendimento. Trocar o tipo e <strong>Encaminhar</strong> manda pra outra fila. <strong>Finalizar</strong> encerra neste tipo. A observação (até 200 caracteres) segue com a senha." : `Consultando ${dataLegivel(diaAtual())}. Chamada só no dia de hoje.`}</p>
-        <p class="muted form-dica dica-mobile">${ehHoje() ? "Chamar na linha. Troca o tipo e encaminha, ou finaliza. Observação vai junto." : "Só consulta."}</p>
+        <p class="muted form-dica dica-web">${ehHoje() ? "<strong>Chamar próximo</strong> pega o primeiro da fila. Chamar na linha coloca em atendimento — se não for o próximo, pede confirmação. Trocar o tipo e <strong>Encaminhar</strong> manda pra outra fila. <strong>Finalizar</strong> encerra neste tipo." : `Consultando ${dataLegivel(diaAtual())}. Chamada só no dia de hoje.`}</p>
+        <p class="muted form-dica dica-mobile">${ehHoje() ? "Próximo no topo, ou Chamar na linha. Troca o tipo e encaminha, ou finaliza." : "Só consulta."}</p>
         <p id="fila-dica" class="muted form-dica dica-web">${verTudo ? "Inclui quem já foi finalizado." : "Só quem ainda está na fila ou em atendimento."}</p>
       </div>
       <div class="topo-acoes">
+        ${ehHoje() ? `<button type="button" class="btn primary" data-acao="chamar-proxima" data-tipo="${escapar(tipo.id)}" ${proxima ? "" : "disabled"}><span class="lab-wide">Chamar próximo${rotuloProx ? ` · ${rotuloProx}` : ""}</span><span class="lab-narrow">Próximo${rotuloProx ? ` ${rotuloProx}` : ""}</span></button>` : ""}
         ${barraFiltro()}
         <span class="sigla grande" style="background:${escapar(tipo.cor)}">${escapar(tipo.sigla)}</span>
       </div>
@@ -1722,6 +1791,8 @@ async function onAcao(ev) {
 
   if (acao === "chamar-senha") {
     if (!podeChamar()) return;
+    const senha = senhas.find((s) => s.id === id);
+    if (!(await confirmarForaDeOrdem(senha))) return;
     btn.disabled = true;
     const { data, error } = await sb.rpc("chamar_senha", { p_id: id, p_operador: sessao.id });
     btn.disabled = false;
@@ -1731,7 +1802,28 @@ async function onAcao(ev) {
       return;
     }
     focarAtenderId = id;
-    aplicarRespostaFila(data, senhas.find((s) => s.id === id) || data?.senha);
+    aplicarRespostaFila(data, senha || data?.senha);
+    return;
+  }
+
+  if (acao === "chamar-proxima") {
+    if (!podeChamar()) return;
+    const tipoId = btn.dataset.tipo;
+    if (!tipoId) return;
+    btn.disabled = true;
+    const { data, error } = await sb.rpc("chamar_proxima", {
+      p_tipo_id: tipoId,
+      p_operador: sessao.id,
+      p_data: diaAtual(),
+    });
+    btn.disabled = false;
+    if (error) {
+      mostrarErro(error.message);
+      await carregar();
+      return;
+    }
+    if (data?.senha?.id) focarAtenderId = data.senha.id;
+    aplicarRespostaFila(data, data?.senha);
     return;
   }
 
@@ -1780,6 +1872,8 @@ async function onAcao(ev) {
     const campo = btn.dataset.campo;
     if (campo === "hora_atendimento") {
       if (!podeChamar()) return;
+      const senha = senhas.find((s) => s.id === id);
+      if (!(await confirmarForaDeOrdem(senha))) return;
       await rpcChamar(id, isoDoDia(agoraHHMM()));
       return;
     }
@@ -1791,8 +1885,14 @@ async function onAcao(ev) {
   }
   if (acao === "toggle-atendimento") {
     if (!podeChamar()) return;
-    if (btn.checked) await rpcChamar(id);
-    else await rpcLiberar(id);
+    if (btn.checked) {
+      const senha = senhas.find((s) => s.id === id);
+      if (!(await confirmarForaDeOrdem(senha))) {
+        btn.checked = false;
+        return;
+      }
+      await rpcChamar(id);
+    } else await rpcLiberar(id);
     return;
   }
   if (acao === "corrigir") {
@@ -1892,7 +1992,14 @@ async function onCampo(ev) {
   if (campo === "hora_atendimento") {
     if (!podeChamar()) return;
     if (!valor) await rpcLiberar(id);
-    else await rpcChamar(id, valor);
+    else {
+      const senha = senhas.find((s) => s.id === id);
+      if (!(await confirmarForaDeOrdem(senha))) {
+        el.value = hora(senha?.hora_atendimento) || "";
+        return;
+      }
+      await rpcChamar(id, valor);
+    }
     return;
   }
   await patch(id, { [campo]: valor }, ev.type !== "blur");
@@ -2068,9 +2175,10 @@ function ligarEventos() {
     aba = "geral";
     desenhar();
   });
-  document.getElementById("aviso-ok")?.addEventListener("click", fecharAviso);
+  document.getElementById("aviso-ok")?.addEventListener("click", () => fecharAviso(true));
+  document.getElementById("aviso-nao")?.addEventListener("click", () => fecharAviso(false));
   document.getElementById("aviso")?.addEventListener("click", (ev) => {
-    if (ev.target.id === "aviso") fecharAviso();
+    if (ev.target.id === "aviso") fecharAviso(false);
   });
   document.getElementById("login-ajuda")?.addEventListener("click", abrirSobre);
   document.getElementById("sobre-ok")?.addEventListener("click", fecharSobre);

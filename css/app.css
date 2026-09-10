@@ -902,6 +902,10 @@ textarea {
   gap: 8px;
   flex-wrap: wrap;
 }
+.topo-acoes [data-acao="chamar-proxima"] {
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
 
 .kpis {
   display: grid;
@@ -1350,13 +1354,36 @@ textarea {
   color: var(--dark);
   font-size: 22px;
 }
-.aviso-card p {
+.aviso-card p,
+.aviso-texto {
   margin: 0;
   color: var(--ink);
   font-size: 15px;
   line-height: 1.45;
 }
+.aviso-texto p { margin: 0 0 8px; }
+.aviso-texto p:last-child { margin-bottom: 0; }
+.aviso-destaque {
+  display: block;
+  margin: 6px 0;
+  padding: 8px 10px;
+  background: #f4f6f9;
+  border-radius: 8px;
+  color: var(--dark);
+  font-weight: 600;
+}
 .aviso-card .eyebrow { color: var(--muted); }
+.aviso-acoes {
+  display: grid;
+  gap: 8px;
+}
+.aviso-acoes.aviso-duas {
+  grid-template-columns: 1fr 1fr;
+}
+.aviso-card:has(.aviso-duas) {
+  width: min(480px, 100%);
+}
+.aviso-acoes .btn { white-space: nowrap; }
 .aviso-card .btn { width: 100%; }
 
 .sobre-card {
@@ -1782,6 +1809,7 @@ textarea {
   .login-body .btn,
   .setup-card .btn,
   .aviso-card .btn { height: 48px; min-height: 48px; width: 100%; }
+  .aviso-acoes.aviso-duas { grid-template-columns: 1fr; }
 
   .top {
     display: grid;

@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/app.css?v=55">
+  <link rel="stylesheet" href="css/app.css?v=57">
 </head>
 <body>
   <div id="setup" class="overlay hidden">
@@ -37,7 +37,7 @@
   <div id="login" class="overlay hidden">
     <div class="login-card">
       <div class="login-body">
-        <img class="logo-login" src="img/logo-login.png?v=55" alt="Senha JEC">
+        <img class="logo-login" src="img/logo-login.png?v=57" alt="Senha JEC">
         <form id="form-login">
           <div class="campo-login">
             <span class="lab-linha">
@@ -75,8 +75,8 @@
     <div class="faixa" aria-hidden="true"></div>
     <header class="top">
       <button type="button" class="brand" id="btn-home" aria-label="Ir para Senha geral">
-        <img class="logo-top logo-top-web" src="img/logo-topbar.png?v=55" alt="">
-        <img class="logo-top logo-top-cel" src="img/simbolo-rolo.png?v=55" alt="">
+        <img class="logo-top logo-top-web" src="img/logo-topbar.png?v=57" alt="">
+        <img class="logo-top logo-top-cel" src="img/simbolo-rolo.png?v=57" alt="">
       </button>
       <div class="top-actions hidden">
         <div id="quem" class="quem"></div>
@@ -118,8 +118,11 @@
     <div class="aviso-card">
       <p class="eyebrow">Senha JEC</p>
       <h2 id="aviso-titulo">Atenção</h2>
-      <p id="aviso-texto"></p>
-      <button type="button" class="btn primary" id="aviso-ok">Entendi</button>
+      <div id="aviso-texto" class="aviso-texto"></div>
+      <div class="aviso-acoes">
+        <button type="button" class="btn ghost hidden" id="aviso-nao">Cancelar</button>
+        <button type="button" class="btn primary" id="aviso-ok">Entendi</button>
+      </div>
     </div>
   </div>
 
@@ -140,7 +143,7 @@
 
       <h3>Atendimento — aba do tipo</h3>
       <ol>
-        <li><strong>Chamar</strong> na linha deixa a senha com você, em amarelo. Dá para ajustar nome, tipo, nº de processo e uma observação (até 200 caracteres).</li>
+        <li><strong>Chamar próximo</strong> (no topo) pega o primeiro da fila. <strong>Chamar</strong> na linha deixa a senha com você, em amarelo. Se não for o próximo, o sistema avisa quem deveria ser e pede confirmação. Dá para ajustar nome, tipo, nº de processo e uma observação (até 200 caracteres).</li>
         <li><strong>Finalizar</strong> encerra neste tipo. Se trocar o tipo, <strong>Encaminhar</strong> manda a pessoa para a outra fila, com a observação.</li>
         <li><strong>Não respondeu</strong> devolve pra fila e chama a próxima.</li>
         <li><strong>Chamar de novo</strong> se a pessoa voltou a ser chamada.</li>
@@ -162,7 +165,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
   <script src="js/config.js"></script>
-  <script src="js/app.js?v=55"></script>
-  <script src="js/pwa.js?v=55"></script>
+  <script src="js/app.js?v=57"></script>
+  <script src="js/pwa.js?v=57"></script>
 </body>
 </html>
