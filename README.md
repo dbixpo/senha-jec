@@ -38,6 +38,7 @@ Cada linha da planilha é uma senha.
 | **Chamar** | Na linha. A senha fica *em atendimento* com você. Se **não** for o próximo, o sistema avisa quem deveria ser e pergunta se quer chamar fora de ordem. Só chama se confirmar. |
 | **Finalizar** | Encerra neste tipo. Sai da fila. |
 | **Encaminhar** | Se trocar o tipo antes de finalizar, manda a pessoa para a outra fila, com a observação (até 200 caracteres). |
+| **Cancelar** | Desfaz a chamada. A senha volta para a espera, na ordem da fila. Não conta como não respondeu. |
 | **Não respondeu** / **Não veio** | Devolve para a fila (conta como não respondeu) e chama a próxima daquele tipo. |
 | **Chamar de novo** | Nova entrada no histórico, continua com você. |
 
@@ -65,7 +66,7 @@ Cores da linha:
 | Dashboard / Painel | Admin | Volume do dia, espera, preferencial, produção por pessoa |
 | Relatório | Todo mundo | Filtro do dia, inclusive por senha; imprimir e CSV |
 | Senha geral | Recepção | Registrar quem chegou |
-| T, C, A (ou os tipos que você cadastrar) | Quem atende | Chamar próximo, chamar na linha, finalizar, não respondeu |
+| T, C, A (ou os tipos que você cadastrar) | Quem atende | Chamar próximo, chamar na linha, finalizar, cancelar, não respondeu |
 | Configurações → Tipos | Admin | Nome, sigla, cor, ativar/desativar |
 | Configurações → Operadores | Admin | Incluir, perfil, senha, ativar/desativar |
 

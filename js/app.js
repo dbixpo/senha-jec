@@ -358,6 +358,17 @@ function proximaEsperaDoTipo(tipoId) {
   return ordenarFila(senhas.filter((s) => s.tipo_id === tipoId && estaNaFila(s)))[0] || null;
 }
 
+async function confirmarVoltarFila(senha) {
+  if (!senha) return false;
+  return perguntarConfirmacao({
+    titulo: "Voltar para a fila",
+    html: `<p>A senha <strong>${escapar(descreverSenhaFila(senha))}</strong> volta para a espera, na ordem. Não conta como não respondeu.</p>
+      <p>Chamou errado e quer desfazer o atendimento?</p>`,
+    ok: "Voltar para a fila",
+    cancelar: "Continuar atendendo",
+  });
+}
+
 async function confirmarForaDeOrdem(senha) {
   if (!senha || !estaNaFila(senha)) return true;
   const proxima = proximaEsperaDoTipo(senha.tipo_id);
@@ -556,7 +567,7 @@ function linhasDicaAtendimento(senha) {
 
 function htmlHistorico(senha) {
   const lista = senha.chamadas || [];
-  const quando = hora(senha.hora_atendimento) || hora(lista[0]?.chamado_em);
+  const quando = hora(senha.hora_atendimento);
   const dica = linhasDicaAtendimento(senha);
   const extra = lista.length > 1 ? `<span class="chip pref">${lista.length}x</span>` : "";
   return `<span class="hist-chamadas">${htmlHoraDica(quando || "—", dica)}${extra}</span>`;
@@ -574,7 +585,8 @@ function botoesAcaoTipo(senha, tipoDestinoId) {
     const encaminha = tipoDestinoId && tipoDestinoId !== senha.tipo_id;
     return `<button type="button" class="btn ok small" data-acao="finalizar-senha" data-id="${senha.id}">${encaminha ? "Encaminhar" : "Finalizar"}</button>
       <button type="button" class="btn stamp small" data-acao="nao-respondeu" data-id="${senha.id}"><span class="lab-wide">Não respondeu</span><span class="lab-narrow">Não veio</span></button>
-      <button type="button" class="btn ghost small btn-rechamada" data-acao="chamar-senha" data-id="${senha.id}">Chamar de novo</button>`;
+      <button type="button" class="btn ghost small btn-rechamada" data-acao="chamar-senha" data-id="${senha.id}">Chamar de novo</button>
+      <button type="button" class="btn ghost small" data-acao="liberar-senha" data-id="${senha.id}">Cancelar</button>`;
   }
   return `<button type="button" class="btn primary small" data-acao="chamar-senha" data-id="${senha.id}">Chamar</button>`;
 }
@@ -1762,7 +1774,17 @@ async function rpcLiberar(id) {
     await carregar();
     return false;
   }
-  return aplicarRespostaFila(data, senhas.find((s) => s.id === id));
+  const senha = senhas.find((s) => s.id === id);
+  if (data?.ok && senha) {
+    Object.assign(senha, {
+      hora_atendimento: null,
+      hora_inicio: null,
+      hora_fim: null,
+      status: "na_fila",
+      atendido_por: null,
+    });
+  }
+  return aplicarRespostaFila(data, senha);
 }
 
 function podeChamar() {
@@ -1865,6 +1887,16 @@ async function onAcao(ev) {
       return;
     }
     aplicarRespostaFila(data, senhas.find((s) => s.id === id));
+    return;
+  }
+
+  if (acao === "liberar-senha") {
+    if (!podeChamar()) return;
+    const senha = senhas.find((s) => s.id === id);
+    if (!(await confirmarVoltarFila(senha))) return;
+    btn.disabled = true;
+    await rpcLiberar(id);
+    btn.disabled = false;
     return;
   }
 

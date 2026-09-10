@@ -1595,6 +1595,9 @@ textarea {
   height: 36px;
   min-height: 36px;
 }
+.form-atender .chegada-acoes {
+  flex-wrap: wrap;
+}
 
 .campo-obs {
   flex: 1 1 100%;
@@ -1987,6 +1990,9 @@ textarea {
   }
   .chegada-acoes .btn-rechamada {
     grid-column: 1 / -1;
+  }
+  .form-atender .chegada-acoes .btn-rechamada {
+    grid-column: auto;
   }
   .form-atender .chegada-acoes .btn {
     height: 44px;
