@@ -134,6 +134,12 @@ h2 { font-size: 18px; color: var(--ink); }
   margin-left: 0;
 }
 .top-actions.hidden ~ .top-dia { display: none; }
+body.tela-relatorio .tabs { display: none; }
+body.tela-relatorio .top-dia { display: none; }
+body.tela-relatorio .top {
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "brand actions";
+}
 .top-actions .btn,
 .top-actions .cfg-wrap {
   flex: none;
@@ -1943,6 +1949,13 @@ textarea {
     height: 48px;
     min-height: 48px;
   }
+  .rel-acoes.topo-acoes [data-acao="voltar-fila"] {
+    flex: 1 1 100%;
+  }
+  body.tela-relatorio .top {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "brand actions";
+  }
   .form-dica { font-size: 13px; margin-bottom: 10px; }
 
   .tabs {
@@ -2362,6 +2375,7 @@ textarea {
   .pwa-bar,
   .rel-acoes,
   .rel-filtros,
+  .periodo-wrap,
   #rel-qtd,
   .overlay,
   .tip-hora-flutuante { display: none !important; }

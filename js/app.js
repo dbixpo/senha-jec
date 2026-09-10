@@ -12,6 +12,7 @@ let senhasLev = [];
 let chamadasLev = [];
 let periodo = { de: "", ate: "" };
 let aba = "geral";
+let abaAntesRelatorio = "geral";
 let canal = null;
 let verTudo = false;
 let enviandoChegada = false;
@@ -106,8 +107,25 @@ function dataLegivel(iso) {
   return `${d}/${m}/${y}`;
 }
 
-function ehLevantamento() {
-  return aba === "controle" || aba === "relatorio";
+function ehRelatorio() {
+  return aba === "relatorio";
+}
+
+function abaDoHash() {
+  const h = String(location.hash || "").replace(/^#\/?/, "");
+  return h === "relatorio" ? "relatorio" : "";
+}
+
+function sincronizarHash() {
+  const want = ehRelatorio() ? "#relatorio" : "";
+  const have = abaDoHash() === "relatorio" ? "#relatorio" : "";
+  if (want === have) return;
+  history.replaceState(null, "", `${location.pathname}${location.search}${want}`);
+}
+
+function aplicarModoTela() {
+  document.body.classList.toggle("tela-relatorio", ehRelatorio());
+  document.title = ehRelatorio() ? "Relatórios · Senha JEC" : "Senha JEC";
 }
 
 function somarDiasISO(iso, n) {
@@ -141,11 +159,21 @@ function garantirPeriodo() {
 }
 
 function irAba(nova) {
-  const eraLev = ehLevantamento();
+  const eraRel = ehRelatorio();
+  if (nova === "relatorio" && aba !== "relatorio") {
+    abaAntesRelatorio = aba && aba !== "relatorio" ? aba : "geral";
+  }
   aba = nova;
-  if (ehLevantamento()) garantirPeriodo();
-  if (eraLev !== ehLevantamento()) carregar();
+  sincronizarHash();
+  aplicarModoTela();
+  if (ehRelatorio()) garantirPeriodo();
+  if (eraRel !== ehRelatorio()) carregar();
   else desenhar();
+}
+
+function voltarDaRelatorio() {
+  const dest = abaAntesRelatorio && abaAntesRelatorio !== "relatorio" ? abaAntesRelatorio : "geral";
+  irAba(dest);
 }
 
 function aplicarDiaSessao() {
@@ -515,7 +543,7 @@ async function carregar(opts = {}) {
   const seq = ++carregarSeq;
   const soFila = !!opts.soFila && tipos.length;
   const data = diaAtual();
-  const precisaLev = ehLevantamento();
+  const precisaLev = ehRelatorio();
   if (precisaLev) garantirPeriodo();
   const ops = [
     soFila
@@ -584,7 +612,14 @@ function contarTipo(tipoId) {
 }
 
 function desenharAbas() {
+  aplicarModoTela();
+  sincronizarHash();
   const nav = document.getElementById("tabs");
+  if (ehRelatorio()) {
+    nav.innerHTML = "";
+    aplicarTopoSessao();
+    return;
+  }
   const abas = [];
   if (ehAdmin()) {
     abas.push({ id: "controle", label: "Dashboard", curto: "Painel", count: senhas.length });
@@ -970,7 +1005,7 @@ function fmtMin(n) {
 }
 
 function senhasDash() {
-  return senhasLev.filter((s) => {
+  return senhas.filter((s) => {
     if (dashFiltro.tipo && s.tipo_id !== dashFiltro.tipo) return false;
     if (dashFiltro.status === "fila" && !estaNaFila(s)) return false;
     if (dashFiltro.status === "atendimento" && !estaEmAtendimento(s)) return false;
@@ -1083,29 +1118,6 @@ function ligarPeriodo() {
       else if (qual === "mes") aplicarPeriodo(`${hoje.slice(0, 8)}01`, hoje);
     });
   });
-}
-
-function htmlPorDia(lista) {
-  if (periodoEhUmDia()) return "";
-  const dias = [...new Set(lista.map((s) => s.data).filter(Boolean))].sort();
-  if (!dias.length) return "";
-  const max = Math.max(1, ...dias.map((d) => lista.filter((s) => s.data === d).length));
-  return `<section class="card">
-    <h2>Por dia</h2>
-    <div class="por-dia">
-      ${dias.map((d) => {
-        const doDia = lista.filter((s) => s.data === d);
-        const feitas = doDia.filter(estaFinalizada).length;
-        const prefs = doDia.filter((s) => s.preferencial).length;
-        return `<div class="por-dia-row">
-          <div class="bar-h-lab"><span>${escapar(dataLegivel(d))}</span><span>${doDia.length} senhas · ${feitas} final. · ${prefs} pref.</span></div>
-          <div class="bar-h" title="${doDia.length} senhas">
-            <i style="width:${(doDia.length / max) * 100}%;background:#1a82b8"></i>
-          </div>
-        </div>`;
-      }).join("")}
-    </div>
-  </section>`;
 }
 
 function historicoTexto(senha) {
@@ -1250,10 +1262,11 @@ function telaRelatorio() {
   return `<section class="card rel-card">
     <div class="card-topo">
       <div>
-        <h2>Relatório</h2>
-        <p class="muted form-dica">Levantamento de ${escapar(rotuloPeriodo())}. Escolhe o período, filtra e, se precisar, imprime ou salva em PDF. A data no topo é só da fila do dia.</p>
+        <h2>Relatórios</h2>
+        <p class="muted form-dica">Levantamento de ${escapar(rotuloPeriodo())}. O período e os filtros desta tela não mexem na fila do dia.</p>
       </div>
       <div class="topo-acoes rel-acoes">
+        <button type="button" class="btn ghost" data-acao="voltar-fila">Voltar à fila</button>
         <button type="button" class="btn ghost" data-acao="baixar-relatorio">Baixar CSV</button>
         <button type="button" class="btn primary" data-acao="imprimir-relatorio">Imprimir / PDF</button>
       </div>
@@ -1321,7 +1334,6 @@ function svgDonut(fatias) {
 }
 
 function ligarDash() {
-  ligarPeriodo();
   const bind = (id, key) => {
     document.getElementById(id)?.addEventListener("change", (ev) => {
       dashFiltro[key] = ev.target.value;
@@ -1395,7 +1407,7 @@ function telaControle() {
   ];
 
   const idsLista = new Set(lista.map((s) => s.id));
-  const chamadasDash = chamadasLev.filter((c) => idsLista.has(c.senha_id));
+  const chamadasDash = chamadas.filter((c) => idsLista.has(c.senha_id));
   const porPessoa = operadores
     .map((o) => {
       const registrou = lista.filter((s) => s.created_by === o.id).length;
@@ -1416,13 +1428,12 @@ function telaControle() {
     <div class="card-topo">
       <div>
         <h2>Dashboard</h2>
-        <p class="muted form-dica">Produção de ${escapar(rotuloPeriodo())}. Escolhe o período abaixo. A data no topo é só da fila do dia. Os outros filtros recortam o que está na tela.</p>
+        <p class="muted form-dica">${ehHoje() ? "Produção de hoje, ao vivo." : `Produção de ${dataLegivel(diaAtual())}.`} A data no topo troca o dia. Os filtros abaixo recortam o que está na tela.</p>
       </div>
       <div class="topo-acoes">
         <button type="button" class="btn ghost" data-acao="ir-relatorio">Relatório detalhado</button>
       </div>
     </div>
-    ${htmlPeriodo()}
     <div class="dash-filtros">
       <label>Tipo
         <select id="dash-tipo">
@@ -1453,7 +1464,7 @@ function telaControle() {
       </label>
     </div>
     <div class="kpis">
-      <div class="kpi"><span>Senhas</span><strong>${total}</strong><small>${senhasLev.length === total ? (periodoEhUmDia() ? "no dia" : "no período") : `de ${senhasLev.length} no período`}</small></div>
+      <div class="kpi"><span>Senhas</span><strong>${total}</strong><small>${senhas.length === total ? "no dia" : `de ${senhas.length} no dia`}</small></div>
       <div class="kpi fila"><span>Na fila</span><strong>${espera}</strong><small>${emAtend ? emAtend + " em atendimento" : maisAntiga == null ? "ninguém esperando" : "mais antiga " + fmtMin(maisAntiga)}</small></div>
       <div class="kpi ok"><span>Finalizadas</span><strong>${feitas}</strong><small>${total ? Math.round((feitas / total) * 100) + "% do recorte" : "—"}</small></div>
       <div class="kpi pref"><span>Preferencial</span><strong>${prefs}</strong><small>${total ? Math.round((prefs / total) * 100) + "% do recorte" : "—"}</small></div>
@@ -1478,7 +1489,6 @@ function telaControle() {
       }
     </div>
   </section>
-  ${htmlPorDia(lista)}
   <div class="dash-grid">
     <section class="card">
       <h2>Por tipo</h2>
@@ -1515,7 +1525,7 @@ function telaControle() {
       }
     </section>
     <section class="card">
-      <h2>${periodoEhUmDia() ? "Ao longo do dia" : "Por horário (dias somados)"}</h2>
+      <h2>Ao longo do dia</h2>
       <p class="dash-chips"><span><i></i>Recepção</span><span><i class="at"></i>Atendimento</span></p>
       ${
         total
@@ -1535,7 +1545,7 @@ function telaControle() {
                 .join("")}
             </div>
             <p class="muted form-dica" style="margin-top:12px">${recPorHora[picoRec] ? `Pico de chegada às ${String(horas[picoRec]).padStart(2, "0")}h (${recPorHora[picoRec]}).` : "Ainda sem pico de chegada neste recorte."}</p>`
-          : `<p class="dash-vazio">Quando as senhas começarem a entrar, o movimento aparece aqui.</p>`
+          : `<p class="dash-vazio">Quando as senhas começarem a entrar, o movimento do dia aparece aqui.</p>`
       }
     </section>
   </div>
@@ -1989,6 +1999,10 @@ async function onAcao(ev) {
     irAba("relatorio");
     return;
   }
+  if (acao === "voltar-fila") {
+    voltarDaRelatorio();
+    return;
+  }
   if (acao === "baixar-relatorio") {
     baixarRelatorio();
     return;
@@ -2241,7 +2255,9 @@ async function onLogin(ev) {
   localStorage.setItem(SESSAO_KEY, JSON.stringify(data));
   document.getElementById("login").classList.add("hidden");
   document.getElementById("dia").value = hojeISO();
+  if (abaDoHash() === "relatorio") aba = "relatorio";
   aplicarTopoSessao();
+  aplicarModoTela();
   await carregar();
   escutar();
 }
@@ -2249,6 +2265,9 @@ async function onLogin(ev) {
 function sair() {
   localStorage.removeItem(SESSAO_KEY);
   sessao = null;
+  aba = "geral";
+  aplicarModoTela();
+  sincronizarHash();
   document.getElementById("quem").innerHTML = "";
   pedirLogin();
 }
@@ -2391,6 +2410,12 @@ function ligarEventos() {
     if (!sessao) return;
     irAba("geral");
   });
+  window.addEventListener("hashchange", () => {
+    if (!sessao) return;
+    const noHash = abaDoHash();
+    if (noHash === "relatorio" && aba !== "relatorio") irAba("relatorio");
+    else if (!noHash && aba === "relatorio") voltarDaRelatorio();
+  });
   document.getElementById("aviso-ok")?.addEventListener("click", () => fecharAviso(true));
   document.getElementById("aviso-nao")?.addEventListener("click", () => fecharAviso(false));
   document.getElementById("aviso")?.addEventListener("click", (ev) => {
@@ -2419,6 +2444,8 @@ async function init() {
   if (!(await conectar())) return;
   if (!pedirLogin()) return;
   aplicarTopoSessao();
+  if (abaDoHash() === "relatorio") aba = "relatorio";
+  aplicarModoTela();
   await carregar();
   escutar();
 }
