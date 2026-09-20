@@ -414,7 +414,11 @@ function vozLocalTexto(row) {
 function vozPeca(id, row) {
   if (id === "requisitante") return String(row?.requisitante || "").trim();
   if (id === "senha") return vozSenhaExtenso(row);
-  if (id === "local") return vozLocalTexto(row);
+  if (id === "local") {
+    const local = vozLocalTexto(row);
+    if (!local) return "";
+    return `Por favor, dirija-se a ${local}`;
+  }
   if (id === "guiche") {
     const g = Number(row?.guiche);
     if (!Number.isFinite(g) || g < 1) return "";
@@ -423,7 +427,7 @@ function vozPeca(id, row) {
   if (id === "atendente") {
     const nome = String(row?.atendente || primeiroNome(operadorDe(row?.chamado_por)?.nome) || "").trim();
     if (!nome || nome === "—") return "";
-    return primeiroNome(nome);
+    return `Atendimento por ${primeiroNome(nome)}`;
   }
   return "";
 }
@@ -2337,7 +2341,7 @@ function telaConfiguracoes() {
     </div>
     <div class="cfg-bloco">
       <h3>O que a TV fala</h3>
-      <p class="muted form-dica">Marca <strong>Fala</strong> no que entra na voz e arrasta para a ordem. Atendente usa só o primeiro nome. Vale para todas as TVs. A mesma lista aparece em <strong>Painel da TV → Configurações</strong>.</p>
+      <p class="muted form-dica">Marca <strong>Fala</strong> no que entra na voz e arrasta para a ordem. Local vira <strong>Por favor, dirija-se a</strong> e o tipo. Atendente vira <strong>Atendimento por</strong> e o primeiro nome. Vale para todas as TVs. A mesma lista aparece em <strong>Painel da TV → Configurações</strong>.</p>
       ${htmlVozLista(vista.voz_script)}
       <p id="cfg-voz-exemplo" class="cfg-exemplo-tit">Exemplo: <strong>${escapar(textoVozExemplo(vista.voz_script) || "—")}</strong></p>
     </div>

@@ -30,7 +30,7 @@ Tudo da **fila** (chamar, finalizar, não respondeu) e o **dashboard** são do *
 3. **Registrar** — grava na fila daquele tipo.
 4. **Não veio** (na recepção) — descarta o rascunho, sem criar senha.
 
-A numeração pode vir do dispenser de papel (um rolo ou dois) ou, se não usa dispenser, começa no 01 todo dia. Preferencial no rolo único usa o mesmo número com prefixo P. A **ordem de chamada** (Opções → Configurações) é *Chamar P preferenciais para cada N senhas normais* (padrão **1 para 2**), começando pelas **normais**. Dá para marcar **Começar com as preferenciais**. A chegada dentro de cada grupo não muda. Em **O que a TV fala** (Configurações e também no Painel da TV) marca Fala/Não fala e arrasta a ordem (padrão: requisitante, senha, local, guichê; atendente desligado, e quando liga fala só o primeiro nome). Ordem, voz e dispenser só entram no sistema depois de **Salvar**. Em **Tipos de atendimento** a **Senha geral** já vem cadastrada (não apaga, não muda nome/sigla/cor). Cada tipo — inclusive a recepção — informa se **tem guichês** e quantos; se tiver, na aba escolhe o guichê antes de chamar.
+A numeração pode vir do dispenser de papel (um rolo ou dois) ou, se não usa dispenser, começa no 01 todo dia. Preferencial no rolo único usa o mesmo número com prefixo P. A **ordem de chamada** (Opções → Configurações) é *Chamar P preferenciais para cada N senhas normais* (padrão **1 para 2**), começando pelas **normais**. Dá para marcar **Começar com as preferenciais**. A chegada dentro de cada grupo não muda. Em **O que a TV fala** (Configurações e também no Painel da TV) marca Fala/Não fala e arrasta a ordem (padrão: requisitante, senha, local, guichê; local fala “Por favor, dirija-se a” e o tipo; atendente desligado, e quando liga fala “Atendimento por” e o primeiro nome). Ordem, voz e dispenser só entram no sistema depois de **Salvar**. Em **Tipos de atendimento** a **Senha geral** já vem cadastrada (não apaga, não muda nome/sigla/cor). Cada tipo — inclusive a recepção — informa se **tem guichês** e quantos; se tiver, na aba escolhe o guichê antes de chamar.
 
 ### Atendimento — aba do tipo
 
@@ -81,7 +81,7 @@ Cores da linha:
 Vale para **todo o sistema**, não só para um computador. O rascunho só entra depois de **Salvar**.
 
 - **Ordem de chamada.** *Chamar P preferenciais para cada N senhas normais* (padrão 1 para 2). O ciclo começa pelas **normais**, a não ser que marque **Começar com as preferenciais**. A chegada dentro de cada grupo não muda — o 03 não passa o 01, o P08 não passa o P04. Preferencial que já é a próxima da fila não espera. O exemplo na tela mostra a ordem. Com 0 preferenciais, fica só chegada; com 0 normais, as P sobem primeiro. Quem não respondeu continua no fim.
-- **O que a TV fala.** Lista arrastável: Requisitante, Senha, Local de atendimento, Guichê e Atendente. Em cada um escolhe **Fala** ou **Não fala**. Padrão: os quatro primeiros ligados; atendente desligado (quando liga, só o primeiro nome). A mesma lista está em **Painel da TV → Configurações**.
+- **O que a TV fala.** Lista arrastável: Requisitante, Senha, Local de atendimento, Guichê e Atendente. Em cada um escolhe **Fala** ou **Não fala**. Padrão: os quatro primeiros ligados; atendente desligado. Local fala “Por favor, dirija-se a” e o tipo; atendente, quando liga, fala “Atendimento por” e o primeiro nome. A mesma lista está em **Painel da TV → Configurações**.
 - **Dispenser**
   - *Nenhum*: todo dia a numeração começa no 01.
   - *Rolo único*: um bloco de senhas; preferencial usa o mesmo número com P (P01, 02, P03…).
