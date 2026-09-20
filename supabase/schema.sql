@@ -425,6 +425,7 @@ declare
   p_quota int := 1;
   n_count int := 0;
   p_count int := 0;
+  fase text := 'pref';
   escolhida uuid;
   rec record;
   ids uuid[] := array[]::uuid[];
@@ -499,13 +500,23 @@ begin
     order by coalesce(hora_atendimento, hora_inicio, created_at), numero
   loop
     if rec.preferencial then
-      p_count := p_count + 1;
-      if p_quota <= 0 or p_count >= p_quota then
-        n_count := 0;
-        p_count := 0;
+      if fase = 'pref' then
+        p_count := p_count + 1;
+        if p_quota <= 0 or p_count >= p_quota then
+          n_count := 0;
+          p_count := 0;
+          fase := case when n_quota > 0 then 'normais' else 'pref' end;
+        end if;
       end if;
     else
       n_count := n_count + 1;
+      if n_quota > 0 and n_count >= n_quota then
+        n_count := 0;
+        p_count := 0;
+        fase := case when p_quota > 0 then 'pref' else 'normais' end;
+      elsif n_quota > 0 then
+        fase := 'normais';
+      end if;
     end if;
   end loop;
 
@@ -513,13 +524,23 @@ begin
     select preferencial into eh_pref from senhas where id = p_exceto;
     if found then
       if eh_pref then
-        p_count := p_count + 1;
-        if p_quota <= 0 or p_count >= p_quota then
-          n_count := 0;
-          p_count := 0;
+        if fase = 'pref' then
+          p_count := p_count + 1;
+          if p_quota <= 0 or p_count >= p_quota then
+            n_count := 0;
+            p_count := 0;
+            fase := case when n_quota > 0 then 'normais' else 'pref' end;
+          end if;
         end if;
       else
         n_count := n_count + 1;
+        if n_quota > 0 and n_count >= n_quota then
+          n_count := 0;
+          p_count := 0;
+          fase := case when p_quota > 0 then 'pref' else 'normais' end;
+        elsif n_quota > 0 then
+          fase := 'normais';
+        end if;
       end if;
     end if;
   end if;
@@ -558,8 +579,7 @@ begin
 
   adianta := pref_i > 0
     and p_quota > 0
-    and p_count < p_quota
-    and (n_quota <= 0 or n_count >= n_quota);
+    and fase = 'pref';
 
   if adianta then
     return ids[pref_i];

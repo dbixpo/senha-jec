@@ -583,26 +583,43 @@ function quotasOrdem(vista) {
   };
 }
 
-function avancarCiclo(nCount, pCount, ehPref, nQuota, pQuota) {
-  if (ehPref) {
-    pCount += 1;
-    if (pQuota <= 0 || pCount >= pQuota) return [0, 0];
-    return [nCount, pCount];
-  }
-  return [nCount + 1, pCount];
+function faseInicial(nQuota, pQuota) {
+  return pQuota > 0 ? "pref" : "normais";
 }
 
-function deveAdiantarPref(nCount, pCount, nQuota, pQuota, temPref) {
-  if (!temPref || pQuota <= 0) return false;
-  if (nQuota <= 0) return pCount < pQuota;
-  return nCount >= nQuota && pCount < pQuota;
+function avancarCiclo(estado, ehPref) {
+  const nQuota = estado.normais;
+  const pQuota = estado.prefs;
+  let { nCount, pCount, phase } = estado;
+  if (ehPref) {
+    if (phase !== "pref") return estado;
+    pCount += 1;
+    if (pQuota <= 0 || pCount >= pQuota) {
+      return { ...estado, nCount: 0, pCount: 0, phase: nQuota > 0 ? "normais" : "pref" };
+    }
+    return { ...estado, pCount, phase: "pref" };
+  }
+  nCount += 1;
+  if (nQuota > 0 && nCount >= nQuota) {
+    return { ...estado, nCount: 0, pCount: 0, phase: pQuota > 0 ? "pref" : "normais" };
+  }
+  return { ...estado, nCount, phase: nQuota > 0 ? "normais" : phase };
+}
+
+function deveAdiantarPref(estado, temPref) {
+  return !!(temPref && estado.prefs > 0 && estado.phase === "pref");
 }
 
 function cicloDeEmitidos(universo, espera) {
   const { normais, prefs } = quotasOrdem();
   const idsEspera = new Set((espera || []).map((s) => s.id));
-  let nCount = 0;
-  let pCount = 0;
+  let estado = {
+    nCount: 0,
+    pCount: 0,
+    phase: faseInicial(normais, prefs),
+    normais,
+    prefs,
+  };
   const emitidos = (universo || [])
     .filter((s) => s && !idsEspera.has(s.id) && (estaEmAtendimento(s) || estaFinalizada(s)))
     .sort((a, b) => {
@@ -611,17 +628,20 @@ function cicloDeEmitidos(universo, espera) {
       if (ta !== tb) return ta - tb;
       return (a.numero || 0) - (b.numero || 0);
     });
-  for (const s of emitidos) {
-    [nCount, pCount] = avancarCiclo(nCount, pCount, !!s.preferencial, normais, prefs);
-  }
-  return { nCount, pCount, normais, prefs };
+  for (const s of emitidos) estado = avancarCiclo(estado, !!s.preferencial);
+  return estado;
 }
 
 function ordenarPorProporcao(espera, ciclo) {
   const nQuota = ciclo?.normais ?? 2;
   const pQuota = ciclo?.prefs ?? 1;
-  let nCount = ciclo?.nCount || 0;
-  let pCount = ciclo?.pCount || 0;
+  let estado = {
+    nCount: ciclo?.nCount || 0,
+    pCount: ciclo?.pCount || 0,
+    phase: ciclo?.phase || faseInicial(nQuota, pQuota),
+    normais: nQuota,
+    prefs: pQuota,
+  };
   const remaining = [...espera].sort(porChegada);
   const out = [];
   while (remaining.length) {
@@ -629,16 +649,16 @@ function ordenarPorProporcao(espera, ciclo) {
     const prefIdx = remaining.findIndex((s) => s.preferencial);
     if (head.preferencial) {
       out.push(remaining.shift());
-      [nCount, pCount] = avancarCiclo(nCount, pCount, true, nQuota, pQuota);
+      estado = avancarCiclo(estado, true);
       continue;
     }
-    if (prefIdx >= 0 && deveAdiantarPref(nCount, pCount, nQuota, pQuota, true)) {
+    if (prefIdx >= 0 && deveAdiantarPref(estado, true)) {
       out.push(remaining.splice(prefIdx, 1)[0]);
-      [nCount, pCount] = avancarCiclo(nCount, pCount, true, nQuota, pQuota);
+      estado = avancarCiclo(estado, true);
       continue;
     }
     out.push(remaining.shift());
-    [nCount, pCount] = avancarCiclo(nCount, pCount, false, nQuota, pQuota);
+    estado = avancarCiclo(estado, false);
   }
   return out;
 }
@@ -649,7 +669,13 @@ function rotuloExemploFila(s) {
 }
 
 function textoExemploProporcao(nQuota, pQuota) {
-  const ciclo = { nCount: 0, pCount: 0, normais: nQuota, prefs: pQuota };
+  const ciclo = {
+    nCount: 0,
+    pCount: 0,
+    phase: faseInicial(nQuota, pQuota),
+    normais: nQuota,
+    prefs: pQuota,
+  };
   return ordenarPorProporcao(EX_FILA_ORDEM, ciclo).map(rotuloExemploFila).join(" → ");
 }
 
@@ -662,7 +688,7 @@ function dicaOrdemChamada(quotas) {
   if (n <= 0) {
     return "Com 0 senhas normais, as preferenciais sobem primeiro. As comuns só entram quando não restar P na espera.";
   }
-  return `A ordem de chegada continua valendo: o 03 não passa na frente do 01, nem o P08 na frente do P04. Depois de ${n} ${n === 1 ? "senha normal" : "senhas normais"}, o sistema chama ${p} ${p === 1 ? "preferencial" : "preferenciais"} que ainda estiver na espera. Se a próxima da fila já for preferencial, ela não espera.`;
+  return `A ordem de chegada continua valendo: o 03 não passa na frente do 01, nem o P08 na frente do P04. O ciclo começa pela preferencial: depois de ${p} ${p === 1 ? "preferencial" : "preferenciais"}, chama ${n} ${n === 1 ? "senha normal" : "senhas normais"}. Se a próxima da fila já for preferencial, ela não espera.`;
 }
 
 function instanteChegada(s) {
