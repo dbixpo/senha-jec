@@ -536,16 +536,15 @@ body.tela-tv .app {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: auto;
   margin-top: 10px;
 }
 .tv-cfg-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto minmax(180px, 0.7fr) minmax(300px, 1.8fr);
+  grid-template-rows: auto auto auto;
   gap: 12px;
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 0 0 auto;
 }
 .tv-cfg-grid section {
   display: grid;
@@ -622,8 +621,8 @@ body.tela-tv .app {
   white-space: nowrap;
 }
 .tv-img-caixa {
-  flex: 1 1 auto;
-  min-height: 0;
+  max-height: min(28vh, 240px);
+  min-height: 112px;
   overflow: auto;
   padding: 8px;
   border: 1px solid var(--line);
@@ -722,10 +721,13 @@ body.tela-tv .app {
 .tv-cfg-voz,
 .tv-cfg-imgs {
   grid-column: 1 / -1;
-  min-height: 0;
 }
 .tv-cfg-voz {
-  overflow: auto;
+  min-height: min-content;
+  overflow: visible;
+}
+.tv-cfg-imgs {
+  min-height: 0;
 }
 .tv-cfg-grid section.tv-cfg-imgs {
   display: flex;
