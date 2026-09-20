@@ -598,6 +598,27 @@ textarea {
   font-weight: 600;
   color: var(--ink);
 }
+.cfg-voz-meio {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.cfg-voz-detalhe {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  width: fit-content;
+}
+.cfg-voz-detalhe input {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--dark);
+}
 .cfg-voz-lista select {
   height: var(--control-h);
   min-height: var(--control-h);

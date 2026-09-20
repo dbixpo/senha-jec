@@ -1351,7 +1351,7 @@ function htmlTvCfg() {
             </div>
             <div class="tv-cfg-voz-script">
               <p class="tv-voz-script-tit">O que ela fala</p>
-              <p class="muted form-dica">${typeof ehAdmin === "function" && ehAdmin() ? "Marca <strong>Fala</strong> ou <strong>Não fala</strong> e arrasta a ordem. Vale para todas as TVs depois de <strong>Salvar</strong>." : "O administrador define o que entra na voz. Aqui só dá para ouvir o exemplo."}</p>
+              <p class="muted form-dica">${typeof ehAdmin === "function" && ehAdmin() ? "Marca <strong>Fala</strong> ou <strong>Não fala</strong> e arrasta a ordem. Em local e atendente, <strong>Fala detalhada</strong> vira a frase longa. Vale para todas as TVs depois de <strong>Salvar</strong>." : "O administrador define o que entra na voz. Aqui só dá para ouvir o exemplo."}</p>
               ${typeof htmlVozLista === "function" ? htmlVozLista(typeof configuracoes !== "undefined" ? configuracoes.voz_script : "", { trava: typeof ehAdmin !== "function" || !ehAdmin() }) : ""}
               <p id="cfg-voz-exemplo" class="cfg-exemplo-tit">Exemplo: <strong>${escapar((typeof textoVozExemplo === "function" ? textoVozExemplo(typeof configuracoes !== "undefined" ? configuracoes.voz_script : "") : "") || "—")}</strong></p>
             </div>

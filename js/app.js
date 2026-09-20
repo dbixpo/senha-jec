@@ -76,17 +76,26 @@ const GUICHE_KEY = "senha-jec-guiche";
 const VOZ_CAMPOS = [
   { id: "requisitante", nome: "Requisitante" },
   { id: "senha", nome: "Senha" },
-  { id: "local", nome: "Local de atendimento" },
+  { id: "local", nome: "Local de atendimento", detalhe: true },
   { id: "guiche", nome: "Guichê" },
-  { id: "atendente", nome: "Atendente" },
+  { id: "atendente", nome: "Atendente", detalhe: true },
 ];
 const VOZ_SCRIPT_PADRAO = [
   { id: "requisitante", on: true },
   { id: "senha", on: true },
-  { id: "local", on: true },
+  { id: "local", on: true, detalhe: true },
   { id: "guiche", on: true },
-  { id: "atendente", on: false },
+  { id: "atendente", on: false, detalhe: true },
 ];
+
+function vozTemDetalhe(id) {
+  return VOZ_CAMPOS.some((c) => c.id === id && c.detalhe);
+}
+
+function vozDetalheLigado(item) {
+  if (!vozTemDetalhe(item?.id)) return false;
+  return item.detalhe !== false && item.detalhe !== "nao" && item.detalhe !== "false" && item.detalhe !== 0 && item.detalhe !== "0";
+}
 
 const PREF_TIPOS = [
   { id: "cadeira", nome: "Deficiência" },
@@ -373,10 +382,15 @@ function parseVozScript(raw) {
     if (!VOZ_CAMPOS.some((c) => c.id === id) || vistos.has(id)) return;
     vistos.add(id);
     const on = item.on === true || item.on === "sim" || item.on === "true" || item.on === 1 || item.on === "1";
-    saida.push({ id, on });
+    const peca = { id, on };
+    if (vozTemDetalhe(id)) peca.detalhe = vozDetalheLigado({ id, detalhe: item.detalhe });
+    saida.push(peca);
   });
   VOZ_SCRIPT_PADRAO.forEach((pad) => {
-    if (!vistos.has(pad.id)) saida.push({ id: pad.id, on: pad.on });
+    if (vistos.has(pad.id)) return;
+    const peca = { id: pad.id, on: pad.on };
+    if (vozTemDetalhe(pad.id)) peca.detalhe = vozDetalheLigado(pad);
+    saida.push(peca);
   });
   return saida;
 }
@@ -411,13 +425,15 @@ function vozLocalTexto(row) {
   return tipoDe(row.tipo_id)?.nome || "Atendimento";
 }
 
-function vozPeca(id, row) {
+function vozPeca(item, row) {
+  const id = typeof item === "string" ? item : item?.id;
+  const detalhe = typeof item === "object" ? vozDetalheLigado(item) : true;
   if (id === "requisitante") return String(row?.requisitante || "").trim();
   if (id === "senha") return vozSenhaExtenso(row);
   if (id === "local") {
     const local = vozLocalTexto(row);
     if (!local) return "";
-    return `Por favor, dirija-se a ${local}`;
+    return detalhe ? `Por favor, dirija-se a ${local}` : local;
   }
   if (id === "guiche") {
     const g = Number(row?.guiche);
@@ -427,14 +443,15 @@ function vozPeca(id, row) {
   if (id === "atendente") {
     const nome = String(row?.atendente || primeiroNome(operadorDe(row?.chamado_por)?.nome) || "").trim();
     if (!nome || nome === "—") return "";
-    return `Atendimento por ${primeiroNome(nome)}`;
+    const curto = primeiroNome(nome);
+    return detalhe ? `Atendimento por ${curto}` : curto;
   }
   return "";
 }
 
 function textoVozChamada(row, script) {
   const ordem = script != null ? parseVozScript(script) : vozScriptAtual();
-  return ordem.filter((x) => x.on).map((x) => vozPeca(x.id, row)).filter(Boolean).join(", ");
+  return ordem.filter((x) => x.on).map((x) => vozPeca(x, row)).filter(Boolean).join(", ");
 }
 
 function textoVozExemplo(script) {
@@ -454,9 +471,18 @@ function htmlVozLista(script, opts = {}) {
   return `<ul id="cfg-voz-lista" class="cfg-voz-lista${trava ? " travada" : ""}">
     ${parseVozScript(script).map((item) => {
       const campo = VOZ_CAMPOS.find((c) => c.id === item.id);
+      const detalhe = vozTemDetalhe(item.id)
+        ? `<label class="cfg-voz-detalhe">
+            <input type="checkbox" data-voz-detalhe ${item.detalhe ? "checked" : ""} ${trava ? "disabled" : ""}>
+            Fala detalhada
+          </label>`
+        : "";
       return `<li ${trava ? "" : "draggable=\"true\""} data-id="${item.id}">
         <span class="cfg-voz-arrasta" title="Arrasta para mudar a ordem" aria-hidden="true">⋮⋮</span>
-        <span class="cfg-voz-nome">${escapar(campo?.nome || item.id)}</span>
+        <span class="cfg-voz-meio">
+          <span class="cfg-voz-nome">${escapar(campo?.nome || item.id)}</span>
+          ${detalhe}
+        </span>
         <select data-voz-on aria-label="${escapar(campo?.nome || item.id)} na voz" ${trava ? "disabled" : ""}>
           <option value="sim" ${item.on ? "selected" : ""}>Fala</option>
           <option value="nao" ${item.on ? "" : "selected"}>Não fala</option>
@@ -469,10 +495,12 @@ function htmlVozLista(script, opts = {}) {
 function lerVozListaDom() {
   const itens = [...document.querySelectorAll("#cfg-voz-lista li[data-id]")];
   if (!itens.length) return null;
-  return itens.map((li) => ({
-    id: li.getAttribute("data-id"),
-    on: li.querySelector("[data-voz-on]")?.value === "sim",
-  }));
+  return itens.map((li) => {
+    const id = li.getAttribute("data-id");
+    const peca = { id, on: li.querySelector("[data-voz-on]")?.value === "sim" };
+    if (vozTemDetalhe(id)) peca.detalhe = !!li.querySelector("[data-voz-detalhe]")?.checked;
+    return peca;
+  });
 }
 
 function guichesDoTipo(tipo) {
@@ -2341,7 +2369,7 @@ function telaConfiguracoes() {
     </div>
     <div class="cfg-bloco">
       <h3>O que a TV fala</h3>
-      <p class="muted form-dica">Marca <strong>Fala</strong> no que entra na voz e arrasta para a ordem. Local vira <strong>Por favor, dirija-se a</strong> e o tipo. Atendente vira <strong>Atendimento por</strong> e o primeiro nome. Vale para todas as TVs. A mesma lista aparece em <strong>Painel da TV → Configurações</strong>.</p>
+      <p class="muted form-dica">Marca <strong>Fala</strong> no que entra na voz e arrasta para a ordem. Em local e atendente, <strong>Fala detalhada</strong> vira a frase longa; sem o visto, só o tipo ou o primeiro nome. Vale para todas as TVs. A mesma lista aparece em <strong>Painel da TV → Configurações</strong>.</p>
       ${htmlVozLista(vista.voz_script)}
       <p id="cfg-voz-exemplo" class="cfg-exemplo-tit">Exemplo: <strong>${escapar(textoVozExemplo(vista.voz_script) || "—")}</strong></p>
     </div>
@@ -2810,7 +2838,10 @@ function ligarCfgVozLista() {
       lista.insertBefore(dragEl, ev.clientY < rect.top + rect.height / 2 ? over : over.nextSibling);
     });
   });
-  lista.querySelectorAll("[data-voz-on]").forEach((el) => {
+  lista.querySelectorAll("input, select, .cfg-voz-detalhe").forEach((el) => {
+    el.addEventListener("mousedown", (ev) => ev.stopPropagation());
+  });
+  lista.querySelectorAll("[data-voz-on], [data-voz-detalhe]").forEach((el) => {
     el.addEventListener("change", onCfgVozPreview);
   });
 }
