@@ -564,9 +564,6 @@ function naFila(lista = senhas) {
 }
 
 function ordemChamada() {
-  const v = configuracoes.ordem_chamada;
-  if (v === ORDEM_PREF_PRIMEIRO) return ORDEM_PREF_PRIMEIRO;
-  if (v === ORDEM_INTERCALAR) return ORDEM_INTERCALAR;
   return ORDEM_PROPORCAO;
 }
 
@@ -656,28 +653,14 @@ function textoExemploProporcao(nQuota, pQuota) {
   return ordenarPorProporcao(EX_FILA_ORDEM, ciclo).map(rotuloExemploFila).join(" → ");
 }
 
-function textoExemploChegada() {
-  return EX_FILA_ORDEM.map(rotuloExemploFila).join(" → ");
-}
-
-function textoExemploPrefPrimeiro() {
-  return [...EX_FILA_ORDEM]
-    .sort((a, b) => Number(!!b.preferencial) - Number(!!a.preferencial) || a.numero - b.numero)
-    .map(rotuloExemploFila)
-    .join(" → ");
-}
-
-function dicaOrdemChamada(regra, quotas) {
-  if (regra === ORDEM_PREF_PRIMEIRO) {
-    return "Todas as preferenciais sobem para o topo. As comuns só entram quando não restar preferencial na espera. Quem chegou primeiro entre as P continua na frente das P.";
-  }
-  if (regra === ORDEM_INTERCALAR) {
-    return "Chama na sequência em que as pessoas chegaram (o número do papel, ou a hora da recepção se os rolos forem separados). Preferencial não sobe na frente de quem já estava na fila.";
-  }
+function dicaOrdemChamada(quotas) {
   const n = quotas?.normais ?? 2;
   const p = quotas?.prefs ?? 1;
   if (p <= 0) {
-    return "Com 0 preferenciais na proporção, a fila fica só na ordem de chegada.";
+    return "Com 0 preferenciais, a fila fica só na ordem de chegada. Preferencial não adianta.";
+  }
+  if (n <= 0) {
+    return "Com 0 senhas normais, as preferenciais sobem primeiro. As comuns só entram quando não restar P na espera.";
   }
   return `A ordem de chegada continua valendo: o 03 não passa na frente do 01, nem o P08 na frente do P04. Depois de ${n} ${n === 1 ? "senha normal" : "senhas normais"}, o sistema chama ${p} ${p === 1 ? "preferencial" : "preferenciais"} que ainda estiver na espera. Se a próxima da fila já for preferencial, ela não espera.`;
 }
@@ -697,17 +680,6 @@ function porChegada(a, b) {
 }
 
 function ordenarEspera(espera, universo) {
-  const regra = ordemChamada();
-  if (regra === ORDEM_PREF_PRIMEIRO) {
-    return [...espera].sort((a, b) => {
-      const sa = Number(a.nao_respondeu) || 0;
-      const sb = Number(b.nao_respondeu) || 0;
-      if (sa !== sb) return sa - sb;
-      if (!!a.preferencial !== !!b.preferencial) return a.preferencial ? -1 : 1;
-      return porChegada(a, b);
-    });
-  }
-  if (regra !== ORDEM_PROPORCAO) return [...espera].sort(porChegada);
   const tiposIds = [...new Set((espera || []).map((s) => s.tipo_id).filter(Boolean))];
   if (tiposIds.length > 1) return [...espera].sort(porChegada);
   return ordenarPorProporcao(espera, cicloDeEmitidos(universo || espera, espera));
@@ -903,13 +875,17 @@ function aplicarConfiguracoes(rows) {
     if (r?.chave) mapa[r.chave] = r.valor;
   });
   const ordem = mapa.ordem_chamada;
-  configuracoes.ordem_chamada = ordem === ORDEM_PREF_PRIMEIRO
-    ? ORDEM_PREF_PRIMEIRO
-    : ordem === ORDEM_INTERCALAR
-      ? ORDEM_INTERCALAR
-      : ORDEM_PROPORCAO;
-  configuracoes.ordem_normais = String(quotaCfgValor(mapa.ordem_normais, 2));
-  configuracoes.ordem_preferenciais = String(quotaCfgValor(mapa.ordem_preferenciais, 1));
+  configuracoes.ordem_chamada = ORDEM_PROPORCAO;
+  if (ordem === ORDEM_PREF_PRIMEIRO) {
+    configuracoes.ordem_normais = "0";
+    configuracoes.ordem_preferenciais = String(Math.max(1, quotaCfgValor(mapa.ordem_preferenciais, 1)));
+  } else if (ordem === ORDEM_INTERCALAR) {
+    configuracoes.ordem_normais = String(quotaCfgValor(mapa.ordem_normais, 2));
+    configuracoes.ordem_preferenciais = "0";
+  } else {
+    configuracoes.ordem_normais = String(quotaCfgValor(mapa.ordem_normais, 2));
+    configuracoes.ordem_preferenciais = String(quotaCfgValor(mapa.ordem_preferenciais, 1));
+  }
   const modo = mapa.dispenser_modo;
   configuracoes.dispenser_modo = modo === DISPENSER_UNICO || modo === DISPENSER_SEPARADO ? modo : DISPENSER_NENHUM;
   configuracoes.dispenser_proxima = String(mapa.dispenser_proxima || configuracoes.dispenser_proxima || "1");
@@ -1185,7 +1161,7 @@ function legendaTipos() {
     <li><span class="chip aguardando">espera</span></li>
     <li><span class="chip em-atendimento">em atendimento</span></li>
     <li><span class="chip atendida">finalizado</span></li>
-    <li><span class="chip pref">P = preferencial${ordemChamada() === ORDEM_PROPORCAO ? " · proporção configurada" : ordemChamada() === ORDEM_INTERCALAR ? " · na ordem de chegada" : " (sobe · senha P01)"}</span></li>
+    <li><span class="chip pref">P = preferencial · ${quotasOrdem().normais} para ${quotasOrdem().prefs}</span></li>
     <li><span class="chip ausente">não respondeu</span></li>
   </ul>`;
 }
@@ -1994,11 +1970,7 @@ function cfgNumeroVista(chave) {
 
 function sincronizarCfgRascunho() {
   const base = { ...cfgVista() };
-  const ordemEl = document.getElementById("cfg-ordem-chamada");
-  if (ordemEl) {
-    const v = ordemEl.value;
-    base.ordem_chamada = v === ORDEM_PREF_PRIMEIRO || v === ORDEM_INTERCALAR ? v : ORDEM_PROPORCAO;
-  }
+  base.ordem_chamada = ORDEM_PROPORCAO;
   const modoEl = document.getElementById("cfg-dispenser-modo");
   if (modoEl) {
     const v = modoEl.value;
@@ -2035,9 +2007,6 @@ function sincronizarCfgRascunho() {
 
 function telaConfiguracoes() {
   const vista = cfgVista();
-  const ordem = vista.ordem_chamada === ORDEM_PREF_PRIMEIRO || vista.ordem_chamada === ORDEM_INTERCALAR
-    ? vista.ordem_chamada
-    : ORDEM_PROPORCAO;
   const quotas = quotasOrdem(vista);
   const modo = vista.dispenser_modo === DISPENSER_UNICO || vista.dispenser_modo === DISPENSER_SEPARADO ? vista.dispenser_modo : DISPENSER_NENHUM;
   return `<section class="card cfg-pagina">
@@ -2046,28 +2015,19 @@ function telaConfiguracoes() {
     <div class="cfg-bloco">
       <h3>Ordem de chamada</h3>
       <p class="muted form-dica">Quem o sistema chama primeiro na fila do tipo. A sequência de chegada nunca inverte quem é do mesmo grupo: o 03 não passa o 01, o P08 não passa o P04.</p>
-      <label class="cfg-select">Ordem de chamada
-        <select id="cfg-ordem-chamada">
-          <option value="${ORDEM_PROPORCAO}" ${ordem === ORDEM_PROPORCAO ? "selected" : ""}>Proporção (normais e preferenciais)</option>
-          <option value="${ORDEM_INTERCALAR}" ${ordem === ORDEM_INTERCALAR ? "selected" : ""}>Só ordem de chegada</option>
-          <option value="${ORDEM_PREF_PRIMEIRO}" ${ordem === ORDEM_PREF_PRIMEIRO ? "selected" : ""}>Preferenciais sempre na frente</option>
-        </select>
-      </label>
-      <p id="cfg-ordem-proporcao" class="cfg-frase ${ordem === ORDEM_PROPORCAO ? "" : "hidden"}">
+      <p class="cfg-frase">
         Chamar
         <input id="cfg-ordem-normais" type="number" min="0" max="99" step="1" inputmode="numeric" value="${quotas.normais}">
         senhas normais para cada
         <input id="cfg-ordem-prefs" type="number" min="0" max="99" step="1" inputmode="numeric" value="${quotas.prefs}">
         preferencial
       </p>
-      <p id="cfg-ordem-dica" class="muted form-dica">${dicaOrdemChamada(ordem, quotas)}</p>
+      <p id="cfg-ordem-dica" class="muted form-dica">${dicaOrdemChamada(quotas)}</p>
       <div class="cfg-exemplo" aria-label="Exemplo da ordem">
         <p class="cfg-exemplo-tit">Exemplo na espera: <strong>01</strong>, <strong>02</strong>, <strong>03</strong>, <strong>P04</strong>, <strong>05</strong>, <strong>P06</strong>, <strong>P07</strong>, <strong>P08</strong>, <strong>09</strong>, <strong>10</strong>, <strong>11</strong>, <strong>12</strong>, <strong>P13</strong></p>
-        <p data-cfg-ex="proporcao" class="${ordem === ORDEM_PROPORCAO ? "on" : ""}"><span class="cfg-modo">Proporção</span> <span id="cfg-ex-proporcao">${textoExemploProporcao(quotas.normais, quotas.prefs)}</span></p>
-        <p data-cfg-ex="intercalar" class="${ordem === ORDEM_INTERCALAR ? "on" : ""}"><span class="cfg-modo">Ordem de chegada</span> ${textoExemploChegada()}</p>
-        <p data-cfg-ex="pref" class="${ordem === ORDEM_PREF_PRIMEIRO ? "on" : ""}"><span class="cfg-modo">Preferenciais na frente</span> ${textoExemploPrefPrimeiro()}</p>
+        <p class="on" id="cfg-ex-proporcao">${textoExemploProporcao(quotas.normais, quotas.prefs)}</p>
       </div>
-      <p class="muted form-dica">Quem não respondeu volta para o fim da espera, nos três jeitos. O <strong>Chamar próximo</strong> e o aviso de fora de ordem seguem esta regra.</p>
+      <p class="muted form-dica">Quem não respondeu volta para o fim da espera. O <strong>Chamar próximo</strong> e o aviso de fora de ordem seguem esta regra.</p>
     </div>
     <div class="cfg-bloco">
       <h3>Dispenser de senha de papel</h3>
@@ -2466,7 +2426,6 @@ async function salvarCfg(chave, valor) {
 }
 
 function ligarCfgPagina() {
-  document.getElementById("cfg-ordem-chamada")?.addEventListener("change", onCfgOrdemPreview);
   ["cfg-ordem-normais", "cfg-ordem-prefs"].forEach((id) => {
     const el = document.getElementById(id);
     el?.addEventListener("input", onCfgOrdemPreview);
@@ -2483,17 +2442,11 @@ function ligarCfgPagina() {
 
 function onCfgOrdemPreview() {
   sincronizarCfgRascunho();
-  const vista = cfgVista();
-  const ordem = vista.ordem_chamada;
-  const quotas = quotasOrdem(vista);
-  document.getElementById("cfg-ordem-proporcao")?.classList.toggle("hidden", ordem !== ORDEM_PROPORCAO);
+  const quotas = quotasOrdem(cfgVista());
   const dica = document.getElementById("cfg-ordem-dica");
-  if (dica) dica.textContent = dicaOrdemChamada(ordem, quotas);
+  if (dica) dica.textContent = dicaOrdemChamada(quotas);
   const exProp = document.getElementById("cfg-ex-proporcao");
   if (exProp) exProp.textContent = textoExemploProporcao(quotas.normais, quotas.prefs);
-  document.querySelector("[data-cfg-ex=proporcao]")?.classList.toggle("on", ordem === ORDEM_PROPORCAO);
-  document.querySelector("[data-cfg-ex=intercalar]")?.classList.toggle("on", ordem === ORDEM_INTERCALAR);
-  document.querySelector("[data-cfg-ex=pref]")?.classList.toggle("on", ordem === ORDEM_PREF_PRIMEIRO);
 }
 
 function onCfgDispenserModoPreview() {
