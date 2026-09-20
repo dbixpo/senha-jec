@@ -9,3 +9,5 @@ manutencao.env
 js/config.js
 supabase/seed.sql
 img/proposta/
+tools/clonar_producao.py
+tools/__pycache__/

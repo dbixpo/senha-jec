@@ -1,9 +1,11 @@
-const CACHE = "senha-jec-v63";
+const CACHE = "senha-jec-v84";
 const SHELL = [
   "./",
   "./index.html",
   "./css/app.css",
+  "./css/tv.css",
   "./js/app.js",
+  "./js/tv.js",
   "./js/pwa.js",
   "./img/favicon.png",
   "./img/logo-topbar.png",
@@ -39,7 +41,9 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.protocol !== "http:" && url.protocol !== "https:") return;
+  if (url.origin !== self.location.origin) return;
   if (url.hostname.includes("supabase.co")) return;
+  if (url.pathname.startsWith("/rest/") || url.pathname.startsWith("/realtime/")) return;
 
   event.respondWith(
     fetch(event.request)

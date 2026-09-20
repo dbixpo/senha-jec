@@ -24,6 +24,7 @@ let enviandoChegada = false;
 let rascunhoChegada = {
   chamado: false,
   horaIso: null,
+  numero: null,
   preferencialTipo: "",
   nome: "",
   tipoId: "",
@@ -36,6 +37,20 @@ let carregarTimer = 0;
 let carregarSeq = 0;
 let focarAtenderId = null;
 let avisoPendencia = null;
+const ORDEM_INTERCALAR = "intercalar";
+const ORDEM_PREF_PRIMEIRO = "preferenciais_primeiro";
+const DISPENSER_NENHUM = "nenhum";
+const DISPENSER_UNICO = "unico";
+const DISPENSER_SEPARADO = "separado";
+let configuracoes = {
+  ordem_chamada: ORDEM_INTERCALAR,
+  dispenser_modo: DISPENSER_NENHUM,
+  dispenser_proxima: "1",
+  dispenser_proxima_comum: "1",
+  dispenser_proxima_pref: "1",
+};
+let cfgRascunho = null;
+let cfgFeedback = "";
 
 const PREF_TIPOS = [
   { id: "cadeira", nome: "Deficiência" },
@@ -116,6 +131,15 @@ function ehRelatorio() {
   return aba === "relatorio";
 }
 
+function ehTv() {
+  return aba === "tv";
+}
+
+function hashTv() {
+  const h = String(location.hash || "").replace(/^#\/?/, "");
+  return h === "tv" || h.startsWith("tv/");
+}
+
 function hashVistaRelatorio() {
   const h = String(location.hash || "").replace(/^#\/?/, "");
   if (h !== "relatorio" && !h.startsWith("relatorio/")) return null;
@@ -141,15 +165,28 @@ function irVistaRelatorio(vista) {
   desenhar();
 }
 
+function aplicarHashInicial() {
+  if (hashTv()) {
+    aba = "tv";
+    return true;
+  }
+  return aplicarHashRelatorio();
+}
+
 function sincronizarHash() {
-  const want = ehRelatorio() ? `#relatorio/${vistaRelatorioOk(relVista)}` : "";
-  const have = hashVistaRelatorio() != null ? `#relatorio/${hashVistaRelatorio()}` : "";
+  const want = ehTv() ? "#tv" : ehRelatorio() ? `#relatorio/${vistaRelatorioOk(relVista)}` : "";
+  const have = hashTv() ? "#tv" : hashVistaRelatorio() != null ? `#relatorio/${hashVistaRelatorio()}` : "";
   if (want === have) return;
   history.replaceState(null, "", `${location.pathname}${location.search}${want}`);
 }
 
 function aplicarModoTela() {
   document.body.classList.toggle("tela-relatorio", ehRelatorio());
+  document.body.classList.toggle("tela-tv", ehTv());
+  if (ehTv()) {
+    document.title = "Painel de senha · Senha JEC";
+    return;
+  }
   if (!ehRelatorio()) {
     document.title = "Senha JEC";
     return;
@@ -190,15 +227,26 @@ function garantirPeriodo() {
 
 function irAba(nova) {
   const eraRel = ehRelatorio();
+  const eraTv = ehTv();
   if (nova === "relatorio" && aba !== "relatorio") {
-    abaAntesRelatorio = aba && aba !== "relatorio" ? aba : "geral";
+    abaAntesRelatorio = aba && aba !== "relatorio" && aba !== "tv" ? aba : "geral";
     const doHash = hashVistaRelatorio();
     if (doHash) relVista = doHash;
+  }
+  if (eraTv && nova !== "tv") tvParar();
+  if (aba === "configuracoes" && nova !== "configuracoes") {
+    cfgRascunho = null;
+    cfgFeedback = "";
   }
   aba = nova;
   sincronizarHash();
   aplicarModoTela();
   if (ehRelatorio()) garantirPeriodo();
+  if (ehTv()) {
+    desenhar();
+    tvEntrar();
+    return;
+  }
   if (eraRel !== ehRelatorio()) carregar();
   else desenhar();
 }
@@ -246,7 +294,7 @@ function aplicarTopoSessao() {
   preencherQuem();
   document.getElementById("cfg-wrap")?.classList.remove("hidden");
   document.querySelectorAll(".cfg-admin").forEach((el) => el.classList.toggle("hidden", !ehAdmin()));
-  document.getElementById("btn-cfg")?.classList.toggle("on", aba === "tipos" || aba === "operadores" || aba === "relatorio");
+  document.getElementById("btn-cfg")?.classList.toggle("on", aba === "tipos" || aba === "operadores" || aba === "configuracoes" || aba === "relatorio" || aba === "tv");
   document.getElementById("cfg-menu")?.querySelectorAll("[data-cfg]").forEach((btn) => {
     btn.classList.toggle("on", aba === btn.dataset.cfg);
   });
@@ -366,7 +414,28 @@ function auditoria(row) {
   return `reg. ${dataHora(row.created_at)}${row.updated_at && row.updated_at !== row.created_at ? " · atual. " + dataHora(row.updated_at) : ""}`;
 }
 
+function numeroCfg(chave, padrao = 1) {
+  const n = parseInt(configuracoes[chave], 10);
+  return Number.isFinite(n) && n > 0 ? n : padrao;
+}
+
+function dispenserModo() {
+  const modo = configuracoes.dispenser_modo;
+  if (modo === DISPENSER_UNICO || modo === DISPENSER_SEPARADO) return modo;
+  return DISPENSER_NENHUM;
+}
+
+function usaDispenser() {
+  return dispenserModo() !== DISPENSER_NENHUM;
+}
+
 function proximoNumero() {
+  if (rascunhoChegada.numero) return rascunhoChegada.numero;
+  const modo = dispenserModo();
+  if (modo === DISPENSER_SEPARADO) {
+    return rascunhoEhPref() ? numeroCfg("dispenser_proxima_pref") : numeroCfg("dispenser_proxima_comum");
+  }
+  if (modo === DISPENSER_UNICO) return numeroCfg("dispenser_proxima");
   const usados = senhas.map((s) => Number(s.numero) || 0);
   return (usados.length ? Math.max(...usados) : 0) + 1;
 }
@@ -400,10 +469,11 @@ function iconePref(id, extra = "") {
 }
 
 function botoesPrefForm() {
+  const travarPref = rascunhoChegada.chamado && dispenserModo() === DISPENSER_SEPARADO;
   return `<div class="pref-tipos" role="group" aria-label="Preferencial">
     ${PREF_TIPOS.map((p) => {
       const on = rascunhoChegada.preferencialTipo === p.id;
-      return `<button type="button" class="btn-pref${p.id === "autismo" ? " colorido" : ""}${on ? " on" : ""}" data-pref="${p.id}" data-tip="${escapar(p.nome)}" title="${escapar(p.nome)}" aria-pressed="${on ? "true" : "false"}" aria-label="${escapar(p.nome)}">
+      return `<button type="button" class="btn-pref${p.id === "autismo" ? " colorido" : ""}${on ? " on" : ""}" data-pref="${p.id}" data-tip="${escapar(p.nome)}" title="${escapar(p.nome)}" aria-pressed="${on ? "true" : "false"}" aria-label="${escapar(p.nome)}" ${travarPref ? "disabled" : ""}>
         <img src="img/pref/${p.id}.png" alt="">
       </button>`;
     }).join("")}
@@ -439,17 +509,48 @@ function naFila(lista = senhas) {
   return lista.filter(estaNaFila).length;
 }
 
+function ordemChamada() {
+  return configuracoes.ordem_chamada === ORDEM_PREF_PRIMEIRO ? ORDEM_PREF_PRIMEIRO : ORDEM_INTERCALAR;
+}
+
+function instanteChegada(s) {
+  return Date.parse(s.hora_recepcao || s.hora_chegada || s.created_at) || 0;
+}
+
+function porChegada(a, b) {
+  const sa = Number(a.nao_respondeu) || 0;
+  const sb = Number(b.nao_respondeu) || 0;
+  if (sa !== sb) return sa - sb;
+  const ta = instanteChegada(a);
+  const tb = instanteChegada(b);
+  if (ta !== tb) return ta - tb;
+  return (a.numero || 0) - (b.numero || 0);
+}
+
+function ordenarEspera(espera) {
+  if (ordemChamada() === ORDEM_PREF_PRIMEIRO) {
+    return [...espera].sort((a, b) => {
+      const sa = Number(a.nao_respondeu) || 0;
+      const sb = Number(b.nao_respondeu) || 0;
+      if (sa !== sb) return sa - sb;
+      if (!!a.preferencial !== !!b.preferencial) return a.preferencial ? -1 : 1;
+      return porChegada(a, b);
+    });
+  }
+  return [...espera].sort(porChegada);
+}
+
+function universoDaLista(lista) {
+  const ids = [...new Set(lista.map((s) => s.tipo_id).filter(Boolean))];
+  if (ids.length === 1) return senhas.filter((s) => s.tipo_id === ids[0]);
+  return senhas;
+}
+
 function ordenarFila(lista) {
-  return [...lista].sort((a, b) => {
-    const ea = estaEmAtendimento(a) ? 0 : estaFinalizada(a) ? 2 : 1;
-    const eb = estaEmAtendimento(b) ? 0 : estaFinalizada(b) ? 2 : 1;
-    if (ea !== eb) return ea - eb;
-    const sa = Number(a.nao_respondeu) || 0;
-    const sb = Number(b.nao_respondeu) || 0;
-    if (sa !== sb) return sa - sb;
-    if (!!a.preferencial !== !!b.preferencial) return a.preferencial ? -1 : 1;
-    return (a.numero || 0) - (b.numero || 0);
-  });
+  const atendimento = lista.filter(estaEmAtendimento).sort((a, b) => (a.numero || 0) - (b.numero || 0));
+  const espera = lista.filter(estaNaFila);
+  const fim = lista.filter(estaFinalizada).sort((a, b) => (a.numero || 0) - (b.numero || 0));
+  return [...atendimento, ...ordenarEspera(espera, universoDaLista(lista)), ...fim];
 }
 
 function descreverSenhaFila(senha) {
@@ -460,7 +561,8 @@ function descreverSenhaFila(senha) {
 
 function proximaEsperaDoTipo(tipoId) {
   if (!tipoId) return null;
-  return ordenarFila(senhas.filter((s) => s.tipo_id === tipoId && estaNaFila(s)))[0] || null;
+  const universo = senhas.filter((s) => s.tipo_id === tipoId);
+  return ordenarEspera(universo.filter(estaNaFila), universo)[0] || null;
 }
 
 async function confirmarVoltarFila(senha) {
@@ -587,6 +689,12 @@ async function carregar(opts = {}) {
       : sb.from("operadores").select(ehAdmin()
         ? "id, usuario, nome, papel, ativo, ultimo_acesso, created_at, updated_at"
         : "id, nome").order("nome"),
+    soFila
+      ? Promise.resolve({
+        data: Object.entries(configuracoes).map(([chave, valor]) => ({ chave, valor: String(valor ?? "") })),
+        error: null,
+      })
+      : sb.from("configuracoes").select("chave, valor"),
   ];
   if (precisaLev && (periodoDe() !== data || periodoAte() !== data)) {
     ops.push(buscarPeriodo(periodoDe(), periodoAte()));
@@ -602,17 +710,33 @@ async function carregar(opts = {}) {
     tipos = resultados[0].data || [];
     operadores = resultados[2]?.data || [];
   }
+  aplicarConfiguracoes(resultados[3]?.data);
   const dia = resultados[1].data || { senhas: [], chamadas: [] };
   senhas = dia.senhas || [];
   chamadas = dia.chamadas || [];
-  if (precisaLev && resultados[3]?.data) {
-    senhasLev = resultados[3].data.senhas || [];
-    chamadasLev = resultados[3].data.chamadas || [];
+  if (precisaLev && resultados[4]?.data) {
+    senhasLev = resultados[4].data.senhas || [];
+    chamadasLev = resultados[4].data.chamadas || [];
   } else if (precisaLev) {
     senhasLev = senhas;
     chamadasLev = chamadas;
   }
-  if (!estaEditando()) desenhar();
+  if (!estaEditando() && !ehTv()) desenhar();
+}
+
+function aplicarConfiguracoes(rows) {
+  const mapa = {};
+  (rows || []).forEach((r) => {
+    if (r?.chave) mapa[r.chave] = r.valor;
+  });
+  configuracoes.ordem_chamada = mapa.ordem_chamada === ORDEM_PREF_PRIMEIRO
+    ? ORDEM_PREF_PRIMEIRO
+    : ORDEM_INTERCALAR;
+  const modo = mapa.dispenser_modo;
+  configuracoes.dispenser_modo = modo === DISPENSER_UNICO || modo === DISPENSER_SEPARADO ? modo : DISPENSER_NENHUM;
+  configuracoes.dispenser_proxima = String(mapa.dispenser_proxima || configuracoes.dispenser_proxima || "1");
+  configuracoes.dispenser_proxima_comum = String(mapa.dispenser_proxima_comum || configuracoes.dispenser_proxima_comum || "1");
+  configuracoes.dispenser_proxima_pref = String(mapa.dispenser_proxima_pref || configuracoes.dispenser_proxima_pref || "1");
 }
 
 function agendarCarregar() {
@@ -636,6 +760,7 @@ function escutar() {
     .on("postgres_changes", { event: "*", schema: "public", table: "senhas" }, () => agendarCarregar())
     .on("postgres_changes", { event: "*", schema: "public", table: "historico_chamadas" }, () => agendarCarregar())
     .on("postgres_changes", { event: "*", schema: "public", table: "tipos_atendimento" }, () => carregar())
+    .on("postgres_changes", { event: "*", schema: "public", table: "configuracoes" }, () => carregar())
     .subscribe();
 }
 
@@ -647,7 +772,7 @@ function desenharAbas() {
   aplicarModoTela();
   sincronizarHash();
   const nav = document.getElementById("tabs");
-  if (ehRelatorio()) {
+  if (ehRelatorio() || ehTv()) {
     nav.innerHTML = "";
     aplicarTopoSessao();
     return;
@@ -882,7 +1007,7 @@ function legendaTipos() {
     <li><span class="chip aguardando">espera</span></li>
     <li><span class="chip em-atendimento">em atendimento</span></li>
     <li><span class="chip atendida">finalizado</span></li>
-    <li><span class="chip pref">P = preferencial (sobe · senha P01)</span></li>
+    <li><span class="chip pref">P = preferencial${ordemChamada() === ORDEM_INTERCALAR ? " · na ordem de chegada" : " (sobe · senha P01)"}</span></li>
     <li><span class="chip ausente">não respondeu</span></li>
   </ul>`;
 }
@@ -928,7 +1053,13 @@ function telaGeral() {
       <div class="card-topo">
         <div>
           <h2>Senha geral</h2>
-          <p class="muted form-dica dica-web">${ehHoje() ? "Chamar anota a hora. Se a pessoa não aparecer, Não respondeu. Se aparecer, preenche e registra." : "Fila de outro dia. Só consulta."}</p>
+          <p class="muted form-dica dica-web">${ehHoje()
+            ? (dispenserModo() === DISPENSER_SEPARADO
+              ? "Com dois rolos, marca preferencial antes de Chamar. Cada Chamar gasta o papel, mesmo se a pessoa não vier."
+              : usaDispenser()
+                ? "O número é o da boca do dispenser. Cada Chamar gasta aquele papel, mesmo se a pessoa não vier."
+                : "Chamar anota a hora. Se a pessoa não aparecer, Não respondeu. Se aparecer, preenche e registra.")
+            : "Fila de outro dia. Só consulta."}</p>
           <p class="muted form-dica dica-mobile">${ehHoje() ? "1 chama · 2 preenche · 3 registra. Rosa espera · amarelo em atendimento." : "Só consulta."}</p>
         </div>
         <div class="topo-acoes">
@@ -1665,6 +1796,112 @@ function telaControle() {
   });
 }
 
+function cfgVista() {
+  if (cfgRascunho) return cfgRascunho;
+  return {
+    ordem_chamada: ordemChamada(),
+    dispenser_modo: dispenserModo(),
+    dispenser_proxima: String(numeroCfg("dispenser_proxima")),
+    dispenser_proxima_comum: String(numeroCfg("dispenser_proxima_comum")),
+    dispenser_proxima_pref: String(numeroCfg("dispenser_proxima_pref")),
+  };
+}
+
+function cfgNumeroVista(chave) {
+  const n = parseInt(cfgVista()[chave], 10);
+  return Number.isFinite(n) && n > 0 ? n : numeroCfg(chave);
+}
+
+function sincronizarCfgRascunho() {
+  const base = { ...cfgVista() };
+  const ordemEl = document.getElementById("cfg-ordem-chamada");
+  if (ordemEl) base.ordem_chamada = ordemEl.value === ORDEM_PREF_PRIMEIRO ? ORDEM_PREF_PRIMEIRO : ORDEM_INTERCALAR;
+  const modoEl = document.getElementById("cfg-dispenser-modo");
+  if (modoEl) {
+    const v = modoEl.value;
+    base.dispenser_modo = v === DISPENSER_UNICO || v === DISPENSER_SEPARADO ? v : DISPENSER_NENHUM;
+  }
+  const lerNum = (id, chave) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const n = parseInt(el.value, 10);
+    base[chave] = String(Number.isFinite(n) && n >= 1 ? n : 1);
+  };
+  lerNum("cfg-dispenser-proxima", "dispenser_proxima");
+  lerNum("cfg-dispenser-comum", "dispenser_proxima_comum");
+  lerNum("cfg-dispenser-pref", "dispenser_proxima_pref");
+  cfgRascunho = base;
+  cfgFeedback = "";
+  document.getElementById("cfg-ok")?.classList.add("hidden");
+  document.getElementById("cfg-erro")?.classList.add("hidden");
+  const btn = document.getElementById("cfg-salvar");
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = "Salvar configurações";
+    btn.classList.remove("ok");
+  }
+}
+
+function telaConfiguracoes() {
+  const vista = cfgVista();
+  const ordem = vista.ordem_chamada === ORDEM_PREF_PRIMEIRO ? ORDEM_PREF_PRIMEIRO : ORDEM_INTERCALAR;
+  const intercalado = ordem === ORDEM_INTERCALAR;
+  const modo = vista.dispenser_modo === DISPENSER_UNICO || vista.dispenser_modo === DISPENSER_SEPARADO ? vista.dispenser_modo : DISPENSER_NENHUM;
+  return `<section class="card cfg-pagina">
+    <h2>Configurações</h2>
+    <p class="muted form-dica">Ajustes do balcão. Só administrador muda. Clique em <strong>Salvar configurações</strong> para valer para todo mundo.</p>
+    <div class="cfg-bloco">
+      <h3>Ordem de chamada</h3>
+      <p class="muted form-dica">Quem o sistema chama primeiro na fila do tipo. Não é para furar quem chegou antes: o 14 não fica atrás de P18, P20 e P21.</p>
+      <label class="cfg-select">Ordem de chamada
+        <select id="cfg-ordem-chamada">
+          <option value="${ORDEM_INTERCALAR}" ${intercalado ? "selected" : ""}>Ordem de chegada</option>
+          <option value="${ORDEM_PREF_PRIMEIRO}" ${intercalado ? "" : "selected"}>Preferenciais sempre na frente</option>
+        </select>
+      </label>
+      <p id="cfg-ordem-dica" class="muted form-dica">${intercalado
+        ? "Chama na sequência em que as pessoas chegaram (o número do papel, ou a hora da recepção se os rolos forem separados). Preferencial não sobe na frente de quem já estava na fila."
+        : "Todas as preferenciais sobem para o topo. As comuns só entram quando não restar preferencial na espera."}</p>
+      <div class="cfg-exemplo" aria-label="Exemplo da ordem">
+        <p class="cfg-exemplo-tit">Exemplo na espera: <strong>P13</strong>, <strong>14</strong>, <strong>P18</strong>, <strong>P20</strong>, <strong>P21</strong>, <strong>22</strong></p>
+        <p data-cfg-ex="intercalar" class="${intercalado ? "on" : ""}"><span class="cfg-modo">Ordem de chegada</span> P13 → 14 → P18 → P20 → P21 → 22</p>
+        <p data-cfg-ex="pref" class="${intercalado ? "" : "on"}"><span class="cfg-modo">Preferenciais na frente</span> P13 → P18 → P20 → P21 → 14 → 22</p>
+      </div>
+      <p class="muted form-dica">Quem não respondeu volta para o fim da espera, nos dois jeitos. O <strong>Chamar próximo</strong> e o aviso de fora de ordem seguem esta regra.</p>
+    </div>
+    <div class="cfg-bloco">
+      <h3>Dispenser de senha de papel</h3>
+      <p class="muted form-dica">O sistema acompanha o rolo que está no balcão. Se não usa dispenser, todo dia começa no 01. Se usa, informa qual número está na boca do aparelho antes de começar.</p>
+      <label class="cfg-select">Como as senhas saem
+        <select id="cfg-dispenser-modo">
+          <option value="${DISPENSER_NENHUM}" ${modo === DISPENSER_NENHUM ? "selected" : ""}>Não usa dispenser — todo dia começa no 01</option>
+          <option value="${DISPENSER_UNICO}" ${modo === DISPENSER_UNICO ? "selected" : ""}>Um rolo só (comum e preferencial no mesmo dispenser)</option>
+          <option value="${DISPENSER_SEPARADO}" ${modo === DISPENSER_SEPARADO ? "selected" : ""}>Dois rolos (um comum e um preferencial)</option>
+        </select>
+      </label>
+      ${modo === DISPENSER_NENHUM ? `<p class="muted form-dica">Sem papel pré-impresso. A primeira senha do dia é 01, a seguinte 02, e preferencial só coloca o P na frente do mesmo número (P02 é a senha 02).</p>` : ""}
+      ${modo === DISPENSER_UNICO ? `<p class="muted form-dica">Um dispenser só. Preferencial é o mesmo número com P. Se a boca do aparelho mostra 47, coloca 47. Cada <strong>Chamar</strong> gasta aquele papel, mesmo se a pessoa não vier.</p>
+        <label class="cfg-select">Próxima senha no dispenser
+          <input id="cfg-dispenser-proxima" type="number" min="1" step="1" value="${cfgNumeroVista("dispenser_proxima")}">
+        </label>` : ""}
+      ${modo === DISPENSER_SEPARADO ? `<p class="muted form-dica">Dois dispensers. Marca preferencial <strong>antes</strong> de Chamar, para puxar o rolo certo. Os números são independentes: pode existir 05 e P05 no mesmo dia.</p>
+        <div class="cfg-dupla">
+          <label class="cfg-select">Próxima senha comum
+            <input id="cfg-dispenser-comum" type="number" min="1" step="1" value="${cfgNumeroVista("dispenser_proxima_comum")}">
+          </label>
+          <label class="cfg-select">Próxima senha preferencial
+            <input id="cfg-dispenser-pref" type="number" min="1" step="1" value="${cfgNumeroVista("dispenser_proxima_pref")}">
+          </label>
+        </div>` : ""}
+    </div>
+    <p id="cfg-erro" class="erro ${cfgFeedback && cfgFeedback !== "ok" ? "" : "hidden"}">${cfgFeedback && cfgFeedback !== "ok" ? escapar(cfgFeedback) : ""}</p>
+    <p id="cfg-ok" class="ok-msg ${cfgFeedback === "ok" ? "" : "hidden"}">Configurações salvas. Vale para todo o balcão.</p>
+    <div class="cfg-acoes">
+      <button type="button" class="btn primary${cfgFeedback === "ok" ? " ok" : ""}" id="cfg-salvar">${cfgFeedback === "ok" ? "Salvo" : "Salvar configurações"}</button>
+    </div>
+  </section>`;
+}
+
 function telaOperadores() {
   return `<section class="card">
     <h2>Operadores</h2>
@@ -1714,6 +1951,12 @@ function telaOperadores() {
 function desenhar() {
   desenharAbas();
   const app = document.getElementById("app");
+  if (aba === "tv") {
+    lerTvCfg();
+    app.innerHTML = telaTv();
+    ligarTv();
+    return;
+  }
   if (aba === "geral") {
     app.innerHTML = telaGeral();
     document.getElementById("form-chegada")?.addEventListener("submit", onChegada);
@@ -1759,6 +2002,16 @@ function desenhar() {
     document.getElementById("form-operador")?.addEventListener("submit", onOperador);
     return;
   }
+  if (aba === "configuracoes") {
+    if (!ehAdmin()) {
+      aba = "geral";
+      desenhar();
+      return;
+    }
+    app.innerHTML = telaConfiguracoes();
+    ligarCfgPagina();
+    return;
+  }
   if (aba.startsWith("tipo-")) {
     const tipo = tipos.find((t) => t.id === aba.slice(5));
     app.innerHTML = tipo ? telaTipo(tipo) : "<p>Tipo não encontrado.</p>";
@@ -1787,6 +2040,7 @@ function limparRascunho() {
   rascunhoChegada = {
     chamado: false,
     horaIso: null,
+    numero: null,
     preferencialTipo: "",
     nome: "",
     tipoId: "",
@@ -1815,13 +2069,36 @@ function aplicarEstadoChegada() {
   if (horaEl) horaEl.textContent = rascunhoChegada.horaIso ? hora(rascunhoChegada.horaIso) : "—";
 }
 
-function onChamarRecepcao() {
+async function onChamarRecepcao() {
   if (!ehHoje()) return;
   guardarRascunho();
+  if (!rascunhoChegada.chamado) {
+    if (usaDispenser()) {
+      const { data, error } = await sb.rpc("reservar_numero", { p_preferencial: rascunhoEhPref() });
+      if (error || !data?.ok) {
+        mostrarErro(error?.message || "Não deu para pegar o número do dispenser.");
+        return;
+      }
+      rascunhoChegada.numero = Number(data.numero) || 1;
+      if (data.reservado) {
+        if (dispenserModo() === DISPENSER_SEPARADO) {
+          const chave = rascunhoEhPref() ? "dispenser_proxima_pref" : "dispenser_proxima_comum";
+          configuracoes[chave] = String(rascunhoChegada.numero + 1);
+        } else {
+          configuracoes.dispenser_proxima = String(rascunhoChegada.numero + 1);
+        }
+      }
+    } else {
+      rascunhoChegada.numero = proximoNumero();
+    }
+  }
   rascunhoChegada.chamado = true;
   rascunhoChegada.horaIso = new Date().toISOString();
   aplicarEstadoChegada();
+  const rotulo = document.getElementById("campo-senha-rotulo");
+  if (rotulo) rotulo.textContent = rotuloProxima(rascunhoEhPref());
   document.getElementById("campo-nome")?.focus();
+  publicarPainelGeral();
 }
 
 function onNaoRespondeuRecepcao() {
@@ -1851,6 +2128,7 @@ function onPrefTipoClick(ev) {
   const btn = ev.target.closest("[data-pref]");
   if (!btn) return;
   ev.preventDefault();
+  if (rascunhoChegada.chamado && dispenserModo() === DISPENSER_SEPARADO) return;
   const id = btn.getAttribute("data-pref");
   rascunhoChegada.preferencialTipo = rascunhoChegada.preferencialTipo === id ? "" : id;
   pintarPrefBotoes();
@@ -1914,11 +2192,12 @@ async function onChegada(ev) {
     created_by: sessao.id,
     updated_by: sessao.id,
   };
+  if (rascunhoChegada.numero) payload.numero = rascunhoChegada.numero;
   const { error } = await sb.from("senhas").insert(payload);
   enviandoChegada = false;
   if (error) {
     if (btn) btn.disabled = false;
-    erro.textContent = error.code === "23505" ? "Esse número bateu com outra senha. Tenta de novo." : error.message;
+    erro.textContent = error.code === "23505" ? "Esse número já saiu hoje. Confere a próxima senha em Opções → Configurações." : error.message;
     erro.classList.remove("hidden");
     return;
   }
@@ -1972,6 +2251,78 @@ async function onOperador(ev) {
   }
   ev.target.reset();
   await carregar();
+}
+
+async function salvarCfg(chave, valor) {
+  const { error } = await sb.from("configuracoes").update({
+    valor: String(valor),
+    updated_by: sessao.id,
+  }).eq("chave", chave);
+  return error;
+}
+
+function ligarCfgPagina() {
+  document.getElementById("cfg-ordem-chamada")?.addEventListener("change", onCfgOrdemPreview);
+  document.getElementById("cfg-dispenser-modo")?.addEventListener("change", onCfgDispenserModoPreview);
+  ["cfg-dispenser-proxima", "cfg-dispenser-comum", "cfg-dispenser-pref"].forEach((id) => {
+    const el = document.getElementById(id);
+    el?.addEventListener("input", sincronizarCfgRascunho);
+    el?.addEventListener("change", sincronizarCfgRascunho);
+  });
+  document.getElementById("cfg-salvar")?.addEventListener("click", salvarConfiguracoesTela);
+}
+
+function onCfgOrdemPreview() {
+  sincronizarCfgRascunho();
+  const intercalado = cfgVista().ordem_chamada !== ORDEM_PREF_PRIMEIRO;
+  const dica = document.getElementById("cfg-ordem-dica");
+  if (dica) {
+    dica.textContent = intercalado
+      ? "Chama na sequência em que as pessoas chegaram (o número do papel, ou a hora da recepção se os rolos forem separados). Preferencial não sobe na frente de quem já estava na fila."
+      : "Todas as preferenciais sobem para o topo. As comuns só entram quando não restar preferencial na espera.";
+  }
+  document.querySelector("[data-cfg-ex=intercalar]")?.classList.toggle("on", intercalado);
+  document.querySelector("[data-cfg-ex=pref]")?.classList.toggle("on", !intercalado);
+}
+
+function onCfgDispenserModoPreview() {
+  sincronizarCfgRascunho();
+  desenhar();
+}
+
+async function salvarConfiguracoesTela() {
+  if (!ehAdmin()) return;
+  sincronizarCfgRascunho();
+  const r = cfgVista();
+  const pares = [
+    ["ordem_chamada", r.ordem_chamada],
+    ["dispenser_modo", r.dispenser_modo],
+    ["dispenser_proxima", r.dispenser_proxima],
+    ["dispenser_proxima_comum", r.dispenser_proxima_comum],
+    ["dispenser_proxima_pref", r.dispenser_proxima_pref],
+  ];
+  const erro = document.getElementById("cfg-erro");
+  const ok = document.getElementById("cfg-ok");
+  const btn = document.getElementById("cfg-salvar");
+  erro?.classList.add("hidden");
+  ok?.classList.add("hidden");
+  if (btn) btn.disabled = true;
+  for (const [chave, valor] of pares) {
+    const error = await salvarCfg(chave, valor);
+    if (error) {
+      cfgFeedback = error.message || "Não deu para salvar.";
+      if (btn) btn.disabled = false;
+      if (erro) {
+        erro.textContent = cfgFeedback;
+        erro.classList.remove("hidden");
+      } else mostrarErro(cfgFeedback);
+      return;
+    }
+    configuracoes[chave] = String(valor);
+  }
+  cfgRascunho = null;
+  cfgFeedback = "ok";
+  desenhar();
 }
 
 async function patch(id, valores, redesenhar = true) {
@@ -2337,14 +2688,19 @@ async function onLogin(ev) {
   localStorage.setItem(SESSAO_KEY, JSON.stringify(data));
   document.getElementById("login").classList.add("hidden");
   document.getElementById("dia").value = hojeISO();
-  aplicarHashRelatorio();
+  aplicarHashInicial();
   aplicarTopoSessao();
   aplicarModoTela();
   await carregar();
   escutar();
+  if (ehTv()) {
+    desenhar();
+    tvEntrar();
+  }
 }
 
 function sair() {
+  if (ehTv()) tvParar();
   localStorage.removeItem(SESSAO_KEY);
   sessao = null;
   aba = "geral";
@@ -2494,6 +2850,14 @@ function ligarEventos() {
   });
   window.addEventListener("hashchange", () => {
     if (!sessao) return;
+    if (hashTv()) {
+      if (aba !== "tv") irAba("tv");
+      return;
+    }
+    if (aba === "tv") {
+      irAba("geral");
+      return;
+    }
     const vista = hashVistaRelatorio();
     if (vista != null) {
       relVista = vistaRelatorioOk(vista);
@@ -2509,6 +2873,10 @@ function ligarEventos() {
     if (ev.target.id === "aviso") fecharAviso(false);
   });
   document.getElementById("login-ajuda")?.addEventListener("click", abrirSobre);
+  document.getElementById("login-tv")?.addEventListener("click", () => {
+    history.replaceState(null, "", `${location.pathname}${location.search}#tv`);
+    document.getElementById("login-usuario")?.focus();
+  });
   document.getElementById("sobre-ok")?.addEventListener("click", fecharSobre);
   document.getElementById("sobre")?.addEventListener("click", (ev) => {
     if (ev.target.id === "sobre") fecharSobre();
@@ -2531,10 +2899,14 @@ async function init() {
   if (!(await conectar())) return;
   if (!pedirLogin()) return;
   aplicarTopoSessao();
-  aplicarHashRelatorio();
+  aplicarHashInicial();
   aplicarModoTela();
   await carregar();
   escutar();
+  if (ehTv()) {
+    desenhar();
+    tvEntrar();
+  }
 }
 
 init();

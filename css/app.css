@@ -481,6 +481,56 @@ textarea {
 .card h2 { margin-bottom: 6px; }
 .form-dica { margin: 0 0 14px; font-size: 14px; }
 
+.cfg-pagina h3 {
+  margin: 8px 0 6px;
+  font-size: 16px;
+  color: var(--dark);
+}
+.cfg-bloco {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+}
+.cfg-select {
+  display: grid;
+  gap: 6px;
+  max-width: 420px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.cfg-dupla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  max-width: 520px;
+}
+.cfg-select input[type="number"] {
+  width: 100%;
+}
+.cfg-exemplo {
+  margin: 4px 0 0;
+  padding: 12px 14px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 8px;
+}
+.cfg-exemplo-tit { margin: 0; font-size: 13px; color: var(--muted); }
+.cfg-exemplo p { margin: 0; font-size: 14px; color: var(--muted); }
+.cfg-exemplo p.on { color: var(--ink); font-weight: 600; }
+.cfg-modo {
+  display: inline-block;
+  min-width: 14.5rem;
+  margin-right: 8px;
+  font-weight: 600;
+  color: var(--dark);
+}
+
 .form-grid {
   display: flex;
   flex-wrap: wrap;
@@ -1258,6 +1308,13 @@ textarea {
 }
 .check-hora.travado { opacity: 0.75; }
 .erro { color: var(--stamp); font-size: 14px; margin: 0; }
+.ok-msg { color: #148a72; font-size: 14px; font-weight: 600; margin: 0; }
+.cfg-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
 .hidden { display: none !important; }
 .meta { font-size: 13px; color: var(--muted); }
 
@@ -1944,6 +2001,8 @@ textarea {
     min-width: 240px;
   }
   .cfg-menu button { height: 44px; }
+  .cfg-acoes { display: grid; }
+  .cfg-acoes .btn { width: 100%; height: 48px; min-height: 48px; }
 
   .shell { padding: 12px; }
   h1 { font-size: 18px; }

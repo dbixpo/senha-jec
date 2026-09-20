@@ -15,7 +15,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/app.css?v=63">
+  <link rel="stylesheet" href="css/app.css?v=84">
+  <link rel="stylesheet" href="css/tv.css?v=84">
 </head>
 <body>
   <div id="setup" class="overlay hidden">
@@ -37,7 +38,7 @@
   <div id="login" class="overlay hidden">
     <div class="login-card">
       <div class="login-body">
-        <img class="logo-login" src="img/logo-login.png?v=63" alt="Senha JEC">
+        <img class="logo-login" src="img/logo-login.png?v=84" alt="Senha JEC">
         <form id="form-login">
           <div class="campo-login">
             <span class="lab-linha">
@@ -65,6 +66,7 @@
         <p class="disclaimer">Sistema de controle de Fila Interna</p>
         <p class="credito">
           <button type="button" class="link-ajuda" id="login-ajuda">Como funciona</button>
+          · <button type="button" class="link-ajuda" id="login-tv">Painel da TV</button>
           · <a href="https://github.com/dbixpo/senha-jec" target="_blank" rel="noopener noreferrer">github.com/dbixpo</a>
         </p>
       </div>
@@ -75,8 +77,8 @@
     <div class="faixa" aria-hidden="true"></div>
     <header class="top">
       <button type="button" class="brand" id="btn-home" aria-label="Ir para Senha geral">
-        <img class="logo-top logo-top-web" src="img/logo-topbar.png?v=63" alt="">
-        <img class="logo-top logo-top-cel" src="img/simbolo-rolo.png?v=63" alt="">
+        <img class="logo-top logo-top-web" src="img/logo-topbar.png?v=84" alt="">
+        <img class="logo-top logo-top-cel" src="img/simbolo-rolo.png?v=84" alt="">
       </button>
       <div class="top-actions hidden">
         <div id="quem" class="quem"></div>
@@ -85,6 +87,8 @@
           <div id="cfg-menu" class="cfg-menu hidden" role="menu">
             <button type="button" role="menuitem" class="cfg-admin" data-cfg="tipos">Tipos de Atendimento</button>
             <button type="button" role="menuitem" class="cfg-admin" data-cfg="operadores">Operadores</button>
+            <button type="button" role="menuitem" class="cfg-admin" data-cfg="configuracoes">Configurações</button>
+            <button type="button" role="menuitem" data-cfg="tv">Painel da TV</button>
             <hr class="cfg-sep cfg-admin">
             <button type="button" role="menuitem" data-cfg="relatorio">Relatórios</button>
             <button type="button" role="menuitem" data-acao="ajuda">Como funciona</button>
@@ -139,11 +143,14 @@
         <li><strong>Registrar</strong> manda a pessoa para a fila daquele tipo.</li>
         <li><strong>Não veio</strong> descarta o rascunho, sem criar senha.</li>
       </ol>
-      <p>A numeração é uma só no dia: 01, 02… Preferencial vira P01 e <strong>sobe</strong> na fila.</p>
+      <p>A numeração segue o dispenser (Opções → Configurações) ou, se não usa papel, começa no 01 todo dia. Preferencial no rolo único vira P01, P02… Com dois rolos, comum e preferencial têm numeração própria. Em <strong>Opções → Configurações</strong> o administrador escolhe se a fila chama na <strong>ordem de chegada</strong> (P13, 14, P18…) ou se as preferenciais <strong>sobem sempre</strong> para o topo.</p>
+
+      <h3>Painel da TV</h3>
+      <p>Em <strong>Opções → Painel da TV</strong> (ou pelo link na tela de login, depois de entrar) esta máquina vira a televisão da espera. Cada TV escolhe o que chama: Senha geral, Triagem, Consulta… Uma TV pode ficar com tudo; outra, só com dois tipos. O fundo é um YouTube (padrão sem som) ou só o símbolo, se o YouTube estiver bloqueado. Imagens 16:9 ficam no banco (até 30, para todas as TVs): cada TV diz em segundos de quanto em quanto a foto surge (padrão 300, cinco minutos) e quanto tempo fica na tela (padrão 20). Quando a foto entra, senha e histórico descem para a faixa de baixo e a imagem aparece inteira no molde — o som do YouTube continua. Serve em Full HD, monitor 4:3 e tablet. A voz padrão é a feminina do Google neste aparelho; também há as neurais Dii, Cadu, Faber e Edresson. As chamadas entram numa fila (intervalo padrão de 3 segundos) para uma não falar em cima da outra. Na Senha geral a voz fala só o número; nos tipos, número e o nome do atendimento.</p>
 
       <h3>Atendimento — aba do tipo</h3>
       <ol>
-        <li><strong>Chamar próximo</strong> (no topo) pega o primeiro da fila daquele tipo.</li>
+        <li><strong>Chamar próximo</strong> (no topo) pega o primeiro da fila daquele tipo, na ordem configurada.</li>
         <li><strong>Chamar</strong> na linha deixa a senha com você, em amarelo. Se não for o próximo, o sistema avisa quem deveria ser e pergunta se quer chamar fora de ordem. Dá para ajustar nome, tipo, nº de processo e uma observação (até 200 caracteres).</li>
         <li><strong>Finalizar</strong> encerra neste tipo. Se trocar o tipo, <strong>Encaminhar</strong> manda a pessoa para a outra fila, com a observação.</li>
         <li><strong>Cancelar</strong> desfaz a chamada: a senha volta para a espera, na ordem, sem contar como não respondeu.</li>
@@ -167,7 +174,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
   <script src="js/config.js"></script>
-  <script src="js/app.js?v=63"></script>
-  <script src="js/pwa.js?v=63"></script>
+  <script src="js/app.js?v=84"></script>
+  <script src="js/tv.js?v=84"></script>
+  <script src="js/pwa.js?v=84"></script>
 </body>
 </html>

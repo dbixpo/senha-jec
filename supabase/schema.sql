@@ -61,6 +61,21 @@ insert into tipos_atendimento (nome, sigla, cor, ordem) values
   ('Ajuizamento', 'A', '#D97A9A', 3)
 on conflict (sigla) do nothing;
 
+create table if not exists configuracoes (
+  chave text primary key,
+  valor text not null,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references operadores (id)
+);
+
+insert into configuracoes (chave, valor) values
+  ('ordem_chamada', 'intercalar'),
+  ('dispenser_modo', 'nenhum'),
+  ('dispenser_proxima', '1'),
+  ('dispenser_proxima_comum', '1'),
+  ('dispenser_proxima_pref', '1')
+on conflict (chave) do nothing;
+
 create table if not exists senhas (
   id uuid primary key default gen_random_uuid(),
   data date not null default (timezone('America/Sao_Paulo', now()))::date,
@@ -89,7 +104,7 @@ create table if not exists senhas (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   nao_respondeu integer not null default 0,
-  constraint senhas_numero_por_dia unique (data, numero),
+  constraint senhas_numero_por_dia unique (data, numero, preferencial),
   constraint senhas_observacao_len check (char_length(observacao) <= 200)
 );
 
@@ -113,15 +128,102 @@ create table if not exists historico_chamadas (
 );
 create index if not exists historico_senha_idx on historico_chamadas (senha_id, chamado_em);
 
+create table if not exists painel_chamadas (
+  id uuid primary key default gen_random_uuid(),
+  data date not null default (timezone('America/Sao_Paulo', now()))::date,
+  numero integer not null,
+  preferencial boolean not null default false,
+  tipo_id uuid references tipos_atendimento (id),
+  senha_id uuid references senhas (id) on delete set null,
+  origem text not null default 'tipo'
+    check (origem in ('geral', 'tipo')),
+  chamado_em timestamptz not null default now(),
+  chamado_por uuid references operadores (id)
+);
+create index if not exists painel_chamadas_dia_idx on painel_chamadas (data, chamado_em desc);
+
+create table if not exists painel_imagens (
+  id uuid primary key default gen_random_uuid(),
+  ordem bigint not null default (extract(epoch from now()) * 1000)::bigint,
+  mime text not null default 'image/jpeg',
+  conteudo text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists painel_imagens_ordem_idx on painel_imagens (ordem);
+
+create or replace function painel_imagens_limite()
+returns trigger
+language plpgsql
+as $$
+begin
+  if (select count(*) from painel_imagens) >= 30 then
+    raise exception 'Limite de 30 imagens no painel da TV';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists painel_imagens_limite_trg on painel_imagens;
+create trigger painel_imagens_limite_trg
+before insert on painel_imagens
+for each row execute procedure painel_imagens_limite();
+
 create or replace function senhas_auto_numero()
 returns trigger
 language plpgsql
 as $$
+declare
+  modo text;
+  chave_rolo text;
+  atual integer;
 begin
   if new.data is null then
     new.data := (timezone('America/Sao_Paulo', now()))::date;
   end if;
   perform pg_advisory_xact_lock(879001, to_char(new.data, 'YYYYMMDD')::int);
+
+  if new.numero is not null and new.numero > 0 then
+    return new;
+  end if;
+
+  select coalesce(
+    (select valor from configuracoes where chave = 'dispenser_modo'),
+    'nenhum'
+  ) into modo;
+
+  if modo = 'separado' then
+    chave_rolo := case when new.preferencial then 'dispenser_proxima_pref' else 'dispenser_proxima_comum' end;
+    select greatest(coalesce(valor::int, 1), 1) into atual
+      from configuracoes where chave = chave_rolo for update;
+    if not found then
+      atual := 1;
+    end if;
+    new.numero := atual;
+    update configuracoes
+      set valor = (atual + 1)::text
+      where chave = chave_rolo;
+    if not found then
+      insert into configuracoes (chave, valor) values (chave_rolo, (atual + 1)::text);
+    end if;
+    return new;
+  end if;
+
+  if modo = 'unico' then
+    select greatest(coalesce(valor::int, 1), 1) into atual
+      from configuracoes where chave = 'dispenser_proxima' for update;
+    if not found then
+      atual := 1;
+    end if;
+    new.numero := atual;
+    update configuracoes
+      set valor = (atual + 1)::text
+      where chave = 'dispenser_proxima';
+    if not found then
+      insert into configuracoes (chave, valor) values ('dispenser_proxima', (atual + 1)::text);
+    end if;
+    return new;
+  end if;
+
   select coalesce(max(numero), 0) + 1
     into new.numero
     from senhas
@@ -163,6 +265,11 @@ for each row execute procedure set_updated_at();
 drop trigger if exists servicos_updated_at on servicos;
 create trigger servicos_updated_at
 before update on servicos
+for each row execute procedure set_updated_at();
+
+drop trigger if exists configuracoes_updated_at on configuracoes;
+create trigger configuracoes_updated_at
+before update on configuracoes
 for each row execute procedure set_updated_at();
 
 create or replace function login_operador(p_usuario text, p_senha text)
@@ -299,7 +406,107 @@ begin
   insert into historico_chamadas (senha_id, tipo_id, chamado_por, local)
   values (alvo.id, alvo.tipo_id, p_operador, coalesce(local_nome, ''));
 
+  insert into painel_chamadas (data, numero, preferencial, tipo_id, senha_id, origem, chamado_por)
+  values (alvo.data, alvo.numero, alvo.preferencial, alvo.tipo_id, alvo.id, 'tipo', p_operador);
+
   return json_build_object('ok', true, 'primeira', primeira, 'senha', row_to_json(alvo));
+end;
+$$;
+
+create or replace function proxima_da_fila(p_tipo_id uuid, p_data date, p_exceto uuid default null)
+returns uuid
+language plpgsql
+as $$
+declare
+  regra text;
+  escolhida uuid;
+begin
+  select coalesce(
+    (select valor from configuracoes where chave = 'ordem_chamada'),
+    'intercalar'
+  ) into regra;
+
+  if regra is distinct from 'intercalar' then
+    select id into escolhida
+    from senhas
+    where data = p_data
+      and tipo_id = p_tipo_id
+      and status = 'na_fila'
+      and hora_fim is null
+      and id is distinct from p_exceto
+    order by coalesce(nao_respondeu, 0),
+             preferencial desc,
+             coalesce(hora_recepcao, hora_chegada, created_at),
+             numero
+    for update skip locked
+    limit 1;
+    return escolhida;
+  end if;
+
+  select id into escolhida
+  from senhas
+  where data = p_data
+    and tipo_id = p_tipo_id
+    and status = 'na_fila'
+    and hora_fim is null
+    and id is distinct from p_exceto
+  order by coalesce(nao_respondeu, 0),
+           coalesce(hora_recepcao, hora_chegada, created_at),
+           numero
+  for update skip locked
+  limit 1;
+  return escolhida;
+end;
+$$;
+
+create or replace function reservar_numero(p_preferencial boolean default false)
+returns json
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  modo text;
+  chave_rolo text;
+  atual integer;
+begin
+  perform pg_advisory_xact_lock(879002, 1);
+
+  select coalesce(
+    (select valor from configuracoes where chave = 'dispenser_modo'),
+    'nenhum'
+  ) into modo;
+
+  if modo is distinct from 'unico' and modo is distinct from 'separado' then
+    select coalesce(max(numero), 0) + 1 into atual
+      from senhas
+      where data = (timezone('America/Sao_Paulo', now()))::date;
+    return json_build_object('ok', true, 'numero', atual, 'reservado', false, 'modo', 'nenhum');
+  end if;
+
+  if modo = 'separado' then
+    chave_rolo := case when coalesce(p_preferencial, false) then 'dispenser_proxima_pref' else 'dispenser_proxima_comum' end;
+  else
+    chave_rolo := 'dispenser_proxima';
+  end if;
+
+  select greatest(coalesce(valor::int, 1), 1) into atual
+    from configuracoes where chave = chave_rolo for update;
+  if not found then
+    atual := 1;
+    insert into configuracoes (chave, valor) values (chave_rolo, '2')
+    on conflict (chave) do update set valor = '2';
+  else
+    update configuracoes set valor = (atual + 1)::text where chave = chave_rolo;
+  end if;
+
+  return json_build_object(
+    'ok', true,
+    'numero', atual,
+    'reservado', true,
+    'modo', modo,
+    'preferencial', coalesce(p_preferencial, false)
+  );
 end;
 $$;
 
@@ -320,15 +527,7 @@ begin
     return json_build_object('ok', false, 'motivo', 'outro_dia');
   end if;
 
-  select id into escolhida
-  from senhas
-  where data = p_data
-    and tipo_id = p_tipo_id
-    and status = 'na_fila'
-    and hora_fim is null
-  order by coalesce(nao_respondeu, 0), preferencial desc, numero
-  for update skip locked
-  limit 1;
+  escolhida := proxima_da_fila(p_tipo_id, p_data, null);
 
   if escolhida is null then
     return json_build_object('ok', false, 'motivo', 'fila_vazia');
@@ -524,16 +723,7 @@ begin
   where id = p_id
   returning * into alvo;
 
-  select id into escolhida
-  from senhas
-  where data = alvo.data
-    and tipo_id = alvo.tipo_id
-    and status = 'na_fila'
-    and hora_fim is null
-    and id is distinct from p_id
-  order by coalesce(nao_respondeu, 0), preferencial desc, numero
-  for update skip locked
-  limit 1;
+  escolhida := proxima_da_fila(alvo.tipo_id, alvo.data, p_id);
 
   if escolhida is null then
     return json_build_object('ok', true, 'pulada', row_to_json(alvo), 'proxima', json_build_object('ok', false, 'motivo', 'fila_vazia'));
@@ -548,6 +738,8 @@ grant execute on function login_operador(text, text) to anon, authenticated;
 grant execute on function criar_operador(text, text, text, text) to anon, authenticated;
 grant execute on function definir_senha_operador(uuid, text) to anon, authenticated;
 grant execute on function chamar_senha(uuid, uuid, timestamptz) to anon, authenticated;
+grant execute on function proxima_da_fila(uuid, date, uuid) to anon, authenticated;
+grant execute on function reservar_numero(boolean) to anon, authenticated;
 grant execute on function chamar_proxima(uuid, uuid, date) to anon, authenticated;
 grant execute on function finalizar_senha(uuid, uuid, uuid, text) to anon, authenticated;
 grant execute on function liberar_senha(uuid, uuid) to anon, authenticated;
@@ -559,6 +751,9 @@ alter table operadores enable row level security;
 alter table servicos enable row level security;
 alter table tipos_atendimento enable row level security;
 alter table historico_chamadas enable row level security;
+alter table configuracoes enable row level security;
+alter table painel_chamadas enable row level security;
+alter table painel_imagens enable row level security;
 
 drop policy if exists setores_publico on setores;
 create policy setores_publico on setores for all using (true) with check (true);
@@ -578,12 +773,28 @@ create policy tipos_publico on tipos_atendimento for all using (true) with check
 drop policy if exists historico_publico on historico_chamadas;
 create policy historico_publico on historico_chamadas for all using (true) with check (true);
 
+drop policy if exists configuracoes_publico on configuracoes;
+create policy configuracoes_publico on configuracoes for all using (true) with check (true);
+
+drop policy if exists painel_chamadas_publico on painel_chamadas;
+create policy painel_chamadas_publico on painel_chamadas for all using (true) with check (true);
+
+drop policy if exists painel_imagens_publico on painel_imagens;
+create policy painel_imagens_publico on painel_imagens for all using (true) with check (true);
+do $$
+begin
+  grant all on table painel_imagens to anon, authenticated;
+exception when undefined_object then null;
+end $$;
+
 alter table senhas replica identity full;
 alter table setores replica identity full;
 alter table servicos replica identity full;
 alter table operadores replica identity full;
 alter table tipos_atendimento replica identity full;
 alter table historico_chamadas replica identity full;
+alter table configuracoes replica identity full;
+alter table painel_chamadas replica identity full;
 
 do $$
 begin
@@ -605,6 +816,14 @@ begin
   end;
   begin
     alter publication supabase_realtime add table historico_chamadas;
+  exception when duplicate_object then null;
+  end;
+  begin
+    alter publication supabase_realtime add table configuracoes;
+  exception when duplicate_object then null;
+  end;
+  begin
+    alter publication supabase_realtime add table painel_chamadas;
   exception when duplicate_object then null;
   end;
 end;
