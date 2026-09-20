@@ -30,7 +30,7 @@ Tudo da **fila** (chamar, finalizar, não respondeu) e o **dashboard** são do *
 3. **Registrar** — grava na fila daquele tipo.
 4. **Não veio** (na recepção) — descarta o rascunho, sem criar senha.
 
-A numeração pode vir do dispenser de papel (um rolo ou dois) ou, se não usa dispenser, começa no 01 todo dia. Preferencial no rolo único usa o mesmo número com prefixo P. A **ordem de chamada** (Opções → Configurações) é *Chamar P preferenciais para cada N senhas normais* (padrão **1 para 2**). A chegada dentro de cada grupo não muda. Ordem e dispenser só entram no sistema depois de **Salvar**.
+A numeração pode vir do dispenser de papel (um rolo ou dois) ou, se não usa dispenser, começa no 01 todo dia. Preferencial no rolo único usa o mesmo número com prefixo P. A **ordem de chamada** (Opções → Configurações) é *Chamar P preferenciais para cada N senhas normais* (padrão **1 para 2**), começando pelas **normais**. Dá para marcar **Começar com as preferenciais**. A chegada dentro de cada grupo não muda. Ordem e dispenser só entram no sistema depois de **Salvar**.
 
 ### Atendimento — aba do tipo
 
@@ -57,7 +57,7 @@ Cores da linha:
 ## Regras da fila
 
 - **Uma senha, um atendente.** Quem chamou é dono até finalizar ou devolver.
-- **Preferencial na ordem configurada.** O padrão é **1 preferencial para cada 2 normais**, a P entra primeiro no ciclo (P04, 01, 02, P06…). Quem chegou primeiro dentro de cada grupo continua na frente. Em Opções → Configurações os dois números ficam abertos. Quem não respondeu volta para o fim da espera.
+- **Preferencial na ordem configurada.** O padrão é **1 preferencial para cada 2 normais**, começando pelas comuns (01, 02, P04…). Marca **Começar com as preferenciais** se quiser a P no começo do ciclo. Quem chegou primeiro dentro de cada grupo continua na frente. Quem não respondeu volta para o fim da espera.
 - **Fora de ordem só com confirmação.** Chamar na linha uma senha que não é a próxima abre um aviso com quem deveria ser; Cancelar não chama.
 - **Chamada só no dia de hoje.** Trocar a data no topo é para olhar o histórico, não para chamar.
 - **Usuário** é sempre `primeiro.sobrenome` (ponto no meio). **Senha de acesso** nesta instalação é o CPF — no seu fork, use o que fizer sentido e **nunca** commite CPF nem hash no GitHub público.
@@ -80,7 +80,7 @@ Cores da linha:
 
 Vale para **todo o sistema**, não só para um computador. O rascunho só entra depois de **Salvar**.
 
-- **Ordem de chamada.** *Chamar P preferenciais para cada N senhas normais* (padrão 1 para 2). O ciclo **começa pela preferencial**, depois as N comuns. A chegada dentro de cada grupo não muda — o 03 não passa o 01, o P08 não passa o P04. Preferencial que já é a próxima da fila não espera. O exemplo na tela mostra a ordem. Com 0 preferenciais, fica só chegada; com 0 normais, as P sobem primeiro. Quem não respondeu continua no fim.
+- **Ordem de chamada.** *Chamar P preferenciais para cada N senhas normais* (padrão 1 para 2). O ciclo começa pelas **normais**, a não ser que marque **Começar com as preferenciais**. A chegada dentro de cada grupo não muda — o 03 não passa o 01, o P08 não passa o P04. Preferencial que já é a próxima da fila não espera. O exemplo na tela mostra a ordem. Com 0 preferenciais, fica só chegada; com 0 normais, as P sobem primeiro. Quem não respondeu continua no fim.
 - **Dispenser**
   - *Nenhum*: todo dia a numeração começa no 01.
   - *Rolo único*: um bloco de senhas; preferencial usa o mesmo número com P (P01, 02, P03…).
@@ -161,6 +161,7 @@ Migrações extras ficam em `supabase/migrations/`. O arquivo canônico para um 
 | `20260919230000_painel_imagens.sql` | Tabela `painel_imagens` (até 30 fotos) |
 | `20260920120000_ordem_proporcao.sql` | Proporção N normais para P preferenciais (padrão 2 para 1) |
 | `20260920123000_ordem_ciclo_pref.sql` | Ciclo começa pela preferencial (P, depois N comuns) |
+| `20260920124500_ordem_comecar_pref.sql` | Checkbox *Começar com as preferenciais* (padrão desligado) |
 
 ## Contribuir
 

@@ -526,6 +526,22 @@ textarea {
   font-size: 16px;
   font-weight: 700;
 }
+.cfg-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  width: fit-content;
+}
+.cfg-check input[type="checkbox"] {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--dark);
+}
 .cfg-select input[type="number"] {
   width: 100%;
 }

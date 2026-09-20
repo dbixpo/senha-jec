@@ -72,6 +72,7 @@ insert into configuracoes (chave, valor) values
   ('ordem_chamada', 'proporcao'),
   ('ordem_normais', '2'),
   ('ordem_preferenciais', '1'),
+  ('ordem_comecar_pref', 'nao'),
   ('dispenser_modo', 'nenhum'),
   ('dispenser_proxima', '1'),
   ('dispenser_proxima_comum', '1'),
@@ -425,7 +426,9 @@ declare
   p_quota int := 1;
   n_count int := 0;
   p_count int := 0;
-  fase text := 'pref';
+  fase text := 'normais';
+  comecar_pref boolean := false;
+  v_comecar text;
   escolhida uuid;
   rec record;
   ids uuid[] := array[]::uuid[];
@@ -457,6 +460,20 @@ begin
   exception when others then
     p_quota := 1;
   end;
+
+  select coalesce(
+    (select valor from configuracoes where chave = 'ordem_comecar_pref'),
+    'nao'
+  ) into v_comecar;
+  comecar_pref := lower(v_comecar) in ('sim', 'true', '1', 't', 'on');
+
+  if p_quota <= 0 then
+    fase := 'normais';
+  elsif n_quota <= 0 or comecar_pref then
+    fase := 'pref';
+  else
+    fase := 'normais';
+  end if;
 
   if regra = 'preferenciais_primeiro' then
     select id into escolhida

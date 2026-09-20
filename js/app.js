@@ -62,6 +62,7 @@ let configuracoes = {
   ordem_chamada: ORDEM_PROPORCAO,
   ordem_normais: "2",
   ordem_preferenciais: "1",
+  ordem_comecar_pref: "nao",
   dispenser_modo: DISPENSER_NENHUM,
   dispenser_proxima: "1",
   dispenser_proxima_comum: "1",
@@ -577,14 +578,18 @@ function quotasOrdem(vista) {
   const src = vista || configuracoes;
   const n = parseInt(src.ordem_normais, 10);
   const p = parseInt(src.ordem_preferenciais, 10);
+  const comecar = String(src.ordem_comecar_pref || "").toLowerCase();
   return {
     normais: Number.isFinite(n) && n >= 0 ? Math.min(99, Math.floor(n)) : 2,
     prefs: Number.isFinite(p) && p >= 0 ? Math.min(99, Math.floor(p)) : 1,
+    comecarPref: comecar === "sim" || comecar === "true" || comecar === "1" || comecar === "on",
   };
 }
 
-function faseInicial(nQuota, pQuota) {
-  return pQuota > 0 ? "pref" : "normais";
+function faseInicial(nQuota, pQuota, comecarPref) {
+  if (pQuota <= 0) return "normais";
+  if (nQuota <= 0 || comecarPref) return "pref";
+  return "normais";
 }
 
 function avancarCiclo(estado, ehPref) {
@@ -611,12 +616,12 @@ function deveAdiantarPref(estado, temPref) {
 }
 
 function cicloDeEmitidos(universo, espera) {
-  const { normais, prefs } = quotasOrdem();
+  const { normais, prefs, comecarPref } = quotasOrdem();
   const idsEspera = new Set((espera || []).map((s) => s.id));
   let estado = {
     nCount: 0,
     pCount: 0,
-    phase: faseInicial(normais, prefs),
+    phase: faseInicial(normais, prefs, comecarPref),
     normais,
     prefs,
   };
@@ -638,7 +643,7 @@ function ordenarPorProporcao(espera, ciclo) {
   let estado = {
     nCount: ciclo?.nCount || 0,
     pCount: ciclo?.pCount || 0,
-    phase: ciclo?.phase || faseInicial(nQuota, pQuota),
+    phase: ciclo?.phase || faseInicial(nQuota, pQuota, ciclo?.comecarPref),
     normais: nQuota,
     prefs: pQuota,
   };
@@ -668,13 +673,14 @@ function rotuloExemploFila(s) {
   return s.preferencial ? `P${n}` : n;
 }
 
-function textoExemploProporcao(nQuota, pQuota) {
+function textoExemploProporcao(nQuota, pQuota, comecarPref) {
   const ciclo = {
     nCount: 0,
     pCount: 0,
-    phase: faseInicial(nQuota, pQuota),
+    phase: faseInicial(nQuota, pQuota, comecarPref),
     normais: nQuota,
     prefs: pQuota,
+    comecarPref: !!comecarPref,
   };
   return ordenarPorProporcao(EX_FILA_ORDEM, ciclo).map(rotuloExemploFila).join(" → ");
 }
@@ -682,13 +688,17 @@ function textoExemploProporcao(nQuota, pQuota) {
 function dicaOrdemChamada(quotas) {
   const n = quotas?.normais ?? 2;
   const p = quotas?.prefs ?? 1;
+  const comecar = !!quotas?.comecarPref;
   if (p <= 0) {
     return "Com 0 preferenciais, a fila fica só na ordem de chegada. Preferencial não adianta.";
   }
   if (n <= 0) {
     return "Com 0 senhas normais, as preferenciais sobem primeiro. As comuns só entram quando não restar P na espera.";
   }
-  return `A ordem de chegada continua valendo: o 03 não passa na frente do 01, nem o P08 na frente do P04. Chama ${p} ${p === 1 ? "preferencial" : "preferenciais"} para cada ${n} ${n === 1 ? "senha normal" : "senhas normais"} — começa pela P. Se a próxima da fila já for preferencial, ela não espera.`;
+  const inicio = comecar
+    ? "Começa pelas preferenciais."
+    : "Começa pelas senhas normais.";
+  return `A ordem de chegada continua valendo: o 03 não passa na frente do 01, nem o P08 na frente do P04. ${inicio} Chama ${p} ${p === 1 ? "preferencial" : "preferenciais"} para cada ${n} ${n === 1 ? "senha normal" : "senhas normais"}. Se a próxima da fila já for preferencial, ela não espera.`;
 }
 
 function instanteChegada(s) {
@@ -912,6 +922,8 @@ function aplicarConfiguracoes(rows) {
     configuracoes.ordem_normais = String(quotaCfgValor(mapa.ordem_normais, 2));
     configuracoes.ordem_preferenciais = String(quotaCfgValor(mapa.ordem_preferenciais, 1));
   }
+  const comecar = String(mapa.ordem_comecar_pref || "").toLowerCase();
+  configuracoes.ordem_comecar_pref = comecar === "sim" || comecar === "true" || comecar === "1" || comecar === "on" ? "sim" : "nao";
   const modo = mapa.dispenser_modo;
   configuracoes.dispenser_modo = modo === DISPENSER_UNICO || modo === DISPENSER_SEPARADO ? modo : DISPENSER_NENHUM;
   configuracoes.dispenser_proxima = String(mapa.dispenser_proxima || configuracoes.dispenser_proxima || "1");
@@ -1982,6 +1994,7 @@ function cfgVista() {
     ordem_chamada: ordemChamada(),
     ordem_normais: String(quotaCfg("ordem_normais", 2)),
     ordem_preferenciais: String(quotaCfg("ordem_preferenciais", 1)),
+    ordem_comecar_pref: quotasOrdem().comecarPref ? "sim" : "nao",
     dispenser_modo: dispenserModo(),
     dispenser_proxima: String(numeroCfg("dispenser_proxima")),
     dispenser_proxima_comum: String(numeroCfg("dispenser_proxima_comum")),
@@ -2016,6 +2029,8 @@ function sincronizarCfgRascunho() {
   };
   lerQuota("cfg-ordem-normais", "ordem_normais", 2);
   lerQuota("cfg-ordem-prefs", "ordem_preferenciais", 1);
+  const comecarEl = document.getElementById("cfg-ordem-comecar-pref");
+  if (comecarEl) base.ordem_comecar_pref = comecarEl.checked ? "sim" : "nao";
   lerNum("cfg-dispenser-proxima", "dispenser_proxima");
   lerNum("cfg-dispenser-comum", "dispenser_proxima_comum");
   lerNum("cfg-dispenser-pref", "dispenser_proxima_pref");
@@ -2048,10 +2063,14 @@ function telaConfiguracoes() {
         <input id="cfg-ordem-normais" type="number" min="0" max="99" step="1" inputmode="numeric" value="${quotas.normais}">
         senha(s) normal(is)
       </p>
+      <label class="cfg-check">
+        <input id="cfg-ordem-comecar-pref" type="checkbox" ${quotas.comecarPref ? "checked" : ""}>
+        Começar com as preferenciais
+      </label>
       <p id="cfg-ordem-dica" class="muted form-dica">${dicaOrdemChamada(quotas)}</p>
       <div class="cfg-exemplo" aria-label="Exemplo da ordem">
         <p class="cfg-exemplo-tit">Exemplo na espera: <strong>01</strong>, <strong>02</strong>, <strong>03</strong>, <strong>P04</strong>, <strong>05</strong>, <strong>P06</strong>, <strong>P07</strong>, <strong>P08</strong>, <strong>09</strong>, <strong>10</strong>, <strong>11</strong>, <strong>12</strong>, <strong>P13</strong></p>
-        <p class="on" id="cfg-ex-proporcao">${textoExemploProporcao(quotas.normais, quotas.prefs)}</p>
+        <p class="on" id="cfg-ex-proporcao">${textoExemploProporcao(quotas.normais, quotas.prefs, quotas.comecarPref)}</p>
       </div>
       <p class="muted form-dica">Quem não respondeu volta para o fim da espera. O <strong>Chamar próximo</strong> e o aviso de fora de ordem seguem esta regra.</p>
     </div>
@@ -2457,6 +2476,7 @@ function ligarCfgPagina() {
     el?.addEventListener("input", onCfgOrdemPreview);
     el?.addEventListener("change", onCfgOrdemPreview);
   });
+  document.getElementById("cfg-ordem-comecar-pref")?.addEventListener("change", onCfgOrdemPreview);
   document.getElementById("cfg-dispenser-modo")?.addEventListener("change", onCfgDispenserModoPreview);
   ["cfg-dispenser-proxima", "cfg-dispenser-comum", "cfg-dispenser-pref"].forEach((id) => {
     const el = document.getElementById(id);
@@ -2472,7 +2492,7 @@ function onCfgOrdemPreview() {
   const dica = document.getElementById("cfg-ordem-dica");
   if (dica) dica.textContent = dicaOrdemChamada(quotas);
   const exProp = document.getElementById("cfg-ex-proporcao");
-  if (exProp) exProp.textContent = textoExemploProporcao(quotas.normais, quotas.prefs);
+  if (exProp) exProp.textContent = textoExemploProporcao(quotas.normais, quotas.prefs, quotas.comecarPref);
 }
 
 function onCfgDispenserModoPreview() {
@@ -2488,6 +2508,7 @@ async function salvarConfiguracoesTela() {
     ["ordem_chamada", r.ordem_chamada],
     ["ordem_normais", r.ordem_normais],
     ["ordem_preferenciais", r.ordem_preferenciais],
+    ["ordem_comecar_pref", r.ordem_comecar_pref],
     ["dispenser_modo", r.dispenser_modo],
     ["dispenser_proxima", r.dispenser_proxima],
     ["dispenser_proxima_comum", r.dispenser_proxima_comum],
