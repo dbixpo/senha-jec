@@ -577,9 +577,9 @@ textarea {
 .cfg-voz-lista li {
   display: grid;
   grid-template-columns: auto 1fr minmax(7.5rem, auto);
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  align-items: start;
+  gap: 8px 10px;
+  padding: 7px 10px;
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -593,6 +593,8 @@ textarea {
   font-weight: 700;
   letter-spacing: -0.12em;
   user-select: none;
+  line-height: 1.2;
+  padding-top: 2px;
 }
 .cfg-voz-nome {
   font-weight: 600;
@@ -600,24 +602,29 @@ textarea {
 }
 .cfg-voz-meio {
   display: grid;
-  gap: 4px;
+  gap: 1px;
   min-width: 0;
 }
 .cfg-voz-detalhe {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   margin: 0;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 500;
+  line-height: 1.2;
   color: var(--muted);
   cursor: pointer;
   width: fit-content;
+  white-space: nowrap;
+  flex-wrap: nowrap;
 }
 .cfg-voz-detalhe input {
-  width: 1.05rem;
-  height: 1.05rem;
+  width: 0.85rem;
+  height: 0.85rem;
+  margin: 0;
   accent-color: var(--dark);
+  flex: none;
 }
 .cfg-voz-lista select {
   height: var(--control-h);

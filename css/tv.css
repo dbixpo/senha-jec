@@ -571,6 +571,15 @@ body.tela-tv .app {
 .tv-cfg-grid label.chip-check {
   display: block;
 }
+.tv-cfg-grid label.cfg-voz-detalhe {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+}
 .tv-voz-status {
   margin: 0;
   font-size: 13px;
@@ -712,7 +721,15 @@ body.tela-tv .app {
 }
 .tv-cfg-grid .cfg-voz-lista li {
   background: #fff;
-  padding: 6px 8px;
+  padding: 5px 8px;
+  align-items: start;
+}
+.tv-cfg-grid .cfg-voz-nome {
+  font-size: 13.5px;
+  line-height: 1.2;
+}
+.tv-cfg-grid .cfg-voz-detalhe {
+  font-size: 10.5px;
 }
 .tv-cfg-grid .cfg-exemplo-tit {
   margin: 0;

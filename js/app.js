@@ -473,8 +473,8 @@ function htmlVozLista(script, opts = {}) {
       const campo = VOZ_CAMPOS.find((c) => c.id === item.id);
       const detalhe = vozTemDetalhe(item.id)
         ? `<label class="cfg-voz-detalhe">
-            <input type="checkbox" data-voz-detalhe ${item.detalhe ? "checked" : ""} ${trava ? "disabled" : ""}>
             Fala detalhada
+            <input type="checkbox" data-voz-detalhe ${item.detalhe ? "checked" : ""} ${trava ? "disabled" : ""}>
           </label>`
         : "";
       return `<li ${trava ? "" : "draggable=\"true\""} data-id="${item.id}">
