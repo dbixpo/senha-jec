@@ -508,6 +508,24 @@ textarea {
   gap: 12px;
   max-width: 520px;
 }
+.cfg-frase {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.cfg-frase input[type="number"] {
+  width: 4.4rem;
+  height: var(--control-h);
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+}
 .cfg-select input[type="number"] {
   width: 100%;
 }
@@ -521,11 +539,11 @@ textarea {
   gap: 8px;
 }
 .cfg-exemplo-tit { margin: 0; font-size: 13px; color: var(--muted); }
-.cfg-exemplo p { margin: 0; font-size: 14px; color: var(--muted); }
+.cfg-exemplo p { margin: 0; font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
 .cfg-exemplo p.on { color: var(--ink); font-weight: 600; }
 .cfg-modo {
   display: inline-block;
-  min-width: 14.5rem;
+  min-width: 12.5rem;
   margin-right: 8px;
   font-weight: 600;
   color: var(--dark);

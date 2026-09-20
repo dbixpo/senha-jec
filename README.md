@@ -30,7 +30,7 @@ Tudo da **fila** (chamar, finalizar, não respondeu) e o **dashboard** são do *
 3. **Registrar** — grava na fila daquele tipo.
 4. **Não veio** (na recepção) — descarta o rascunho, sem criar senha.
 
-A numeração pode vir do dispenser de papel (um rolo ou dois) ou, se não usa dispenser, começa no 01 todo dia. Preferencial no rolo único usa o mesmo número com prefixo P. A **ordem de chamada** (Opções → Configurações) decide se a fila segue a **chegada** (P13, 14, P18, P20, P21, 22) ou se as preferenciais sobem sempre para o topo. Ordem e dispenser só entram no sistema depois de **Salvar**.
+A numeração pode vir do dispenser de papel (um rolo ou dois) ou, se não usa dispenser, começa no 01 todo dia. Preferencial no rolo único usa o mesmo número com prefixo P. A **ordem de chamada** (Opções → Configurações) decide a fila: o padrão é **2 senhas normais para cada 1 preferencial**, sem inverter quem chegou primeiro no mesmo grupo. Dá para mudar esses números, usar só a ordem de chegada, ou colocar todas as preferenciais na frente. Ordem e dispenser só entram no sistema depois de **Salvar**.
 
 ### Atendimento — aba do tipo
 
@@ -38,7 +38,7 @@ Cada linha da planilha é uma senha.
 
 | Botão | O que faz |
 |---|---|
-| **Chamar próximo** | No topo da aba. Pega o **primeiro** da fila daquele tipo, na ordem configurada (chegada ou preferenciais na frente; quem não respondeu vai para o fim da espera). |
+| **Chamar próximo** | No topo da aba. Pega o **primeiro** da fila daquele tipo, na ordem configurada (proporção, chegada ou preferenciais na frente; quem não respondeu vai para o fim da espera). |
 | **Chamar** | Na linha. A senha fica *em atendimento* com você. Se **não** for o próximo, o sistema avisa quem deveria ser e pergunta se quer chamar fora de ordem. Só chama se confirmar. |
 | **Finalizar** | Encerra neste tipo. Sai da fila. |
 | **Encaminhar** | Se trocar o tipo antes de finalizar, manda a pessoa para a outra fila, com a observação (até 200 caracteres). |
@@ -57,7 +57,7 @@ Cores da linha:
 ## Regras da fila
 
 - **Uma senha, um atendente.** Quem chamou é dono até finalizar ou devolver.
-- **Preferencial na ordem configurada.** O padrão é a ordem de **chegada**: quem chegou primeiro é chamado primeiro (o 14 não fica atrás de um P18 que chegou depois). Em Opções → Configurações dá para colocar todas as preferenciais na frente. Quem não respondeu volta para o fim da espera.
+- **Preferencial na ordem configurada.** O padrão é **2 normais para cada 1 preferencial**, sempre respeitando quem chegou primeiro dentro de cada grupo (01, 02, P04, 03, 05, P06…). Em Opções → Configurações os números ficam abertos, dá para usar só a ordem de chegada, ou colocar todas as preferenciais na frente. Quem não respondeu volta para o fim da espera.
 - **Fora de ordem só com confirmação.** Chamar na linha uma senha que não é a próxima abre um aviso com quem deveria ser; Cancelar não chama.
 - **Chamada só no dia de hoje.** Trocar a data no topo é para olhar o histórico, não para chamar.
 - **Usuário** é sempre `primeiro.sobrenome` (ponto no meio). **Senha de acesso** nesta instalação é o CPF — no seu fork, use o que fizer sentido e **nunca** commite CPF nem hash no GitHub público.
@@ -81,7 +81,8 @@ Cores da linha:
 Vale para **todo o sistema**, não só para um computador. O rascunho só entra depois de **Salvar**.
 
 - **Ordem de chamada**
-  - *Ordem de chegada* (padrão): a fila segue quem chegou primeiro. Preferencial e comum se misturam: P13, 14, P18, P20, P21, 22.
+  - *Proporção* (padrão, 2 para 1): chama N senhas normais para cada P preferenciais. A chegada dentro de cada grupo não muda — o 03 não passa o 01, o P08 não passa o P04. Preferencial que já é a próxima da fila não espera. Exemplo com 2 e 1: 01, 02, 03, P04, 05, P06, P07, P08, 09, 10, 11, 12, P13 vira **01 → 02 → P04 → 03 → 05 → P06 → P07 → P08 → 09 → 10 → P13 → 11 → 12**.
+  - *Só ordem de chegada*: a fila segue quem chegou primeiro, sem adiantar preferencial.
   - *Preferenciais sempre na frente*: na espera do tipo, as P sobem; as comuns vêm depois. Quem não respondeu continua no fim.
 - **Dispenser**
   - *Nenhum*: todo dia a numeração começa no 01.
@@ -161,6 +162,7 @@ Migrações extras ficam em `supabase/migrations/`. O arquivo canônico para um 
 | `20260919210000_painel_tv.sql` | Tabela `painel_chamadas`; o Chamar grava o evento da TV |
 | `20260919220000_chegada_e_dispenser.sql` | Ordem por chegada, dispenser, `reservar_numero`, unique `(data, numero, preferencial)` |
 | `20260919230000_painel_imagens.sql` | Tabela `painel_imagens` (até 30 fotos) |
+| `20260920120000_ordem_proporcao.sql` | Proporção N normais para P preferenciais (padrão 2 para 1) |
 
 ## Contribuir
 

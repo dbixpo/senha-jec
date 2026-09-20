@@ -69,7 +69,9 @@ create table if not exists configuracoes (
 );
 
 insert into configuracoes (chave, valor) values
-  ('ordem_chamada', 'intercalar'),
+  ('ordem_chamada', 'proporcao'),
+  ('ordem_normais', '2'),
+  ('ordem_preferenciais', '1'),
   ('dispenser_modo', 'nenhum'),
   ('dispenser_proxima', '1'),
   ('dispenser_proxima_comum', '1'),
@@ -419,14 +421,43 @@ language plpgsql
 as $$
 declare
   regra text;
+  n_quota int := 2;
+  p_quota int := 1;
+  n_count int := 0;
+  p_count int := 0;
   escolhida uuid;
+  rec record;
+  ids uuid[] := array[]::uuid[];
+  prefs boolean[] := array[]::boolean[];
+  i int;
+  pref_i int := 0;
+  adianta boolean;
+  eh_pref boolean;
 begin
   select coalesce(
     (select valor from configuracoes where chave = 'ordem_chamada'),
-    'intercalar'
+    'proporcao'
   ) into regra;
 
-  if regra is distinct from 'intercalar' then
+  begin
+    n_quota := greatest(0, least(99, coalesce(
+      (select valor from configuracoes where chave = 'ordem_normais')::int,
+      2
+    )));
+  exception when others then
+    n_quota := 2;
+  end;
+
+  begin
+    p_quota := greatest(0, least(99, coalesce(
+      (select valor from configuracoes where chave = 'ordem_preferenciais')::int,
+      1
+    )));
+  exception when others then
+    p_quota := 1;
+  end;
+
+  if regra = 'preferenciais_primeiro' then
     select id into escolhida
     from senhas
     where data = p_data
@@ -443,19 +474,98 @@ begin
     return escolhida;
   end if;
 
-  select id into escolhida
-  from senhas
-  where data = p_data
-    and tipo_id = p_tipo_id
-    and status = 'na_fila'
-    and hora_fim is null
-    and id is distinct from p_exceto
-  order by coalesce(nao_respondeu, 0),
-           coalesce(hora_recepcao, hora_chegada, created_at),
-           numero
-  for update skip locked
-  limit 1;
-  return escolhida;
+  if regra = 'intercalar' or p_quota = 0 then
+    select id into escolhida
+    from senhas
+    where data = p_data
+      and tipo_id = p_tipo_id
+      and status = 'na_fila'
+      and hora_fim is null
+      and id is distinct from p_exceto
+    order by coalesce(nao_respondeu, 0),
+             coalesce(hora_recepcao, hora_chegada, created_at),
+             numero
+    for update skip locked
+    limit 1;
+    return escolhida;
+  end if;
+
+  for rec in
+    select preferencial
+    from senhas
+    where data = p_data
+      and tipo_id = p_tipo_id
+      and status in ('em_atendimento', 'resolvido')
+    order by coalesce(hora_atendimento, hora_inicio, created_at), numero
+  loop
+    if rec.preferencial then
+      p_count := p_count + 1;
+      if p_quota <= 0 or p_count >= p_quota then
+        n_count := 0;
+        p_count := 0;
+      end if;
+    else
+      n_count := n_count + 1;
+    end if;
+  end loop;
+
+  if p_exceto is not null then
+    select preferencial into eh_pref from senhas where id = p_exceto;
+    if found then
+      if eh_pref then
+        p_count := p_count + 1;
+        if p_quota <= 0 or p_count >= p_quota then
+          n_count := 0;
+          p_count := 0;
+        end if;
+      else
+        n_count := n_count + 1;
+      end if;
+    end if;
+  end if;
+
+  for rec in
+    select id, preferencial
+    from senhas
+    where data = p_data
+      and tipo_id = p_tipo_id
+      and status = 'na_fila'
+      and hora_fim is null
+      and id is distinct from p_exceto
+    order by coalesce(nao_respondeu, 0),
+             coalesce(hora_recepcao, hora_chegada, created_at),
+             numero
+    for update skip locked
+  loop
+    ids := ids || rec.id;
+    prefs := prefs || rec.preferencial;
+  end loop;
+
+  if cardinality(ids) = 0 then
+    return null;
+  end if;
+
+  for i in 1..cardinality(ids) loop
+    if prefs[i] then
+      pref_i := i;
+      exit;
+    end if;
+  end loop;
+
+  if prefs[1] then
+    return ids[1];
+  end if;
+
+  adianta := pref_i > 0
+    and p_quota > 0
+    and p_count < p_quota
+    and (n_quota <= 0 or n_count >= n_quota);
+
+  if adianta then
+    return ids[pref_i];
+  end if;
+
+  return ids[1];
 end;
 $$;
 
