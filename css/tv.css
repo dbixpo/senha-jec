@@ -483,14 +483,15 @@ body.tela-tv .app {
   object-fit: contain;
   object-position: center;
   background: #fff;
-  transform: none;
+  transform: scale(1.04);
   border-radius: clamp(8px, 1vw, 14px);
   box-shadow: 0 18px 56px rgba(0, 0, 0, 0.5);
   outline: 2px solid rgba(255, 211, 44, 0.5);
+  transition: transform 1.2s cubic-bezier(.22, .61, .36, 1);
 }
 
 .tv-shell.tv-retrato .tv-slide.visivel img {
-  transform: none;
+  transform: scale(1);
 }
 
 .tv-cfg {

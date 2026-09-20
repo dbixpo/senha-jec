@@ -27,6 +27,7 @@ let tvSlideTimer = 0;
 let tvSlideHideTimer = 0;
 let tvAnuncioTimer = 0;
 let tvSlideIdx = 0;
+let tvSlideGeracao = 0;
 let tvImagens = [];
 let tvImgAssinatura = "";
 let tvImgTimer = 0;
@@ -1115,6 +1116,7 @@ function tvPararRelogio() {
 }
 
 function tvPararSlides() {
+  tvSlideGeracao += 1;
   clearTimeout(tvSlideTimer);
   clearInterval(tvSlideTimer);
   clearTimeout(tvSlideHideTimer);
@@ -1148,31 +1150,52 @@ function tvAplicarFormaFoto(img, shell) {
   shell.classList.toggle("tv-anuncio", forma !== "retrato");
 }
 
-function tvMostrarSlide() {
+async function tvMostrarSlide() {
   if (tvCfgAberta || !tvImagens.length) return;
   const el = document.getElementById("tv-slide");
   const img = document.getElementById("tv-slide-img");
   const shell = document.querySelector(".tv-shell");
   if (!el || !img || !shell) return;
+  const geracao = ++tvSlideGeracao;
   tvSlideIdx = tvSlideIdx % tvImagens.length;
   const atual = tvImagens[tvSlideIdx];
   const proxima = tvImagens[(tvSlideIdx + 1) % tvImagens.length];
   tvSlideIdx += 1;
-  let ja = false;
-  const entrar = () => {
-    if (ja) return;
-    ja = true;
-    tvAplicarFormaFoto(img, shell);
-    clearTimeout(tvAnuncioTimer);
-    tvAnuncioTimer = 0;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => el.classList.add("visivel"));
-    });
-  };
-  img.onload = entrar;
-  img.onerror = entrar;
-  img.src = tvUrlImagem(atual);
-  if (img.complete && img.naturalWidth) entrar();
+  const url = tvUrlImagem(atual);
+  if (!url) return;
+
+  el.classList.remove("visivel");
+  img.onload = null;
+  img.onerror = null;
+  await new Promise((r) => requestAnimationFrame(r));
+  if (geracao !== tvSlideGeracao) return;
+
+  try {
+    if (img.getAttribute("src") !== url) img.src = url;
+    if (typeof img.decode === "function") await img.decode();
+    else {
+      await new Promise((ok) => {
+        if (img.complete && img.naturalWidth) ok();
+        else {
+          img.onload = () => ok();
+          img.onerror = () => ok();
+        }
+      });
+    }
+  } catch {
+    /* decode abortou porque a src mudou */
+  }
+  if (geracao !== tvSlideGeracao) return;
+
+  tvAplicarFormaFoto(img, shell);
+  clearTimeout(tvAnuncioTimer);
+  tvAnuncioTimer = 0;
+  void el.offsetWidth;
+  requestAnimationFrame(() => {
+    if (geracao !== tvSlideGeracao) return;
+    el.classList.add("visivel");
+  });
+
   if (proxima && proxima !== atual) {
     const preload = new Image();
     preload.src = tvUrlImagem(proxima);
@@ -1187,9 +1210,10 @@ function tvLigarSlides() {
     tvEsconderSlide();
     tvSlideTimer = setTimeout(proxima, tvImgIntervaloMs());
   };
-  const proxima = () => {
+  const proxima = async () => {
     if (!ehTv() || tvCfgAberta || !tvImagens.length) return;
-    tvMostrarSlide();
+    await tvMostrarSlide();
+    if (!ehTv() || tvCfgAberta) return;
     tvSlideHideTimer = setTimeout(aposFoto, tvImgDuracaoMs());
   };
   tvSlideTimer = setTimeout(proxima, tvImgIntervaloMs());
