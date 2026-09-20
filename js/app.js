@@ -688,7 +688,7 @@ function dicaOrdemChamada(quotas) {
   if (n <= 0) {
     return "Com 0 senhas normais, as preferenciais sobem primeiro. As comuns só entram quando não restar P na espera.";
   }
-  return `A ordem de chegada continua valendo: o 03 não passa na frente do 01, nem o P08 na frente do P04. O ciclo começa pela preferencial: depois de ${p} ${p === 1 ? "preferencial" : "preferenciais"}, chama ${n} ${n === 1 ? "senha normal" : "senhas normais"}. Se a próxima da fila já for preferencial, ela não espera.`;
+  return `A ordem de chegada continua valendo: o 03 não passa na frente do 01, nem o P08 na frente do P04. Chama ${p} ${p === 1 ? "preferencial" : "preferenciais"} para cada ${n} ${n === 1 ? "senha normal" : "senhas normais"} — começa pela P. Se a próxima da fila já for preferencial, ela não espera.`;
 }
 
 function instanteChegada(s) {
@@ -1187,7 +1187,7 @@ function legendaTipos() {
     <li><span class="chip aguardando">espera</span></li>
     <li><span class="chip em-atendimento">em atendimento</span></li>
     <li><span class="chip atendida">finalizado</span></li>
-    <li><span class="chip pref">P = preferencial · ${quotasOrdem().normais} para ${quotasOrdem().prefs}</span></li>
+    <li><span class="chip pref">P = preferencial · ${quotasOrdem().prefs} para ${quotasOrdem().normais}</span></li>
     <li><span class="chip ausente">não respondeu</span></li>
   </ul>`;
 }
@@ -2043,10 +2043,10 @@ function telaConfiguracoes() {
       <p class="muted form-dica">Quem o sistema chama primeiro na fila do tipo. A sequência de chegada nunca inverte quem é do mesmo grupo: o 03 não passa o 01, o P08 não passa o P04.</p>
       <p class="cfg-frase">
         Chamar
-        <input id="cfg-ordem-normais" type="number" min="0" max="99" step="1" inputmode="numeric" value="${quotas.normais}">
-        senhas normais para cada
         <input id="cfg-ordem-prefs" type="number" min="0" max="99" step="1" inputmode="numeric" value="${quotas.prefs}">
-        preferencial
+        preferencial(is) para cada
+        <input id="cfg-ordem-normais" type="number" min="0" max="99" step="1" inputmode="numeric" value="${quotas.normais}">
+        senha(s) normal(is)
       </p>
       <p id="cfg-ordem-dica" class="muted form-dica">${dicaOrdemChamada(quotas)}</p>
       <div class="cfg-exemplo" aria-label="Exemplo da ordem">
