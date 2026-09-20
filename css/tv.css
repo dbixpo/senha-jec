@@ -82,6 +82,7 @@ body.tela-tv .app {
   align-items: center;
   gap: clamp(8px, 1vw, 12px);
   min-width: 0;
+  flex: 1 1 0;
 }
 .tv-marca img {
   width: clamp(28px, 4.2vh, 42px);
@@ -94,6 +95,7 @@ body.tela-tv .app {
   font-size: clamp(14px, 1.4vw + 0.4vh, 18px);
   letter-spacing: 0.04em;
 }
+.tv-marca > div { min-width: 0; }
 .tv-marca span {
   display: block;
   color: #d6e4ef;
@@ -101,7 +103,34 @@ body.tela-tv .app {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: min(58vw, 720px);
+  max-width: 100%;
+}
+
+.tv-relogio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  line-height: 1.05;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.tv-relogio-data {
+  display: block;
+  font-size: clamp(11px, 1.05vw + 0.35vh, 15px);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--amarelo);
+}
+.tv-relogio-hora {
+  display: block;
+  font-size: clamp(1.2rem, 2.6vw + 1.2vh, 2.25rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
 }
 
 .tv-acoes {
@@ -109,7 +138,7 @@ body.tela-tv .app {
   gap: clamp(4px, 0.7vw, 8px);
   flex-wrap: nowrap;
   justify-content: flex-end;
-  flex: 0 1 auto;
+  flex: 1 1 0;
 }
 .tv-acoes .btn {
   font-size: clamp(11px, 1.05vw, 14px);
@@ -526,7 +555,7 @@ body.tela-tv .app {
   .tv-cfg-grid {
     grid-template-columns: 1fr;
   }
-  .tv-marca span { max-width: 38vw; }
+  .tv-marca span { max-width: 100%; }
   .tv-cfg-acoes { display: grid; }
   .tv-cfg-acoes .ok-msg { margin-right: 0; }
   .tv-cfg-acoes .btn { width: 100%; }
@@ -544,6 +573,7 @@ body.tela-tv .app {
 
 @media (max-width: 560px) {
   .tv-marca span { display: none; }
+  .tv-relogio-hora { font-size: clamp(1.05rem, 4.5vw, 1.35rem); }
   .tv-historico { display: none; }
   .tv-shell.tv-anuncio .tv-miolo {
     grid-template-columns: 1fr;

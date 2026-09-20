@@ -50,6 +50,7 @@ let tvPiperModelo = null;
 let tvFilaFala = [];
 let tvFilaTimer = 0;
 let tvFalaLivreEm = 0;
+let tvRelogioTimer = 0;
 
 function tvSegundos(valor, padrao, min, max) {
   const n = Number(valor);
@@ -748,7 +749,7 @@ async function tvEntrar() {
 }
 
 function tvAbrirCfg() {
-  tvEsconderSlide();
+  tvPararSlides();
   tvCfgAberta = true;
   tvCfgSuja = false;
   tvCfgEdicao = null;
@@ -808,16 +809,13 @@ function tvSalvarCfgTela() {
 
 function tvParar() {
   clearInterval(tvTimer);
-  clearTimeout(tvSlideTimer);
-  clearInterval(tvSlideTimer);
-  clearTimeout(tvSlideHideTimer);
-  clearTimeout(tvAnuncioTimer);
+  tvPararSlides();
+  tvPararRelogio();
   clearInterval(tvImgTimer);
   tvTimer = 0;
-  tvSlideTimer = 0;
-  tvSlideHideTimer = 0;
-  tvAnuncioTimer = 0;
   tvImgTimer = 0;
+  clearTimeout(tvAnuncioTimer);
+  tvAnuncioTimer = 0;
   tvLimparFilaFala();
   if (tvCanal && sb) {
     try { sb.removeChannel(tvCanal); } catch { /* já saiu */ }
@@ -995,6 +993,56 @@ function tvImgDuracaoMs() {
   return tvSegundos(tvCfg.imagensDuracao, TV_IMG_DUR_PADRAO, 1, 86400) * 1000;
 }
 
+function tvAgoraSP() {
+  const fmt = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+  const map = Object.fromEntries(fmt.formatToParts(new Date()).map((p) => [p.type, p.value]));
+  return {
+    data: `${map.day}/${map.month}/${map.year}`,
+    hora: `${map.hour}:${map.minute}:${map.second}`,
+    iso: `${map.year}-${map.month}-${map.day}T${map.hour}:${map.minute}:${map.second}`,
+  };
+}
+
+function tvPintarRelogio() {
+  const el = document.getElementById("tv-relogio");
+  if (!el) return;
+  const agora = tvAgoraSP();
+  const data = el.querySelector(".tv-relogio-data");
+  const hora = el.querySelector(".tv-relogio-hora");
+  if (data) data.textContent = agora.data;
+  if (hora) hora.textContent = agora.hora;
+  el.setAttribute("datetime", agora.iso);
+}
+
+function tvLigarRelogio() {
+  clearInterval(tvRelogioTimer);
+  tvPintarRelogio();
+  tvRelogioTimer = setInterval(tvPintarRelogio, 250);
+}
+
+function tvPararRelogio() {
+  clearInterval(tvRelogioTimer);
+  tvRelogioTimer = 0;
+}
+
+function tvPararSlides() {
+  clearTimeout(tvSlideTimer);
+  clearInterval(tvSlideTimer);
+  clearTimeout(tvSlideHideTimer);
+  tvSlideTimer = 0;
+  tvSlideHideTimer = 0;
+  tvEsconderSlide();
+}
+
 function tvEsconderSlide() {
   clearTimeout(tvSlideHideTimer);
   document.getElementById("tv-slide")?.classList.remove("visivel");
@@ -1025,24 +1073,22 @@ function tvMostrarSlide() {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => el.classList.add("visivel"));
   });
-  const intervalo = tvImgIntervaloMs();
-  const mostra = tvImgDuracaoMs();
-  clearTimeout(tvSlideHideTimer);
-  if (mostra + 800 < intervalo) {
-    tvSlideHideTimer = setTimeout(tvEsconderSlide, mostra);
-  }
 }
 
 function tvLigarSlides() {
-  clearTimeout(tvSlideTimer);
-  clearInterval(tvSlideTimer);
-  tvEsconderSlide();
-  if (!tvImagens.length) return;
-  const ciclo = () => {
-    tvMostrarSlide();
-    tvSlideTimer = setTimeout(ciclo, tvImgIntervaloMs());
+  tvPararSlides();
+  if (!tvImagens.length || tvCfgAberta) return;
+  const aposFoto = () => {
+    if (!ehTv() || tvCfgAberta) return;
+    tvEsconderSlide();
+    tvSlideTimer = setTimeout(proxima, tvImgIntervaloMs());
   };
-  tvSlideTimer = setTimeout(ciclo, Math.min(1200, tvImgIntervaloMs()));
+  const proxima = () => {
+    if (!ehTv() || tvCfgAberta || !tvImagens.length) return;
+    tvMostrarSlide();
+    tvSlideHideTimer = setTimeout(aposFoto, tvImgDuracaoMs());
+  };
+  tvSlideTimer = setTimeout(proxima, tvImgIntervaloMs());
 }
 
 function telaTv() {
@@ -1054,6 +1100,7 @@ function telaTv() {
   }
   const atual = tvAtual;
   const rotuloFontes = tvRotuloFontes();
+  const agora = tvAgoraSP();
   return `<div class="tv-shell">
     <div class="tv-video${tvUsaVideo() ? "" : " hidden"}" aria-hidden="true"><div id="tv-yt"></div></div>
     <div class="tv-fundo-simbolo${tvUsaVideo() ? " hidden" : ""}" aria-hidden="true">
@@ -1071,6 +1118,10 @@ function telaTv() {
           <span id="tv-fontes">${escapar(rotuloFontes || "Nenhum tipo selecionado")}</span>
         </div>
       </div>
+      <time id="tv-relogio" class="tv-relogio" datetime="${escapar(agora.iso)}">
+        <span class="tv-relogio-data">${escapar(agora.data)}</span>
+        <span class="tv-relogio-hora">${escapar(agora.hora)}</span>
+      </time>
       <div class="tv-acoes">
         <button type="button" class="btn ghost small" data-tv="cfg">Configurar esta TV</button>
         <button type="button" class="btn ghost small" data-tv="cheia">Tela cheia</button>
@@ -1190,7 +1241,7 @@ function htmlTvCfg() {
         </section>
         <section>
           <h3>Imagens sobre o fundo</h3>
-          <p class="muted form-dica">Valem para todas as TVs assim que você enviar (ficam no banco). Quando a foto entra, senha e histórico descem para a faixa de baixo — a imagem aparece inteira no molde 16:9, e o som do YouTube continua se estiver ligado. Até <strong>${TV_IMG_MAX}</strong> imagens. Se o tempo em amostra for igual ou maior que o intervalo, a próxima foto entra no lugar, sem voltar ao fundo.</p>
+          <p class="muted form-dica">Valem para todas as TVs assim que você enviar (ficam no banco). Quando a foto entra, senha e histórico descem para a faixa de baixo — a imagem aparece inteira no molde 16:9, e o som do YouTube continua se estiver ligado. Até <strong>${TV_IMG_MAX}</strong> imagens. Depois da amostra o fundo <strong>sempre</strong> volta; a espera é o tempo de vídeo (ou do símbolo) até a próxima foto.</p>
           <div class="cfg-dupla">
             <label>Surge uma imagem a cada
               <span class="tv-seg-linha">
@@ -1205,7 +1256,7 @@ function htmlTvCfg() {
               </span>
             </label>
           </div>
-          <p class="muted form-dica">Padrão: 300 segundos (5 minutos) para surgir, 20 segundos em amostra.</p>
+          <p class="muted form-dica">Padrão: espera 300 segundos (5 minutos) de fundo, 20 segundos em amostra. Com 5 e 5, a foto aparece 5 segundos e o vídeo volta 5 segundos.</p>
           <label class="btn ghost tv-file-btn${tvImagens.length >= TV_IMG_MAX ? " off" : ""}">Enviar imagem 16:9
             <input id="tv-img-file" class="tv-file" type="file" accept="image/*" ${tvImagens.length >= TV_IMG_MAX ? "disabled" : ""}>
           </label>
@@ -1340,6 +1391,7 @@ function ligarTv() {
   tvPintarChamada(false);
   tvAplicarFundo();
   tvLigarSlides();
+  tvLigarRelogio();
   document.querySelector("[data-tv=cfg]")?.addEventListener("click", tvAbrirCfg);
   document.querySelector("[data-tv=sair]")?.addEventListener("click", tvSair);
   document.querySelector("[data-tv=cheia]")?.addEventListener("click", () => {
