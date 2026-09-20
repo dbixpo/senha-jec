@@ -21,7 +21,7 @@ Tudo da **fila** (chamar, finalizar, não respondeu) e o **dashboard** são do *
 
 **Relatórios** (Opções → Relatórios) é outra tela: some a data do topo e as abas da fila. O período (de/até, ou atalhos de 7 dias, 30 dias e o mês) vale para todos os relatórios. Hoje dá para ver em **Painel** (gráficos) ou **Lista** (senha a senha).
 
-**Painel da TV** (Opções → Painel da TV, ou o atalho na tela de login) pergunta se abre **nesta aba** ou em **outra**. Este aparelho vira a televisão da espera. No topo, no centro, tem data e relógio. Cada TV escolhe as fontes (Senha geral e/ou tipos). O fundo é um YouTube (padrão sem som) ou só o símbolo do Senha JEC, um pouco menor e embaçado, se o YouTube estiver bloqueado ou para economizar banda. Imagens de qualquer proporção (A4, retrato, paisagem, quadrado) ficam no banco (até 30, valem para todas as TVs). Cada TV informa a espera de fundo até a foto surgir (padrão **300** s) e quanto ela fica na tela (padrão **20** s); depois o vídeo **volta**. Retrato entra inteiro de um lado, com senha e histórico do outro; paisagem ou quadrado viram **cartão** no meio e a faixa desce para baixo. O som do YouTube continua, se estiver ligado. Serve em Full HD, 4:3 (tipo 800×600) e tablet. A voz padrão é a feminina do **Google** neste aparelho; nas neurais ficam Dii, Cadu, Faber e Edresson. As chamadas entram numa fila com intervalo padrão de **3 segundos**, para uma não falar em cima da outra. O que a voz fala (requisitante, senha, local, guichê, atendente) se configura em **Configurações da TV** (e também em Opções → Configurações), arrastando a ordem.
+**Painel da TV** (Opções → Painel da TV, ou o atalho na tela de login) pergunta se abre **nesta aba** ou em **outra**. Este aparelho vira a televisão da espera. No topo, no centro, tem data e relógio. Cada TV escolhe as fontes (Senha geral e/ou tipos). O fundo é um YouTube (padrão sem som) ou só o símbolo do Senha JEC, um pouco menor e embaçado, se o YouTube estiver bloqueado ou para economizar banda. Imagens de qualquer proporção (A4, retrato, paisagem, quadrado) ficam no banco (até 30, valem para todas as TVs). Cada TV informa a espera de fundo até a foto surgir (padrão **300** s) e quanto ela fica na tela (padrão **20** s); depois o vídeo **volta**. Retrato entra inteiro de um lado, com senha e histórico do outro; paisagem ou quadrado viram **cartão** no meio e a faixa desce para baixo. O som do YouTube continua, se estiver ligado. Serve em Full HD, 4:3 (tipo 800×600) e tablet. A voz padrão é a feminina do **Google** neste aparelho; nas neurais ficam Dii, Cadu, Faber e Edresson. As chamadas entram numa fila com intervalo padrão de **3 segundos**, para uma não falar em cima da outra. O que a voz fala (requisitante, senha, local, guichê, atendente) se configura em **Configurações da TV** (e também em Opções → Configurações), arrastando a ordem. Em local e atendente, **Fala detalhada** (ligada por padrão) vira a frase longa; sem o visto, só o tipo ou o nome.
 
 ### Recepção — Senha geral
 
@@ -95,7 +95,7 @@ O botão **Painel da TV** (no login e em Opções) pergunta se o painel abre **n
 
 - **O que esta TV chama.** Senha geral e/ou os tipos. Uma TV pode ficar com tudo; outra, só com Consulta.
 - **Vídeo de fundo.** Live ou vídeo do YouTube (padrão sem som). Dá para voltar o link padrão. **Sem vídeo** usa o símbolo do Senha JEC, menor e embaçado — serve se o YouTube estiver bloqueado ou para economizar banda.
-- **Voz.** Duas listas: **Vozes Padrão** (as do aparelho; a feminina do Google é a recomendada) e **Vozes Neurais** (Dii, Cadu, Faber, Edresson — as três últimas são as da Vivver). Na primeira vez a neural baixa uns 60 MB e guarda neste aparelho. Velocidade, volume e **intervalo entre chamadas** (padrão 3 s). **O que ela fala** (requisitante, senha, local, guichê, atendente) fica nessa mesma tela, para todas as TVs; só o administrador altera. Se várias pessoas chamarem ao mesmo tempo, a TV fala uma por vez e descarta o excesso da fila (no máximo 10 à espera).
+- **Voz.** Duas listas: **Vozes Padrão** (as do aparelho; a feminina do Google é a recomendada) e **Vozes Neurais** (Dii, Cadu, Faber, Edresson — as três últimas são as da Vivver). Na primeira vez a neural baixa uns 60 MB e guarda neste aparelho. Velocidade, volume e **intervalo entre chamadas** (padrão 3 s). **O que ela fala** (requisitante, senha, local, guichê, atendente) fica nessa mesma tela, para todas as TVs; só o administrador altera. Em local e atendente, **Fala detalhada** (ligada por padrão) usa a frase longa; sem o visto, só o tipo ou o primeiro nome. Se várias pessoas chamarem ao mesmo tempo, a TV fala uma por vez e descarta o excesso da fila (no máximo 10 à espera).
 - **Imagens.** Até 30 fotos no banco, em qualquer proporção (A4, retrato, paisagem, quadrado). Envia direto, sem recorte — dá para selecionar várias de uma vez. *Surge uma imagem a cada* é a espera de fundo (padrão 300 s) até entrar a foto; *fica em amostra* é quanto a foto permanece (padrão 20 s). Depois a foto **sempre** sai e o vídeo volta, mesmo se os dois tempos forem iguais. Retrato (mais alta que larga) fica **inteira de um lado**, senha e histórico do outro. Paisagem ou quadrado viram **cartão** no meio, com folga em volta; senha e histórico descem para a faixa de baixo. Se o som do YouTube estiver ligado, ele não é cortado. O layout se ajeita em Full HD, monitor 4:3 (800×600) e tablet.
 - **Relógio.** No topo, no centro: data DD/MM/AAAA e hora HH:MM:SS (fuso de São Paulo).
 
@@ -107,7 +107,7 @@ Na planilha, recepção e atendimento mostram só a hora. Passa o mouse (ou toca
 
 Cada instalação tem o **seu** Supabase. Não existe banco compartilhado neste repositório.
 
-1. Crie um projeto no [Supabase](https://supabase.com).
+1. Crie um projeto no [Supabase](https://supabase.com). Na região, escolha a mais perto de quem vai usar (no JEC, **South America (São Paulo)** / `sa-east-1`). A região não muda depois: para trocar, é projeto novo e copiar os dados.
 2. SQL Editor: rode `supabase/schema.sql` inteiro (tabelas, RLS, RPCs). Esse arquivo **pode** (e deve) ser usado: é o esquema, não os dados de ninguém.
 3. Crie **os seus** operadores no SQL Editor, por exemplo:
 
@@ -122,6 +122,21 @@ Não use seed de outra mesa. `supabase/seed.sql` e `js/config.js`, se existirem 
 4. Em **Project Settings → API**, copie a URL e a chave **anon** (pode ser a publishable) **do projeto que você criou**.
 5. Copie `js/config.example.js` para `js/config.js` e cole **a sua** URL e chave. Esse arquivo não vai para o Git.
 6. Publique a pasta (GitHub Pages, Netlify, pasta num servidor). Neste repositório, um push em `main` dispara o workflow de Pages, que injeta `js/config.js` a partir dos secrets `SUPABASE_URL` e `SUPABASE_ANON_KEY`. Abra o site e entre com o usuário criado.
+
+## Produção deste repositório
+
+- Tela: [GitHub Pages](https://dbixpo.github.io/senha-jec/) (HTML, CSS e JS num CDN).
+- Banco: projeto Supabase **Free** na região **West US (Oregon)** / `us-west-2`.
+
+O GitHub Pages **não** é o que deixa a fila “pensando”. Ele só entrega o programa, em geral rápido depois do primeiro carregamento (e o PWA guarda o casco no aparelho). Cada **Chamar**, **Finalizar** e atualização ao vivo vai do navegador em Sorocaba até o Postgres no Oregon e volta — uns 180–250 ms por ida, somados à CPU compartilhada do plano gratuito (500 MB de RAM). No PC local o `tools/servidor_local.py` fala com o Postgres **neste computador**, por isso parece instantâneo.
+
+Trocar o Pages por Netlify ou uma pasta no servidor quase não muda essa espera. O que encurta o caminho de verdade:
+
+1. **Projeto novo em São Paulo** (`sa-east-1`) e apontar os secrets da Pages para ele — maior ganho, mas a região do projeto atual não se altera: é copiar dados e operadores.
+2. Plano **Pro** (CPU reservada), se o Free estiver engasgando no horário de pico.
+3. No Free, projeto **pausa depois de 1 semana sem uso**; a primeira abertura depois disso pode demorar enquanto o banco acorda. Uso todo dia no balcão evita a pausa.
+
+As fotos da TV (até 30) ficam **dentro** do Postgres. A primeira abertura do painel baixa todas; isso também pesa mais na produção do que no local.
 
 A senha do **Postgres** (Settings → Database) também não vai para o repositório. Script local de manutenção usa `manutencao.env`, igual ao `.env.example`.
 
