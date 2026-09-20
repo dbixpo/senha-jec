@@ -21,7 +21,7 @@ Tudo da **fila** (chamar, finalizar, não respondeu) e o **dashboard** são do *
 
 **Relatórios** (Opções → Relatórios) é outra tela: some a data do topo e as abas da fila. O período (de/até, ou atalhos de 7 dias, 30 dias e o mês) vale para todos os relatórios. Hoje dá para ver em **Painel** (gráficos) ou **Lista** (senha a senha).
 
-**Painel da TV** (Opções → Painel da TV, ou o atalho na tela de login) vira este aparelho na televisão da espera. No topo, no centro, tem data e relógio. Cada TV escolhe as fontes (Senha geral e/ou tipos). O fundo é um YouTube (padrão sem som) ou só o símbolo do Senha JEC, um pouco menor e embaçado, se o YouTube estiver bloqueado ou para economizar banda. Imagens 16:9 ficam no banco (até 30, valem para todas as TVs). Cada TV informa a espera de fundo até a foto surgir (padrão **300** s) e quanto ela fica na tela (padrão **20** s); depois o vídeo **volta**. Quando a foto entra, senha e histórico descem para uma faixa embaixo — a arte aparece inteira no molde 16:9, em qualquer proporção de tela (Full HD, 4:3 tipo 800×600, tablet). O som do YouTube continua, se estiver ligado. A voz padrão é a feminina do **Google** neste aparelho; nas neurais ficam Dii, Cadu, Faber e Edresson. As chamadas entram numa fila com intervalo padrão de **3 segundos**, para uma não falar em cima da outra. A voz fala o número; nos tipos, também o nome do atendimento. Na Senha geral fala só o número.
+**Painel da TV** (Opções → Painel da TV, ou o atalho na tela de login) pergunta se abre **nesta aba** ou em **outra**. Este aparelho vira a televisão da espera. No topo, no centro, tem data e relógio. Cada TV escolhe as fontes (Senha geral e/ou tipos). O fundo é um YouTube (padrão sem som) ou só o símbolo do Senha JEC, um pouco menor e embaçado, se o YouTube estiver bloqueado ou para economizar banda. Imagens 16:9 ficam no banco (até 30, valem para todas as TVs). Cada TV informa a espera de fundo até a foto surgir (padrão **300** s) e quanto ela fica na tela (padrão **20** s); depois o vídeo **volta**. A foto entra como **cartão** no meio, com folga em volta para o vídeo continuar visível; senha e histórico descem para uma faixa embaixo. O som do YouTube continua, se estiver ligado. Serve em Full HD, 4:3 (tipo 800×600) e tablet. A voz padrão é a feminina do **Google** neste aparelho; nas neurais ficam Dii, Cadu, Faber e Edresson. As chamadas entram numa fila com intervalo padrão de **3 segundos**, para uma não falar em cima da outra. A voz fala o número; nos tipos, também o nome do atendimento. Na Senha geral fala só o número.
 
 ### Recepção — Senha geral
 
@@ -74,7 +74,7 @@ Cores da linha:
 | Configurações → Tipos | Admin | Nome, sigla, cor, ativar/desativar |
 | Configurações → Operadores | Admin | Incluir, perfil, senha, ativar/desativar |
 | Configurações | Admin | Ordem de chamada, dispenser de papel e próxima senha do rolo — só vale depois de Salvar |
-| Painel da TV | Todo mundo | Tela da espera neste aparelho: fontes, YouTube ou símbolo, imagens e voz |
+| Painel da TV | Todo mundo | Tela da espera neste aparelho: fontes, YouTube ou símbolo, imagens, voz e relógio |
 
 ### Configurações (admin)
 
@@ -92,10 +92,12 @@ Vale para **todo o sistema**, não só para um computador. O rascunho só entra 
 
 Vale **neste aparelho** (salvo no navegador), com um **Salvar** próprio. Outra TV pode mostrar outros tipos, outro vídeo e outra voz. As **imagens** são a exceção: ficam no Postgres e valem para todas as TVs.
 
+O botão **Painel da TV** (no login e em Opções) pergunta se o painel abre **nesta aba** ou em **nova aba**. Clique fora ou Escape cancela.
+
 - **O que esta TV chama.** Senha geral e/ou os tipos. Uma TV pode ficar com tudo; outra, só com Consulta.
 - **Vídeo de fundo.** Live ou vídeo do YouTube (padrão sem som). Dá para voltar o link padrão. **Sem vídeo** usa o símbolo do Senha JEC, menor e embaçado — serve se o YouTube estiver bloqueado ou para economizar banda.
 - **Voz.** Duas listas: **Vozes Padrão** (as do aparelho; a feminina do Google é a recomendada) e **Vozes Neurais** (Dii, Cadu, Faber, Edresson — as três últimas são as da Vivver). Na primeira vez a neural baixa uns 60 MB e guarda neste aparelho. Velocidade, volume e **intervalo entre chamadas** (padrão 3 s). Se várias pessoas chamarem ao mesmo tempo, a TV fala uma por vez e descarta o excesso da fila (no máximo 10 à espera).
-- **Imagens.** Até 30 fotos 16:9 no banco. Recorte na janela amarela na hora de enviar. *Surge uma imagem a cada* é a espera de fundo (padrão 300 s) até entrar a foto; *fica em amostra* é quanto a foto permanece (padrão 20 s). Depois a foto sai e o vídeo volta, mesmo se os dois tempos forem iguais. A foto entra no molde; senha e histórico descem para a faixa de baixo, então a arte não fica escondida atrás do painel. Se o som do YouTube estiver ligado, ele não é cortado. O layout se ajeita em Full HD, monitor 4:3 (800×600) e tablet.
+- **Imagens.** Até 30 fotos 16:9 no banco. Recorte na janela amarela na hora de enviar — o sistema enquadra no molde, não importa o tamanho do arquivo. *Surge uma imagem a cada* é a espera de fundo (padrão 300 s) até entrar a foto; *fica em amostra* é quanto a foto permanece (padrão 20 s). Depois a foto **sempre** sai e o vídeo volta, mesmo se os dois tempos forem iguais. Na tela a foto vira um **cartão** no meio, com folga em volta (o vídeo aparece nas bordas); senha e histórico descem para a faixa de baixo, então a arte não fica escondida atrás do painel. Se o som do YouTube estiver ligado, ele não é cortado. O layout se ajeita em Full HD, monitor 4:3 (800×600) e tablet.
 - **Relógio.** No topo, no centro: data DD/MM/AAAA e hora HH:MM:SS (fuso de São Paulo).
 
 Na Senha geral a voz fala só o número. Nos tipos, número e o nome do atendimento.
@@ -122,7 +124,7 @@ Não use seed de outra mesa. `supabase/seed.sql` e `js/config.js`, se existirem 
 
 4. Em **Project Settings → API**, copie a URL e a chave **anon** (pode ser a publishable) **do projeto que você criou**.
 5. Copie `js/config.example.js` para `js/config.js` e cole **a sua** URL e chave. Esse arquivo não vai para o Git.
-6. Publique a pasta (GitHub Pages, Netlify, pasta num servidor). Abra o site e entre com o usuário criado.
+6. Publique a pasta (GitHub Pages, Netlify, pasta num servidor). Neste repositório, um push em `main` dispara o workflow de Pages, que injeta `js/config.js` a partir dos secrets `SUPABASE_URL` e `SUPABASE_ANON_KEY`. Abra o site e entre com o usuário criado.
 
 A senha do **Postgres** (Settings → Database) também não vai para o repositório. Script local de manutenção usa `manutencao.env`, igual ao `.env.example`.
 
