@@ -393,6 +393,36 @@ function perguntarConfirmacao({ titulo, texto, html, ok = "Confirmar", cancelar 
   });
 }
 
+function urlPainelTv() {
+  return `${location.pathname}${location.search}#tv`;
+}
+
+function fecharPerguntaTv() {
+  document.getElementById("tv-abrir")?.classList.add("hidden");
+}
+
+function abrirPainelTvNestaAba() {
+  fecharPerguntaTv();
+  if (!sessao) {
+    history.replaceState(null, "", urlPainelTv());
+    document.getElementById("login-usuario")?.focus();
+    return;
+  }
+  irAba("tv");
+}
+
+function abrirPainelTvNovaAba() {
+  fecharPerguntaTv();
+  const janela = window.open(urlPainelTv(), "_blank");
+  if (janela) janela.opener = null;
+  else mostrarErro("O navegador bloqueou a nova aba. Permita pop-ups para este site, ou abra nesta aba.");
+}
+
+function perguntarAbrirPainelTv() {
+  document.getElementById("tv-abrir")?.classList.remove("hidden");
+  document.getElementById("tv-abrir-mesma")?.focus();
+}
+
 function abrirSobre() {
   document.getElementById("sobre")?.classList.remove("hidden");
   document.getElementById("sobre-ok")?.focus();
@@ -2829,6 +2859,10 @@ function ligarEventos() {
     if (!item) return;
     cfgMenu.classList.add("hidden");
     cfgBtn?.setAttribute("aria-expanded", "false");
+    if (item.dataset.cfg === "tv") {
+      perguntarAbrirPainelTv();
+      return;
+    }
     irAba(item.dataset.cfg);
   });
   document.addEventListener("click", () => {
@@ -2873,9 +2907,11 @@ function ligarEventos() {
     if (ev.target.id === "aviso") fecharAviso(false);
   });
   document.getElementById("login-ajuda")?.addEventListener("click", abrirSobre);
-  document.getElementById("login-tv")?.addEventListener("click", () => {
-    history.replaceState(null, "", `${location.pathname}${location.search}#tv`);
-    document.getElementById("login-usuario")?.focus();
+  document.getElementById("login-tv")?.addEventListener("click", perguntarAbrirPainelTv);
+  document.getElementById("tv-abrir-mesma")?.addEventListener("click", abrirPainelTvNestaAba);
+  document.getElementById("tv-abrir-nova")?.addEventListener("click", abrirPainelTvNovaAba);
+  document.getElementById("tv-abrir")?.addEventListener("click", (ev) => {
+    if (ev.target.id === "tv-abrir") fecharPerguntaTv();
   });
   document.getElementById("sobre-ok")?.addEventListener("click", fecharSobre);
   document.getElementById("sobre")?.addEventListener("click", (ev) => {
@@ -2885,6 +2921,7 @@ function ligarEventos() {
     if (ev.key === "Escape") {
       fecharAviso();
       fecharSobre();
+      fecharPerguntaTv();
       esconderTipHora();
       cfgMenu?.classList.add("hidden");
       cfgBtn?.setAttribute("aria-expanded", "false");
