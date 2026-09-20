@@ -17,20 +17,20 @@ Três papéis na prática:
 2. **Atendimento (Triagem, Consulta, Ajuizamento…)** chama a senha daquele tipo, atende e finaliza.
 3. **Admin** vê o dashboard do dia, cadastra tipos e operadores.
 
-Tudo da **fila** (chamar, finalizar, não respondeu) e o **dashboard** são do **dia** escolhido no topo. Chamada só vale **hoje**. Dia anterior na fila é consulta.
+Tudo da **fila** (chamar, finalizar, não respondeu) e o **dashboard** são do **dia** escolhido no topo (**DD/MM/AAAA**, mesmo se o Windows estiver em inglês). Chamada só vale **hoje**. Dia anterior na fila é consulta.
 
 **Relatórios** (Opções → Relatórios) é outra tela: some a data do topo e as abas da fila. O período (de/até, ou atalhos de 7 dias, 30 dias e o mês) vale para todos os relatórios. Hoje dá para ver em **Painel** (gráficos) ou **Lista** (senha a senha).
 
-**Painel da TV** (Opções → Painel da TV, ou o atalho na tela de login) pergunta se abre **nesta aba** ou em **outra**. Este aparelho vira a televisão da espera. No topo, no centro, tem data e relógio. Cada TV escolhe as fontes (Senha geral e/ou tipos). O fundo é um YouTube (padrão sem som) ou só o símbolo do Senha JEC, um pouco menor e embaçado, se o YouTube estiver bloqueado ou para economizar banda. Imagens 16:9 ficam no banco (até 30, valem para todas as TVs). Cada TV informa a espera de fundo até a foto surgir (padrão **300** s) e quanto ela fica na tela (padrão **20** s); depois o vídeo **volta**. A foto entra como **cartão** no meio, com folga em volta para o vídeo continuar visível; senha e histórico descem para uma faixa embaixo. O som do YouTube continua, se estiver ligado. Serve em Full HD, 4:3 (tipo 800×600) e tablet. A voz padrão é a feminina do **Google** neste aparelho; nas neurais ficam Dii, Cadu, Faber e Edresson. As chamadas entram numa fila com intervalo padrão de **3 segundos**, para uma não falar em cima da outra. A voz fala o número; nos tipos, também o nome do atendimento. Na Senha geral fala só o número.
+**Painel da TV** (Opções → Painel da TV, ou o atalho na tela de login) pergunta se abre **nesta aba** ou em **outra**. Este aparelho vira a televisão da espera. No topo, no centro, tem data e relógio. Cada TV escolhe as fontes (Senha geral e/ou tipos). O fundo é um YouTube (padrão sem som) ou só o símbolo do Senha JEC, um pouco menor e embaçado, se o YouTube estiver bloqueado ou para economizar banda. Imagens de qualquer proporção (A4, retrato, paisagem, quadrado) ficam no banco (até 30, valem para todas as TVs). Cada TV informa a espera de fundo até a foto surgir (padrão **300** s) e quanto ela fica na tela (padrão **20** s); depois o vídeo **volta**. Retrato entra inteiro de um lado, com senha e histórico do outro; paisagem ou quadrado viram **cartão** no meio e a faixa desce para baixo. O som do YouTube continua, se estiver ligado. Serve em Full HD, 4:3 (tipo 800×600) e tablet. A voz padrão é a feminina do **Google** neste aparelho; nas neurais ficam Dii, Cadu, Faber e Edresson. As chamadas entram numa fila com intervalo padrão de **3 segundos**, para uma não falar em cima da outra. O que a voz fala (requisitante, senha, local, guichê, atendente) se configura em **Opções → Configurações**, arrastando a ordem.
 
 ### Recepção — Senha geral
 
-1. **Chamar** — anota a hora. Ainda não grava no banco.
+1. **Chamar** — escolhe o guichê, se a recepção tiver, e anota a hora. Ainda não grava no banco.
 2. Preenche nome, tipo (T / C / A) e, se quiser, nº de processo. Preferencial acende o ícone (cadeira, idoso, gestante, colo, obesidade, autismo) e a senha vira P01, P02…
 3. **Registrar** — grava na fila daquele tipo.
 4. **Não veio** (na recepção) — descarta o rascunho, sem criar senha.
 
-A numeração pode vir do dispenser de papel (um rolo ou dois) ou, se não usa dispenser, começa no 01 todo dia. Preferencial no rolo único usa o mesmo número com prefixo P. A **ordem de chamada** (Opções → Configurações) é *Chamar P preferenciais para cada N senhas normais* (padrão **1 para 2**), começando pelas **normais**. Dá para marcar **Começar com as preferenciais**. A chegada dentro de cada grupo não muda. Ordem e dispenser só entram no sistema depois de **Salvar**.
+A numeração pode vir do dispenser de papel (um rolo ou dois) ou, se não usa dispenser, começa no 01 todo dia. Preferencial no rolo único usa o mesmo número com prefixo P. A **ordem de chamada** (Opções → Configurações) é *Chamar P preferenciais para cada N senhas normais* (padrão **1 para 2**), começando pelas **normais**. Dá para marcar **Começar com as preferenciais**. A chegada dentro de cada grupo não muda. Em **O que a TV fala** marca Fala/Não fala e arrasta a ordem (padrão: requisitante, senha, local, guichê; atendente desligado, e quando liga fala só o primeiro nome). Ordem, voz e dispenser só entram no sistema depois de **Salvar**. Em **Tipos de atendimento** a **Senha geral** já vem cadastrada (não apaga, não muda nome/sigla/cor). Cada tipo — inclusive a recepção — informa se **tem guichês** e quantos; se tiver, na aba escolhe o guichê antes de chamar.
 
 ### Atendimento — aba do tipo
 
@@ -38,8 +38,8 @@ Cada linha da planilha é uma senha.
 
 | Botão | O que faz |
 |---|---|
-| **Chamar próximo** | No topo da aba. Pega o **primeiro** da fila daquele tipo, na proporção configurada (quem não respondeu vai para o fim da espera). |
-| **Chamar** | Na linha. A senha fica *em atendimento* com você. Se **não** for o próximo, o sistema avisa quem deveria ser e pergunta se quer chamar fora de ordem. Só chama se confirmar. |
+| **Chamar próximo** | No topo da aba. Pega o **primeiro** da fila daquele tipo, na proporção configurada (quem não respondeu vai para o fim da espera). Só chama se o guichê daquele tipo já estiver escolhido. |
+| **Chamar** | Na linha. A senha fica *em atendimento* com você. Se **não** for o próximo, o sistema avisa quem deveria ser e pergunta se quer chamar fora de ordem. Só chama se confirmar. Também precisa do guichê. |
 | **Finalizar** | Encerra neste tipo. Sai da fila. |
 | **Encaminhar** | Se trocar o tipo antes de finalizar, manda a pessoa para a outra fila, com a observação (até 200 caracteres). |
 | **Cancelar** | Desfaz a chamada. A senha volta para a espera, na ordem da fila. Não conta como não respondeu. |
@@ -59,7 +59,7 @@ Cores da linha:
 - **Uma senha, um atendente.** Quem chamou é dono até finalizar ou devolver.
 - **Preferencial na ordem configurada.** O padrão é **1 preferencial para cada 2 normais**, começando pelas comuns (01, 02, P04…). Marca **Começar com as preferenciais** se quiser a P no começo do ciclo. Quem chegou primeiro dentro de cada grupo continua na frente. Quem não respondeu volta para o fim da espera.
 - **Fora de ordem só com confirmação.** Chamar na linha uma senha que não é a próxima abre um aviso com quem deveria ser; Cancelar não chama.
-- **Chamada só no dia de hoje.** Trocar a data no topo é para olhar o histórico, não para chamar.
+- **Chamada só no dia de hoje.** Trocar a data no topo (DD/MM/AAAA) é para olhar o histórico, não para chamar.
 - **Usuário** é sempre `primeiro.sobrenome` (ponto no meio). **Senha de acesso** nesta instalação é o CPF — no seu fork, use o que fizer sentido e **nunca** commite CPF nem hash no GitHub público.
 - Operador comum não cadastra tipo nem gente. Admin sim.
 
@@ -69,11 +69,11 @@ Cores da linha:
 |---|---|---|
 | Dashboard / Painel | Admin | Volume, espera, preferencial e produção por pessoa **do dia do topo** |
 | Relatórios | Todo mundo | Tela própria: período compartilhado, Painel ou Lista; imprimir e CSV |
-| Senha geral | Recepção | Registrar quem chegou |
+| Senha geral | Recepção | Chamar na porta (com guichê, se houver) e registrar quem chegou |
 | T, C, A (ou os tipos que você cadastrar) | Quem atende | Chamar próximo, chamar na linha, finalizar, cancelar, não respondeu |
-| Configurações → Tipos | Admin | Nome, sigla, cor, ativar/desativar |
+| Configurações → Tipos | Admin | Senha geral é fixa (só guichês). Os outros: nome, sigla, cor, guichês, ativar/desativar |
 | Configurações → Operadores | Admin | Incluir, perfil, senha, ativar/desativar |
-| Configurações | Admin | Ordem de chamada, dispenser de papel e próxima senha do rolo — só vale depois de Salvar |
+| Configurações | Admin | Ordem de chamada, o que a TV fala, dispenser de papel e próxima senha do rolo — só vale depois de Salvar |
 | Painel da TV | Todo mundo | Tela da espera neste aparelho: fontes, YouTube ou símbolo, imagens, voz e relógio |
 
 ### Configurações (admin)
@@ -81,6 +81,7 @@ Cores da linha:
 Vale para **todo o sistema**, não só para um computador. O rascunho só entra depois de **Salvar**.
 
 - **Ordem de chamada.** *Chamar P preferenciais para cada N senhas normais* (padrão 1 para 2). O ciclo começa pelas **normais**, a não ser que marque **Começar com as preferenciais**. A chegada dentro de cada grupo não muda — o 03 não passa o 01, o P08 não passa o P04. Preferencial que já é a próxima da fila não espera. O exemplo na tela mostra a ordem. Com 0 preferenciais, fica só chegada; com 0 normais, as P sobem primeiro. Quem não respondeu continua no fim.
+- **O que a TV fala.** Lista arrastável: Requisitante, Senha, Local de atendimento, Guichê e Atendente. Em cada um escolhe **Fala** ou **Não fala**. Padrão: os quatro primeiros ligados; atendente desligado (quando liga, só o primeiro nome).
 - **Dispenser**
   - *Nenhum*: todo dia a numeração começa no 01.
   - *Rolo único*: um bloco de senhas; preferencial usa o mesmo número com P (P01, 02, P03…).
@@ -94,11 +95,9 @@ O botão **Painel da TV** (no login e em Opções) pergunta se o painel abre **n
 
 - **O que esta TV chama.** Senha geral e/ou os tipos. Uma TV pode ficar com tudo; outra, só com Consulta.
 - **Vídeo de fundo.** Live ou vídeo do YouTube (padrão sem som). Dá para voltar o link padrão. **Sem vídeo** usa o símbolo do Senha JEC, menor e embaçado — serve se o YouTube estiver bloqueado ou para economizar banda.
-- **Voz.** Duas listas: **Vozes Padrão** (as do aparelho; a feminina do Google é a recomendada) e **Vozes Neurais** (Dii, Cadu, Faber, Edresson — as três últimas são as da Vivver). Na primeira vez a neural baixa uns 60 MB e guarda neste aparelho. Velocidade, volume e **intervalo entre chamadas** (padrão 3 s). Se várias pessoas chamarem ao mesmo tempo, a TV fala uma por vez e descarta o excesso da fila (no máximo 10 à espera).
-- **Imagens.** Até 30 fotos 16:9 no banco. Recorte na janela amarela na hora de enviar — o sistema enquadra no molde, não importa o tamanho do arquivo. *Surge uma imagem a cada* é a espera de fundo (padrão 300 s) até entrar a foto; *fica em amostra* é quanto a foto permanece (padrão 20 s). Depois a foto **sempre** sai e o vídeo volta, mesmo se os dois tempos forem iguais. Na tela a foto vira um **cartão** no meio, com folga em volta (o vídeo aparece nas bordas); senha e histórico descem para a faixa de baixo, então a arte não fica escondida atrás do painel. Se o som do YouTube estiver ligado, ele não é cortado. O layout se ajeita em Full HD, monitor 4:3 (800×600) e tablet.
+- **Voz.** Duas listas: **Vozes Padrão** (as do aparelho; a feminina do Google é a recomendada) e **Vozes Neurais** (Dii, Cadu, Faber, Edresson — as três últimas são as da Vivver). Na primeira vez a neural baixa uns 60 MB e guarda neste aparelho. Velocidade, volume e **intervalo entre chamadas** (padrão 3 s). O texto falado (requisitante, senha, local, guichê, atendente) se configura em **Opções → Configurações**, para todas as TVs. Se várias pessoas chamarem ao mesmo tempo, a TV fala uma por vez e descarta o excesso da fila (no máximo 10 à espera).
+- **Imagens.** Até 30 fotos no banco, em qualquer proporção (A4, retrato, paisagem, quadrado). Envia direto, sem recorte — dá para selecionar várias de uma vez. *Surge uma imagem a cada* é a espera de fundo (padrão 300 s) até entrar a foto; *fica em amostra* é quanto a foto permanece (padrão 20 s). Depois a foto **sempre** sai e o vídeo volta, mesmo se os dois tempos forem iguais. Retrato (mais alta que larga) fica **inteira de um lado**, senha e histórico do outro. Paisagem ou quadrado viram **cartão** no meio, com folga em volta; senha e histórico descem para a faixa de baixo. Se o som do YouTube estiver ligado, ele não é cortado. O layout se ajeita em Full HD, monitor 4:3 (800×600) e tablet.
 - **Relógio.** No topo, no centro: data DD/MM/AAAA e hora HH:MM:SS (fuso de São Paulo).
-
-Na Senha geral a voz fala só o número. Nos tipos, número e o nome do atendimento.
 
 No celular o site vira PWA: no Android o Chrome oferece **Instalar**; no iPhone é Compartilhar → Adicionar à Tela de Início. No computador o convite de instalar não aparece.
 
@@ -162,6 +161,8 @@ Migrações extras ficam em `supabase/migrations/`. O arquivo canônico para um 
 | `20260920120000_ordem_proporcao.sql` | Proporção N normais para P preferenciais (padrão 2 para 1) |
 | `20260920123000_ordem_ciclo_pref.sql` | Ciclo começa pela preferencial (P, depois N comuns) |
 | `20260920124500_ordem_comecar_pref.sql` | Checkbox *Começar com as preferenciais* (padrão desligado) |
+| `20260920133000_voz_guiches.sql` | Guichês no tipo, `voz_script`, colunas no painel; `chamar_senha` / `chamar_proxima` com guichê |
+| `20260920140000_senha_geral_fixo.sql` | Tipo fixo Senha geral (não apaga nem muda nome); só configura guichês |
 
 ## Contribuir
 

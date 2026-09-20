@@ -165,7 +165,7 @@ body.tela-tv .app {
   gap: clamp(8px, 2vw, 24px);
   align-items: end;
   padding: var(--tv-pad);
-  transition: height 0.8s cubic-bezier(.22, .61, .36, 1), padding 0.8s cubic-bezier(.22, .61, .36, 1), gap 0.7s, background-color 0.55s;
+  transition: height 0.8s cubic-bezier(.22, .61, .36, 1), left 0.8s cubic-bezier(.22, .61, .36, 1), padding 0.8s cubic-bezier(.22, .61, .36, 1), gap 0.7s, background-color 0.55s;
 }
 
 .tv-chamada {
@@ -306,6 +306,8 @@ body.tela-tv .app {
   height: auto;
   max-width: 100%;
   max-height: 100%;
+  min-width: 0;
+  min-height: 0;
   object-fit: contain;
   background: transparent;
   transform: scale(1.04);
@@ -396,13 +398,99 @@ body.tela-tv .app {
 .tv-shell.tv-anuncio .tv-slide img {
   width: auto;
   height: auto;
-  max-width: 100%;
-  max-height: 100%;
+  max-width: min(100%, calc(100cqw - clamp(56px, 12vw, 176px)));
+  max-height: min(100%, calc(100cqh - var(--tv-top) - var(--tv-faixa) - clamp(24px, 5.2vh, 60px)));
+  min-width: 0;
+  min-height: 0;
   object-fit: contain;
   object-position: center;
+  background: #fff;
   border-radius: clamp(8px, 1vw, 14px);
   box-shadow: 0 18px 56px rgba(0, 0, 0, 0.5);
   outline: 2px solid rgba(255, 211, 44, 0.5);
+}
+
+.tv-shell.tv-retrato .tv-velo {
+  opacity: 0.22;
+}
+
+.tv-shell.tv-retrato .tv-top {
+  z-index: 4;
+}
+
+.tv-shell.tv-retrato .tv-miolo {
+  z-index: 4;
+  left: min(48%, 36rem);
+  right: 0;
+  top: var(--tv-top);
+  bottom: 0;
+  height: auto;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  align-items: start;
+  align-content: center;
+  padding: clamp(16px, 3vh, 40px) clamp(16px, 2.8vw, 44px) clamp(16px, 2.6vh, 32px);
+  gap: clamp(12px, 2.2vh, 26px);
+  background: linear-gradient(90deg, rgba(13, 59, 94, 0.12) 0%, rgba(13, 59, 94, 0.86) 22%, rgba(13, 59, 94, 0.94) 100%);
+}
+
+.tv-shell.tv-retrato .tv-kicker {
+  margin: 0 0 6px;
+}
+
+.tv-shell.tv-retrato .tv-numero {
+  font-size: clamp(2.4rem, 6.4vw + 3.2vh, 8.4rem);
+}
+
+.tv-shell.tv-retrato .tv-local {
+  margin: 8px 0 0;
+  font-size: clamp(1rem, 1.8vw + 1vh, 2rem);
+}
+
+.tv-shell.tv-retrato .tv-historico {
+  width: 100%;
+  max-height: none;
+  overflow: auto;
+  align-self: stretch;
+}
+
+.tv-shell.tv-retrato .tv-slide {
+  z-index: 2;
+  top: var(--tv-top);
+  right: auto;
+  bottom: 0;
+  left: 0;
+  width: min(48%, 36rem);
+  padding: clamp(12px, 2.2vh, 26px) clamp(12px, 1.8vw, 24px);
+  transform: translateX(-28px);
+  transition:
+    opacity 0.85s ease,
+    visibility 0.85s,
+    transform 0.85s cubic-bezier(.22, .61, .36, 1);
+}
+
+.tv-shell.tv-retrato .tv-slide.visivel {
+  transform: translateX(0);
+}
+
+.tv-shell.tv-retrato .tv-slide img {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
+  object-fit: contain;
+  object-position: center;
+  background: #fff;
+  transform: none;
+  border-radius: clamp(8px, 1vw, 14px);
+  box-shadow: 0 18px 56px rgba(0, 0, 0, 0.5);
+  outline: 2px solid rgba(255, 211, 44, 0.5);
+}
+
+.tv-shell.tv-retrato .tv-slide.visivel img {
+  transform: none;
 }
 
 .tv-cfg {
@@ -415,19 +503,8 @@ body.tela-tv .app {
   background: rgba(13, 59, 94, 0.72);
   overflow: auto;
 }
-.tv-crop {
-  position: absolute;
-  inset: 0;
-  z-index: 12;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgba(13, 59, 94, 0.72);
-  overflow: auto;
-}
 
-.tv-cfg-card,
-.tv-crop-card {
+.tv-cfg-card {
   width: min(980px, 100%);
   max-height: min(96dvh, 100%);
   overflow: auto;
@@ -437,8 +514,7 @@ body.tela-tv .app {
   box-shadow: var(--shadow);
   padding: clamp(12px, 2vw, 24px) clamp(12px, 2vw, 22px);
 }
-.tv-cfg-card h2,
-.tv-crop-card h2 {
+.tv-cfg-card h2 {
   margin: 4px 0 0;
 }
 .tv-cfg-card h3 {
@@ -509,8 +585,9 @@ body.tela-tv .app {
 }
 .tv-img-lista img {
   width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
+  height: 148px;
+  object-fit: contain;
+  background: #0d3b5e;
   border-radius: 8px;
   border: 1px solid var(--line);
 }
@@ -544,21 +621,6 @@ body.tela-tv .app {
 .tv-cfg-acoes .ok-msg {
   margin-right: auto;
 }
-.tv-crop-view {
-  margin: 12px 0 16px;
-  border: 3px solid var(--amarelo);
-  border-radius: 10px;
-  overflow: hidden;
-  background: #0d3b5e;
-  cursor: grab;
-}
-.tv-crop-view:active { cursor: grabbing; }
-.tv-crop-view canvas {
-  display: block;
-  width: 100%;
-  height: auto;
-  touch-action: none;
-}
 
 @media (max-width: 900px) {
   .tv-cfg-grid {
@@ -576,6 +638,12 @@ body.tela-tv .app {
   }
   .tv-shell.tv-anuncio .tv-miolo {
     grid-template-columns: max-content minmax(0, 1fr);
+  }
+  .tv-shell.tv-retrato .tv-slide {
+    width: 42%;
+  }
+  .tv-shell.tv-retrato .tv-miolo {
+    left: 42%;
   }
   .tv-historico li:nth-child(n+6) { display: none; }
 }

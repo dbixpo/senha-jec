@@ -63,6 +63,7 @@ let configuracoes = {
   ordem_normais: "2",
   ordem_preferenciais: "1",
   ordem_comecar_pref: "nao",
+  voz_script: "",
   dispenser_modo: DISPENSER_NENHUM,
   dispenser_proxima: "1",
   dispenser_proxima_comum: "1",
@@ -70,6 +71,22 @@ let configuracoes = {
 };
 let cfgRascunho = null;
 let cfgFeedback = "";
+
+const GUICHE_KEY = "senha-jec-guiche";
+const VOZ_CAMPOS = [
+  { id: "requisitante", nome: "Requisitante" },
+  { id: "senha", nome: "Senha" },
+  { id: "local", nome: "Local de atendimento" },
+  { id: "guiche", nome: "Guichê" },
+  { id: "atendente", nome: "Atendente" },
+];
+const VOZ_SCRIPT_PADRAO = [
+  { id: "requisitante", on: true },
+  { id: "senha", on: true },
+  { id: "local", on: true },
+  { id: "guiche", on: true },
+  { id: "atendente", on: false },
+];
 
 const PREF_TIPOS = [
   { id: "cadeira", nome: "Deficiência" },
@@ -144,6 +161,13 @@ function dataLegivel(iso) {
   if (!iso) return "";
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
+}
+
+function pintarDiaMostra() {
+  const el = document.getElementById("dia-mostra");
+  const input = document.getElementById("dia");
+  if (!el || !input) return;
+  el.textContent = dataLegivel(input.value || hojeISO());
 }
 
 function ehRelatorio() {
@@ -287,6 +311,7 @@ function aplicarDiaSessao() {
     input.disabled = false;
     input.title = "Filtrar a fila por dia";
   }
+  pintarDiaMostra();
 }
 
 function preencherQuem() {
@@ -329,6 +354,185 @@ function operadorDe(id) {
 
 function nomeOperador(id) {
   return operadorDe(id)?.nome || "—";
+}
+
+function primeiroNome(nome) {
+  return String(nome || "").trim().split(/\s+/).filter(Boolean)[0] || "";
+}
+
+function parseVozScript(raw) {
+  let lista = [];
+  if (Array.isArray(raw)) lista = raw;
+  else {
+    try { lista = JSON.parse(raw || "[]"); } catch { lista = []; }
+  }
+  const vistos = new Set();
+  const saida = [];
+  (lista || []).forEach((item) => {
+    const id = item?.id;
+    if (!VOZ_CAMPOS.some((c) => c.id === id) || vistos.has(id)) return;
+    vistos.add(id);
+    const on = item.on === true || item.on === "sim" || item.on === "true" || item.on === 1 || item.on === "1";
+    saida.push({ id, on });
+  });
+  VOZ_SCRIPT_PADRAO.forEach((pad) => {
+    if (!vistos.has(pad.id)) saida.push({ id: pad.id, on: pad.on });
+  });
+  return saida;
+}
+
+function vozScriptAtual(vista) {
+  if (vista?.voz_script != null) return parseVozScript(vista.voz_script);
+  if (cfgRascunho?.voz_script != null) return parseVozScript(cfgRascunho.voz_script);
+  return parseVozScript(configuracoes.voz_script);
+}
+
+function vozNumeroExtenso(n) {
+  const x = Math.round(Number(n));
+  const uns = ["zero", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"];
+  const dez = ["dez", "onze", "doze", "treze", "catorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove", "vinte"];
+  if (!Number.isFinite(x) || x < 0) return "";
+  if (x <= 9) return uns[x];
+  if (x <= 20) return dez[x - 10];
+  return String(x);
+}
+
+function vozSenhaExtenso(row) {
+  const n = padSenha(row?.numero || 0);
+  const falado = n.split("").map((d) => vozNumeroExtenso(d)).join(" ");
+  return `senha ${row?.preferencial ? "P, " : ""}${falado}`;
+}
+
+function vozLocalTexto(row) {
+  if (row?.local_nome) return row.local_nome;
+  if (row?.origem === "geral" || !row?.tipo_id) return "Senha geral";
+  return tipoDe(row.tipo_id)?.nome || "Atendimento";
+}
+
+function vozPeca(id, row) {
+  if (id === "requisitante") return String(row?.requisitante || "").trim();
+  if (id === "senha") return vozSenhaExtenso(row);
+  if (id === "local") return vozLocalTexto(row);
+  if (id === "guiche") {
+    const g = Number(row?.guiche);
+    if (!Number.isFinite(g) || g < 1) return "";
+    return `guichê ${vozNumeroExtenso(g)}`;
+  }
+  if (id === "atendente") {
+    const nome = String(row?.atendente || primeiroNome(operadorDe(row?.chamado_por)?.nome) || "").trim();
+    if (!nome || nome === "—") return "";
+    return primeiroNome(nome);
+  }
+  return "";
+}
+
+function textoVozChamada(row, script) {
+  const ordem = script != null ? parseVozScript(script) : vozScriptAtual();
+  return ordem.filter((x) => x.on).map((x) => vozPeca(x.id, row)).filter(Boolean).join(", ");
+}
+
+function textoVozExemplo(script) {
+  return textoVozChamada({
+    numero: 4,
+    preferencial: false,
+    origem: "tipo",
+    requisitante: "Maria Silva",
+    atendente: "Flávia",
+    guiche: 2,
+    local_nome: "Consulta",
+  }, script);
+}
+
+function htmlVozLista(script) {
+  return `<ul id="cfg-voz-lista" class="cfg-voz-lista">
+    ${parseVozScript(script).map((item) => {
+      const campo = VOZ_CAMPOS.find((c) => c.id === item.id);
+      return `<li draggable="true" data-id="${item.id}">
+        <span class="cfg-voz-arrasta" title="Arrasta para mudar a ordem" aria-hidden="true">⋮⋮</span>
+        <span class="cfg-voz-nome">${escapar(campo?.nome || item.id)}</span>
+        <select data-voz-on aria-label="${escapar(campo?.nome || item.id)} na voz">
+          <option value="sim" ${item.on ? "selected" : ""}>Fala</option>
+          <option value="nao" ${item.on ? "" : "selected"}>Não fala</option>
+        </select>
+      </li>`;
+    }).join("")}
+  </ul>`;
+}
+
+function lerVozListaDom() {
+  const itens = [...document.querySelectorAll("#cfg-voz-lista li[data-id]")];
+  if (!itens.length) return null;
+  return itens.map((li) => ({
+    id: li.getAttribute("data-id"),
+    on: li.querySelector("[data-voz-on]")?.value === "sim",
+  }));
+}
+
+function guichesDoTipo(tipo) {
+  const n = parseInt(tipo?.guiches, 10);
+  return Number.isFinite(n) && n > 0 ? Math.min(20, n) : 0;
+}
+
+function mapaGuiche() {
+  try {
+    return JSON.parse(localStorage.getItem(GUICHE_KEY) || "{}") || {};
+  } catch {
+    return {};
+  }
+}
+
+function guicheSalvo(tipoId) {
+  const n = parseInt(mapaGuiche()[tipoId], 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function salvarGuicheTipo(tipoId, n) {
+  const mapa = mapaGuiche();
+  if (n) mapa[tipoId] = n;
+  else delete mapa[tipoId];
+  try { localStorage.setItem(GUICHE_KEY, JSON.stringify(mapa)); } catch { /* quota */ }
+}
+
+function guicheAtualDoTipo(tipo) {
+  const max = guichesDoTipo(tipo);
+  if (!max) return 0;
+  const n = guicheSalvo(tipo.id);
+  return n >= 1 && n <= max ? n : 0;
+}
+
+function tipoDaAba() {
+  if (!String(aba).startsWith("tipo-")) return null;
+  return tipos.find((t) => t.id === aba.slice(5)) || null;
+}
+
+function htmlGuicheTipo(tipo) {
+  if (!tipo) return "";
+  const max = guichesDoTipo(tipo);
+  if (!max || !ehHoje()) return "";
+  const atual = guicheAtualDoTipo(tipo);
+  const opts = [`<option value="">Escolha o guichê</option>`].concat(
+    Array.from({ length: max }, (_, i) => {
+      const n = i + 1;
+      return `<option value="${n}" ${atual === n ? "selected" : ""}>Guichê ${n}</option>`;
+    })
+  );
+  return `<label class="guiche-sel">
+    <span>Seu guichê</span>
+    <select id="tipo-guiche" data-tipo="${escapar(tipo.id)}">${opts.join("")}</select>
+  </label>`;
+}
+
+function chamarPrecisaGuiche(tipo) {
+  return guichesDoTipo(tipo) > 0 && !guicheAtualDoTipo(tipo);
+}
+
+function garantirGuiche(tipo) {
+  if (!chamarPrecisaGuiche(tipo)) return true;
+  abrirAviso({
+    titulo: "Escolha o guichê",
+    texto: "Antes de chamar, escolhe o guichê deste atendimento.",
+  });
+  return false;
 }
 
 function lerConfig() {
@@ -457,6 +661,26 @@ function mostrarErro(msg) {
 
 function tipoDe(id) {
   return tipos.find((t) => t.id === id) || null;
+}
+
+function ehTipoFixo(tipo) {
+  return tipo?.codigo === "geral";
+}
+
+function tipoGeral() {
+  return tipos.find((t) => t.codigo === "geral") || null;
+}
+
+function tiposFila() {
+  return tipos.filter((t) => t.ativo && t.codigo !== "geral");
+}
+
+function tiposNaLista() {
+  return [...tipos].sort((a, b) => {
+    if (a.codigo === "geral") return -1;
+    if (b.codigo === "geral") return 1;
+    return (Number(a.ordem) || 0) - (Number(b.ordem) || 0) || String(a.nome).localeCompare(String(b.nome), "pt-BR");
+  });
 }
 
 function auditoria(row) {
@@ -929,6 +1153,7 @@ function aplicarConfiguracoes(rows) {
   configuracoes.dispenser_proxima = String(mapa.dispenser_proxima || configuracoes.dispenser_proxima || "1");
   configuracoes.dispenser_proxima_comum = String(mapa.dispenser_proxima_comum || configuracoes.dispenser_proxima_comum || "1");
   configuracoes.dispenser_proxima_pref = String(mapa.dispenser_proxima_pref || configuracoes.dispenser_proxima_pref || "1");
+  configuracoes.voz_script = mapa.voz_script || configuracoes.voz_script || JSON.stringify(VOZ_SCRIPT_PADRAO);
 }
 
 function agendarCarregar() {
@@ -975,7 +1200,7 @@ function desenharAbas() {
   }
   abas.push({ id: "geral", label: "Senha geral", curto: "Geral", count: naFila() });
   abas.push(
-    ...tipos.filter((t) => t.ativo).map((t) => ({
+    ...tiposFila().map((t) => ({
       id: "tipo-" + t.id,
       label: t.nome,
       curto: t.sigla,
@@ -998,7 +1223,7 @@ function desenharAbas() {
 }
 
 function checksTipoForm() {
-  const ativos = tipos.filter((t) => t.ativo);
+  const ativos = tiposFila();
   const travado = !rascunhoChegada.chamado;
   if (!ativos.length) return `<p class="muted">${ehAdmin() ? "Cadastre um tipo primeiro, em Opções → Tipos de Atendimento." : "Peça a um administrador para cadastrar um tipo."}</p>`;
   return ativos.map((t) => `
@@ -1059,17 +1284,18 @@ function botoesAcaoTipo(senha, tipoDestinoId) {
   }
   if (minha) {
     const encaminha = tipoDestinoId && tipoDestinoId !== senha.tipo_id;
+    const travaGuiche = chamarPrecisaGuiche(tipoDaAba());
     return `<button type="button" class="btn ok small" data-acao="finalizar-senha" data-id="${senha.id}">${encaminha ? "Encaminhar" : "Finalizar"}</button>
       <button type="button" class="btn stamp small" data-acao="nao-respondeu" data-id="${senha.id}"><span class="lab-wide">Não respondeu</span><span class="lab-narrow">Não veio</span></button>
-      <button type="button" class="btn ghost small btn-rechamada" data-acao="chamar-senha" data-id="${senha.id}">Chamar de novo</button>
+      <button type="button" class="btn ghost small btn-rechamada" data-acao="chamar-senha" data-id="${senha.id}" ${travaGuiche ? "disabled title=\"Escolha o guichê\"" : ""}>Chamar de novo</button>
       <button type="button" class="btn ghost small" data-acao="liberar-senha" data-id="${senha.id}">Cancelar</button>`;
   }
-  return `<button type="button" class="btn primary small" data-acao="chamar-senha" data-id="${senha.id}">Chamar</button>`;
+  const travaGuiche = chamarPrecisaGuiche(tipoDaAba());
+  return `<button type="button" class="btn primary small" data-acao="chamar-senha" data-id="${senha.id}" ${travaGuiche ? "disabled title=\"Escolha o guichê\"" : ""}>Chamar</button>`;
 }
 
 function checksTipoAtender(senha) {
-  return tipos
-    .filter((t) => t.ativo)
+  return tiposFila()
     .map(
       (t) => `
     <label class="chip-check mini" title="${escapar(t.nome)}" style="--tipo:${escapar(t.cor)}">
@@ -1195,7 +1421,7 @@ function ligarFiltro(lista, opts) {
 
 function legendaTipos() {
   return `<ul class="legenda">
-    ${tipos.filter((t) => t.ativo).map((t) => `<li><span class="sigla" style="background:${escapar(t.cor)}">${escapar(t.sigla)}</span> ${escapar(t.nome)}</li>`).join("")}
+    ${tiposFila().map((t) => `<li><span class="sigla" style="background:${escapar(t.cor)}">${escapar(t.sigla)}</span> ${escapar(t.nome)}</li>`).join("")}
     <li><span class="chip aguardando">espera</span></li>
     <li><span class="chip em-atendimento">em atendimento</span></li>
     <li><span class="chip atendida">finalizado</span></li>
@@ -1206,6 +1432,8 @@ function legendaTipos() {
 
 function telaGeral() {
   const travado = !rascunhoChegada.chamado;
+  const geral = tipoGeral();
+  const travaGuiche = ehHoje() && geral && chamarPrecisaGuiche(geral);
   const form = ehHoje()
     ? `<form id="form-chegada" class="form-chegada${travado ? " aguardando-chamada" : ""}">
         <input type="hidden" id="campo-tipo" value="${escapar(rascunhoChegada.tipoId)}">
@@ -1217,7 +1445,7 @@ function telaGeral() {
           ${botoesPrefForm()}
         </div>
         <div class="chegada-chamada">
-          <button type="button" class="btn primary" id="btn-chamar-recepcao"><span class="n-passo">1</span>Chamar</button>
+          <button type="button" class="btn primary" id="btn-chamar-recepcao" ${travaGuiche ? "disabled title=\"Escolha o guichê\"" : ""}><span class="n-passo">1</span>Chamar</button>
           <div class="campo campo-hora">
             <span>Hora recepção</span>
             <strong id="campo-hora-rotulo" class="senha-valor senha-hora-dica">${rascunhoChegada.horaIso ? escapar(hora(rascunhoChegada.horaIso)) : "—"}</strong>
@@ -1242,22 +1470,25 @@ function telaGeral() {
     : `<p class="muted form-dica">Consultando ${dataLegivel(diaAtual())}. Para registrar senha, volta a data para hoje.</p>`;
   return `
     <section class="card card-fila">
-      <div class="card-topo">
-        <div>
+      <div class="card-topo card-topo-tipo">
+        <div class="card-topo-linha">
           <h2>Senha geral</h2>
-          <p class="muted form-dica dica-web">${ehHoje()
+          <div class="topo-acoes">
+            <div class="topo-chamar">
+              ${htmlGuicheTipo(geral)}
+            </div>
+            ${barraFiltro()}
+          </div>
+        </div>
+        <p class="muted form-dica dica-web">${ehHoje()
             ? (dispenserModo() === DISPENSER_SEPARADO
               ? "Com dois rolos, marca preferencial antes de Chamar. Cada Chamar gasta o papel, mesmo se a pessoa não vier."
               : usaDispenser()
                 ? "O número é o da boca do dispenser. Cada Chamar gasta aquele papel, mesmo se a pessoa não vier."
                 : "Chamar anota a hora. Se a pessoa não aparecer, Não respondeu. Se aparecer, preenche e registra.")
             : "Fila de outro dia. Só consulta."}</p>
-          <p class="muted form-dica dica-mobile">${ehHoje() ? "1 chama · 2 preenche · 3 registra. Rosa espera · amarelo em atendimento." : "Só consulta."}</p>
-        </div>
-        <div class="topo-acoes">
-          ${legendaTipos()}
-          ${barraFiltro()}
-        </div>
+        <p class="muted form-dica dica-mobile">${ehHoje() ? "1 chama · 2 preenche · 3 registra. Rosa espera · amarelo em atendimento." : "Só consulta."}</p>
+        ${legendaTipos()}
       </div>
       ${form}
       <div id="fila-lista">${tabelaFila(senhas, { chamar: false })}</div>
@@ -1268,62 +1499,86 @@ function telaTipo(tipo) {
   const lista = senhas.filter((s) => s.tipo_id === tipo.id);
   const proxima = ehHoje() ? proximaEsperaDoTipo(tipo.id) : null;
   const rotuloProx = proxima ? escapar(rotuloSenha(proxima)) : "";
+  const travaGuiche = ehHoje() && chamarPrecisaGuiche(tipo);
   return `<section class="card card-fila">
-    <div class="card-topo">
-      <div>
+    <div class="card-topo card-topo-tipo">
+      <div class="card-topo-linha">
         <h2>${escapar(tipo.nome)}</h2>
-        <p class="muted form-dica dica-web">${ehHoje() ? "<strong>Chamar próximo</strong> pega o primeiro da fila. Chamar na linha coloca em atendimento — se não for o próximo, pede confirmação. Trocar o tipo e <strong>Encaminhar</strong> manda pra outra fila. <strong>Finalizar</strong> encerra neste tipo." : `Consultando ${dataLegivel(diaAtual())}. Chamada só no dia de hoje.`}</p>
-        <p class="muted form-dica dica-mobile">${ehHoje() ? "Próximo no topo, ou Chamar na linha. Troca o tipo e encaminha, ou finaliza." : "Só consulta."}</p>
-        <p id="fila-dica" class="muted form-dica dica-web">${verTudo ? "Inclui quem já foi finalizado." : "Só quem ainda está na fila ou em atendimento."}</p>
+        <div class="topo-acoes">
+          <div class="topo-chamar">
+            ${htmlGuicheTipo(tipo)}
+            ${ehHoje() ? `<button type="button" class="btn primary" data-acao="chamar-proxima" data-tipo="${escapar(tipo.id)}" ${proxima && !travaGuiche ? "" : "disabled"}${travaGuiche ? " title=\"Escolha o guichê\"" : ""}><span class="lab-wide">Chamar próximo${rotuloProx ? ` · ${rotuloProx}` : ""}</span><span class="lab-narrow">Próximo${rotuloProx ? ` ${rotuloProx}` : ""}</span></button>` : ""}
+          </div>
+          ${barraFiltro()}
+          <span class="sigla grande" style="background:${escapar(tipo.cor)}">${escapar(tipo.sigla)}</span>
+        </div>
       </div>
-      <div class="topo-acoes">
-        ${ehHoje() ? `<button type="button" class="btn primary" data-acao="chamar-proxima" data-tipo="${escapar(tipo.id)}" ${proxima ? "" : "disabled"}><span class="lab-wide">Chamar próximo${rotuloProx ? ` · ${rotuloProx}` : ""}</span><span class="lab-narrow">Próximo${rotuloProx ? ` ${rotuloProx}` : ""}</span></button>` : ""}
-        ${barraFiltro()}
-        <span class="sigla grande" style="background:${escapar(tipo.cor)}">${escapar(tipo.sigla)}</span>
-      </div>
+      <p class="muted form-dica dica-web">${ehHoje() ? "<strong>Chamar próximo</strong> pega o primeiro da fila. Chamar na linha coloca em atendimento — se não for o próximo, pede confirmação. Trocar o tipo e <strong>Encaminhar</strong> manda pra outra fila. <strong>Finalizar</strong> encerra neste tipo." : `Consultando ${dataLegivel(diaAtual())}. Chamada só no dia de hoje.`}</p>
+      <p class="muted form-dica dica-mobile">${ehHoje() ? "Próximo no topo, ou Chamar na linha. Troca o tipo e encaminha, ou finaliza." : "Só consulta."}</p>
+      <p id="fila-dica" class="muted form-dica dica-web">${verTudo ? "Inclui quem já foi finalizado." : "Só quem ainda está na fila ou em atendimento."}</p>
     </div>
     <div id="fila-lista">${tabelaFila(lista, { chamar: ehHoje() })}</div>
   </section>`;
 }
 
+function rotuloGuiches(n) {
+  const q = Number(n) || 0;
+  return q > 0 ? String(q) : "Não tem";
+}
+
 function telaTipos() {
   const editando = tipos.find((t) => t.id === tipoEditandoId) || null;
+  const fixo = ehTipoFixo(editando);
+  const semGuiche = editando ? !guichesDoTipo(editando) : false;
+  const dica = editando
+    ? (fixo
+      ? `A <strong>Senha geral</strong> não muda de nome, sigla nem cor, e não dá para desativar. Só informa se a recepção tem guichês e quantos.`
+      : `Editando <strong>${escapar(editando.nome)}</strong>. Pode mudar nome, sigla, cor e os guichês.`)
+    : "A Senha geral já vem pronta e não sai da lista. Os outros tipos (Triagem, Consulta, Ajuizamento) você edita, inclui ou desativa.";
   return `<section class="card">
     <h2>Tipos de atendimento</h2>
-    <p class="muted form-dica">${editando ? `Editando <strong>${escapar(editando.nome)}</strong>. Os tipos já vêm prontos (Triagem, Consulta, Ajuizamento) e você pode mudar nome, sigla e cor.` : "Os tipos já vêm cadastrados. Pode editar, incluir outros ou desativar."}</p>
+    <p class="muted form-dica">${dica}</p>
     <form id="form-tipo" class="form-grid cadastro">
       <input type="hidden" id="tipo-id" value="${editando ? escapar(editando.id) : ""}">
       <label>Nome
-        <input id="tipo-nome" required placeholder="Ex.: Triagem" value="${editando ? escapar(editando.nome) : ""}">
+        <input id="tipo-nome" required placeholder="Ex.: Triagem" value="${editando ? escapar(editando.nome) : ""}" ${fixo ? "readonly" : ""}>
       </label>
       <label>Sigla
-        <input id="tipo-sigla" required maxlength="3" placeholder="T" value="${editando ? escapar(editando.sigla) : ""}">
+        <input id="tipo-sigla" required maxlength="3" placeholder="T" value="${editando ? escapar(editando.sigla) : ""}" ${fixo ? "readonly" : ""}>
       </label>
       <label>Cor
-        <input id="tipo-cor" type="color" value="${editando ? escapar(editando.cor) : "#6B3FA0"}">
+        <input id="tipo-cor" type="color" value="${editando ? escapar(editando.cor) : "#6B3FA0"}" ${fixo ? "disabled" : ""}>
+      </label>
+      <label class="chip-check tipo-sem-guiche">
+        <input type="checkbox" id="tipo-sem-guiches" ${semGuiche ? "checked" : ""}>
+        <span class="chip-check-ui">Este local não tem guichês</span>
+      </label>
+      <label id="tipo-guiches-wrap" class="${semGuiche ? "hidden" : ""}">Quantos guichês
+        <input id="tipo-guiches" type="number" min="1" max="20" step="1" inputmode="numeric" value="${editando ? (guichesDoTipo(editando) || 1) : 1}">
       </label>
       <button class="btn primary" type="submit">${editando ? "Salvar" : "Incluir tipo"}</button>
       ${editando ? `<button type="button" class="btn ghost" data-acao="cancelar-tipo">Cancelar</button>` : ""}
     </form>
     <p id="tipo-erro" class="erro hidden"></p>
     <table class="table table-cartoes">
-      <thead><tr><th>Tipo</th><th>Quando</th><th></th></tr></thead>
+      <thead><tr><th>Tipo</th><th>Guichês</th><th>Quando</th><th></th></tr></thead>
       <tbody>
         ${
-          tipos.length
-            ? tipos
+          tiposNaLista().length
+            ? tiposNaLista()
                 .map(
                   (t) => `<tr class="${t.id === tipoEditandoId ? "editando" : ""}">
-                    <td data-label="Tipo"><span class="sigla" style="background:${escapar(t.cor)}">${escapar(t.sigla)}</span> <strong>${escapar(t.nome)}</strong>${t.ativo ? "" : " · inativo"}</td>
+                    <td data-label="Tipo"><span class="sigla" style="background:${escapar(t.cor)}">${escapar(t.sigla)}</span> <strong>${escapar(t.nome)}</strong>${ehTipoFixo(t) ? ` <span class="tipo-fixo-tag">fixo</span>` : ""}${t.ativo ? "" : " · inativo"}</td>
+                    <td data-label="Guichês">${rotuloGuiches(t.guiches)}</td>
                     <td class="meta" data-label="Quando">${auditoria(t)}</td>
                     <td class="cel-botoes">
-                      <button type="button" class="btn ghost small" data-acao="editar-tipo" data-id="${t.id}">Editar</button>
-                      <button type="button" class="btn ghost small" data-acao="toggle-tipo" data-id="${t.id}" data-ativo="${t.ativo ? "1" : "0"}">${t.ativo ? "Desativar" : "Ativar"}</button>
+                      <button type="button" class="btn ghost small" data-acao="editar-tipo" data-id="${t.id}">${ehTipoFixo(t) ? "Guichês" : "Editar"}</button>
+                      ${ehTipoFixo(t) ? "" : `<button type="button" class="btn ghost small" data-acao="toggle-tipo" data-id="${t.id}" data-ativo="${t.ativo ? "1" : "0"}">${t.ativo ? "Desativar" : "Ativar"}</button>`}
                     </td>
                   </tr>`
                 )
                 .join("")
-            : `<tr><td colspan="3" class="empty">Nenhum tipo ainda.</td></tr>`
+            : `<tr><td colspan="4" class="empty">Nenhum tipo ainda.</td></tr>`
         }
       </tbody>
     </table>
@@ -1617,7 +1872,7 @@ function baixarRelatorio() {
 }
 
 function htmlFiltrosRecorte(prefix, filtro, lista, extras = "") {
-  const optsTipo = tipos.map((t) => `<option value="${t.id}" ${filtro.tipo === t.id ? "selected" : ""}>${escapar(t.nome)}</option>`).join("");
+  const optsTipo = tiposFila().map((t) => `<option value="${t.id}" ${filtro.tipo === t.id ? "selected" : ""}>${escapar(t.nome)}</option>`).join("");
   const optsPessoa = operadores
     .filter((o) => o.ativo || lista.some((s) => s.created_by === o.id || s.atendido_por === o.id))
     .map((o) => `<option value="${o.id}" ${filtro.pessoa === o.id ? "selected" : ""}>${escapar(o.nome)}</option>`)
@@ -1795,7 +2050,7 @@ function htmlPainel(lista, chamadasFonte, filtro, opts = {}) {
     .map((s) => Math.max(0, (agora - new Date(s.hora_recepcao)) / 60000));
   const maisAntiga = naFilaMin.length ? Math.max(...naFilaMin) : null;
 
-  const porTipo = tipos.map((t) => {
+  const porTipo = tiposFila().map((t) => {
     const doTipo = lista.filter((s) => s.tipo_id === t.id);
     return {
       t,
@@ -1995,6 +2250,7 @@ function cfgVista() {
     ordem_normais: String(quotaCfg("ordem_normais", 2)),
     ordem_preferenciais: String(quotaCfg("ordem_preferenciais", 1)),
     ordem_comecar_pref: quotasOrdem().comecarPref ? "sim" : "nao",
+    voz_script: JSON.stringify(parseVozScript(configuracoes.voz_script)),
     dispenser_modo: dispenserModo(),
     dispenser_proxima: String(numeroCfg("dispenser_proxima")),
     dispenser_proxima_comum: String(numeroCfg("dispenser_proxima_comum")),
@@ -2034,6 +2290,8 @@ function sincronizarCfgRascunho() {
   lerNum("cfg-dispenser-proxima", "dispenser_proxima");
   lerNum("cfg-dispenser-comum", "dispenser_proxima_comum");
   lerNum("cfg-dispenser-pref", "dispenser_proxima_pref");
+  const vozDom = lerVozListaDom();
+  if (vozDom) base.voz_script = JSON.stringify(vozDom);
   cfgRascunho = base;
   cfgFeedback = "";
   document.getElementById("cfg-ok")?.classList.add("hidden");
@@ -2073,6 +2331,12 @@ function telaConfiguracoes() {
         <p class="on" id="cfg-ex-proporcao">${textoExemploProporcao(quotas.normais, quotas.prefs, quotas.comecarPref)}</p>
       </div>
       <p class="muted form-dica">Quem não respondeu volta para o fim da espera. O <strong>Chamar próximo</strong> e o aviso de fora de ordem seguem esta regra.</p>
+    </div>
+    <div class="cfg-bloco">
+      <h3>O que a TV fala</h3>
+      <p class="muted form-dica">Marca <strong>Fala</strong> no que entra na voz e arrasta para a ordem. Atendente usa só o primeiro nome. Vale para todas as TVs.</p>
+      ${htmlVozLista(vista.voz_script)}
+      <p id="cfg-voz-exemplo" class="cfg-exemplo-tit">Exemplo: <strong>${escapar(textoVozExemplo(vista.voz_script) || "—")}</strong></p>
     </div>
     <div class="cfg-bloco">
       <h3>Dispenser de senha de papel</h3>
@@ -2170,6 +2434,13 @@ function desenhar() {
     document.getElementById("btn-chamar-recepcao")?.addEventListener("click", onChamarRecepcao);
     document.getElementById("btn-nao-respondeu-recepcao")?.addEventListener("click", onNaoRespondeuRecepcao);
     ligarFiltro(senhas, { chamar: false });
+    document.getElementById("tipo-guiche")?.addEventListener("change", (ev) => {
+      const tipo = tipoGeral();
+      if (!tipo) return;
+      const n = parseInt(ev.target.value, 10);
+      salvarGuicheTipo(tipo.id, Number.isFinite(n) && n > 0 ? n : 0);
+      desenhar();
+    });
     return;
   }
   if (aba === "controle") {
@@ -2195,6 +2466,9 @@ function desenhar() {
     }
     app.innerHTML = telaTipos();
     document.getElementById("form-tipo")?.addEventListener("submit", onTipo);
+    document.getElementById("tipo-sem-guiches")?.addEventListener("change", (ev) => {
+      document.getElementById("tipo-guiches-wrap")?.classList.toggle("hidden", ev.target.checked);
+    });
     return;
   }
   if (aba === "operadores") {
@@ -2219,8 +2493,20 @@ function desenhar() {
   }
   if (aba.startsWith("tipo-")) {
     const tipo = tipos.find((t) => t.id === aba.slice(5));
+    if (ehTipoFixo(tipo)) {
+      aba = "geral";
+      desenhar();
+      return;
+    }
     app.innerHTML = tipo ? telaTipo(tipo) : "<p>Tipo não encontrado.</p>";
-    if (tipo) ligarFiltro(senhas.filter((s) => s.tipo_id === tipo.id), { chamar: ehHoje() });
+    if (tipo) {
+      ligarFiltro(senhas.filter((s) => s.tipo_id === tipo.id), { chamar: ehHoje() });
+      document.getElementById("tipo-guiche")?.addEventListener("change", (ev) => {
+        const n = parseInt(ev.target.value, 10);
+        salvarGuicheTipo(tipo.id, Number.isFinite(n) && n > 0 ? n : 0);
+        desenhar();
+      });
+    }
     if (focarAtenderId) {
       const form = document.querySelector(`.form-atender[data-id="${focarAtenderId}"]`);
       focarAtenderId = null;
@@ -2276,6 +2562,7 @@ function aplicarEstadoChegada() {
 
 async function onChamarRecepcao() {
   if (!ehHoje()) return;
+  if (!garantirGuiche(tipoGeral())) return;
   guardarRascunho();
   if (!rascunhoChegada.chamado) {
     if (usaDispenser()) {
@@ -2417,16 +2704,23 @@ async function onTipo(ev) {
   const nome = document.getElementById("tipo-nome").value.trim();
   const sigla = document.getElementById("tipo-sigla").value.trim().toUpperCase();
   const cor = document.getElementById("tipo-cor").value;
+  const semGuiche = !!document.getElementById("tipo-sem-guiches")?.checked;
+  const guichesRaw = parseInt(document.getElementById("tipo-guiches")?.value, 10);
+  const guiches = semGuiche ? 0 : (Number.isFinite(guichesRaw) ? Math.min(20, Math.max(1, guichesRaw)) : 1);
   const id = document.getElementById("tipo-id")?.value || tipoEditandoId;
+  const atual = id ? tipos.find((t) => t.id === id) : null;
   let error;
-  if (id) {
-    ({ error } = await sb.from("tipos_atendimento").update({ nome, sigla, cor }).eq("id", id));
+  if (id && ehTipoFixo(atual)) {
+    ({ error } = await sb.from("tipos_atendimento").update({ guiches }).eq("id", id));
+  } else if (id) {
+    ({ error } = await sb.from("tipos_atendimento").update({ nome, sigla, cor, guiches }).eq("id", id));
   } else {
     ({ error } = await sb.from("tipos_atendimento").insert({
       nome,
       sigla,
       cor,
-      ordem: tipos.length + 1,
+      guiches,
+      ordem: tiposFila().length + 1,
     }));
   }
   if (error) {
@@ -2484,6 +2778,40 @@ function ligarCfgPagina() {
     el?.addEventListener("change", sincronizarCfgRascunho);
   });
   document.getElementById("cfg-salvar")?.addEventListener("click", salvarConfiguracoesTela);
+  ligarCfgVozLista();
+}
+
+function ligarCfgVozLista() {
+  const lista = document.getElementById("cfg-voz-lista");
+  if (!lista) return;
+  let dragEl = null;
+  lista.querySelectorAll("li").forEach((li) => {
+    li.addEventListener("dragstart", () => {
+      dragEl = li;
+      li.classList.add("arrastando");
+    });
+    li.addEventListener("dragend", () => {
+      li.classList.remove("arrastando");
+      dragEl = null;
+      onCfgVozPreview();
+    });
+    li.addEventListener("dragover", (ev) => {
+      ev.preventDefault();
+      const over = ev.currentTarget;
+      if (!dragEl || over === dragEl) return;
+      const rect = over.getBoundingClientRect();
+      lista.insertBefore(dragEl, ev.clientY < rect.top + rect.height / 2 ? over : over.nextSibling);
+    });
+  });
+  lista.querySelectorAll("[data-voz-on]").forEach((el) => {
+    el.addEventListener("change", onCfgVozPreview);
+  });
+}
+
+function onCfgVozPreview() {
+  sincronizarCfgRascunho();
+  const ex = document.getElementById("cfg-voz-exemplo");
+  if (ex) ex.innerHTML = `Exemplo: <strong>${escapar(textoVozExemplo(cfgVista().voz_script) || "—")}</strong>`;
 }
 
 function onCfgOrdemPreview() {
@@ -2509,6 +2837,7 @@ async function salvarConfiguracoesTela() {
     ["ordem_normais", r.ordem_normais],
     ["ordem_preferenciais", r.ordem_preferenciais],
     ["ordem_comecar_pref", r.ordem_comecar_pref],
+    ["voz_script", r.voz_script],
     ["dispenser_modo", r.dispenser_modo],
     ["dispenser_proxima", r.dispenser_proxima],
     ["dispenser_proxima_comum", r.dispenser_proxima_comum],
@@ -2572,6 +2901,8 @@ function avisoChamada(res, senha) {
     abrirAviso({ titulo: "Fila vazia", texto: "Não há ninguém aguardando neste tipo de atendimento." });
   } else if (res?.motivo === "nao_chamada") {
     abrirAviso({ titulo: "Ainda na espera", texto: "Chame a senha antes. “Não respondeu” só vale durante o atendimento." });
+  } else if (res?.motivo === "sem_guiche") {
+    abrirAviso({ titulo: "Escolha o guichê", texto: "Antes de chamar, escolhe o guichê deste atendimento." });
   } else if (res?.motivo === "tipo_invalido") {
     abrirAviso({ titulo: "Tipo inativo", texto: "Este tipo de atendimento não está ativo." });
   } else if (res?.motivo === "outro_dia") {
@@ -2596,8 +2927,12 @@ function aplicarRespostaFila(data, senha) {
 }
 
 async function rpcChamar(id, horaIso) {
+  const tipo = tipoDaAba() || tipoDe(senhas.find((s) => s.id === id)?.tipo_id);
+  if (!garantirGuiche(tipo)) return false;
   const args = { p_id: id, p_operador: sessao.id };
   if (horaIso) args.p_hora = horaIso;
+  const g = guicheAtualDoTipo(tipo);
+  if (g) args.p_guiche = g;
   const { data, error } = await sb.rpc("chamar_senha", args);
   if (error) {
     mostrarErro(error.message);
@@ -2661,9 +2996,14 @@ async function onAcao(ev) {
   if (acao === "chamar-senha") {
     if (!podeChamar()) return;
     const senha = senhas.find((s) => s.id === id);
+    const tipo = tipoDaAba() || tipoDe(senha?.tipo_id);
+    if (!garantirGuiche(tipo)) return;
     if (!(await confirmarForaDeOrdem(senha))) return;
     btn.disabled = true;
-    const { data, error } = await sb.rpc("chamar_senha", { p_id: id, p_operador: sessao.id });
+    const args = { p_id: id, p_operador: sessao.id };
+    const g = guicheAtualDoTipo(tipo);
+    if (g) args.p_guiche = g;
+    const { data, error } = await sb.rpc("chamar_senha", args);
     btn.disabled = false;
     if (error) {
       mostrarErro(error.message);
@@ -2679,12 +3019,17 @@ async function onAcao(ev) {
     if (!podeChamar()) return;
     const tipoId = btn.dataset.tipo;
     if (!tipoId) return;
+    const tipo = tipos.find((t) => t.id === tipoId);
+    if (!garantirGuiche(tipo)) return;
     btn.disabled = true;
-    const { data, error } = await sb.rpc("chamar_proxima", {
+    const args = {
       p_tipo_id: tipoId,
       p_operador: sessao.id,
       p_data: diaAtual(),
-    });
+    };
+    const g = guicheAtualDoTipo(tipo);
+    if (g) args.p_guiche = g;
+    const { data, error } = await sb.rpc("chamar_proxima", args);
     btn.disabled = false;
     if (error) {
       mostrarErro(error.message);
@@ -2802,6 +3147,11 @@ async function onAcao(ev) {
   }
   if (acao === "toggle-tipo") {
     if (!ehAdmin()) return;
+    const tipo = tipos.find((t) => t.id === id);
+    if (ehTipoFixo(tipo)) {
+      mostrarErro("A Senha geral não pode ser desativada.");
+      return;
+    }
     const { error } = await sb.from("tipos_atendimento").update({ ativo: btn.dataset.ativo !== "1" }).eq("id", id);
     if (error) mostrarErro(error.message);
     else await carregar();
@@ -2901,6 +3251,7 @@ async function onLogin(ev) {
   localStorage.setItem(SESSAO_KEY, JSON.stringify(data));
   document.getElementById("login").classList.add("hidden");
   document.getElementById("dia").value = hojeISO();
+  pintarDiaMostra();
   aplicarHashInicial();
   aplicarTopoSessao();
   aplicarModoTela();
@@ -3017,8 +3368,10 @@ function ligarEventos() {
   app.addEventListener("blur", (ev) => {
     if (ev.target.matches("input[data-campo=nome], input[data-campo=processo], [data-campo=observacao]")) onCampo(ev);
   }, true);
+  document.getElementById("dia").addEventListener("input", pintarDiaMostra);
   document.getElementById("dia").addEventListener("change", () => {
     if (!ehAdmin()) document.getElementById("dia").value = hojeISO();
+    pintarDiaMostra();
     carregar();
   });
   const cfgBtn = document.getElementById("btn-cfg");
@@ -3115,6 +3468,7 @@ function ligarEventos() {
 
 async function init() {
   document.getElementById("dia").value = hojeISO();
+  pintarDiaMostra();
   ligarEventos();
   if (!(await conectar())) return;
   if (!pedirLogin()) return;

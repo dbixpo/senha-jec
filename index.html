@@ -15,8 +15,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/app.css?v=93">
-  <link rel="stylesheet" href="css/tv.css?v=93">
+  <link rel="stylesheet" href="css/app.css?v=105">
+  <link rel="stylesheet" href="css/tv.css?v=105">
 </head>
 <body>
   <div id="setup" class="overlay hidden">
@@ -38,7 +38,7 @@
   <div id="login" class="overlay hidden">
     <div class="login-card">
       <div class="login-body">
-        <img class="logo-login" src="img/logo-login.png?v=93" alt="Senha JEC">
+        <img class="logo-login" src="img/logo-login.png?v=105" alt="Senha JEC">
         <form id="form-login">
           <div class="campo-login">
             <span class="lab-linha">
@@ -77,8 +77,8 @@
     <div class="faixa" aria-hidden="true"></div>
     <header class="top">
       <button type="button" class="brand" id="btn-home" aria-label="Ir para Senha geral">
-        <img class="logo-top logo-top-web" src="img/logo-topbar.png?v=93" alt="">
-        <img class="logo-top logo-top-cel" src="img/simbolo-rolo.png?v=93" alt="">
+        <img class="logo-top logo-top-web" src="img/logo-topbar.png?v=105" alt="">
+        <img class="logo-top logo-top-cel" src="img/simbolo-rolo.png?v=105" alt="">
       </button>
       <div class="top-actions hidden">
         <div id="quem" class="quem"></div>
@@ -98,7 +98,8 @@
       </div>
       <div class="top-dia">
         <label class="date-wrap">
-          <input type="date" id="dia" aria-label="Data">
+          <span id="dia-mostra" class="date-mostra" aria-hidden="true"></span>
+          <input type="date" id="dia" lang="pt-BR" aria-label="Data">
         </label>
       </div>
     </header>
@@ -152,15 +153,15 @@
 
       <h3>Recepção — Senha geral</h3>
       <ol>
-        <li><strong>Chamar</strong> anota a hora. Ainda não grava.</li>
+        <li><strong>Chamar</strong> anota a hora. Se a recepção tem guichês, escolhe o guichê antes. Ainda não grava.</li>
         <li>Preenche nome, tipo (T, C, A…) e, se for o caso, preferencial e nº de processo.</li>
         <li><strong>Registrar</strong> manda a pessoa para a fila daquele tipo.</li>
         <li><strong>Não veio</strong> descarta o rascunho, sem criar senha.</li>
       </ol>
-      <p>A numeração segue o dispenser (Opções → Configurações) ou, se não usa papel, começa no 01 todo dia. Preferencial no rolo único vira P01, P02… Com dois rolos, comum e preferencial têm numeração própria. Em <strong>Opções → Configurações</strong> o administrador informa: chamar <strong>1 preferencial para cada 2 senhas normais</strong> (os números ficam abertos), começando pelas comuns. Dá para marcar <strong>Começar com as preferenciais</strong>. A tela mostra um exemplo da ordem.</p>
+      <p>A numeração segue o dispenser (Opções → Configurações) ou, se não usa papel, começa no 01 todo dia. Preferencial no rolo único vira P01, P02… Com dois rolos, comum e preferencial têm numeração própria. Em <strong>Opções → Configurações</strong> o administrador informa: chamar <strong>1 preferencial para cada 2 senhas normais</strong> (os números ficam abertos), começando pelas comuns. Dá para marcar <strong>Começar com as preferenciais</strong>. A tela mostra um exemplo da ordem. Também configura o que a TV fala (requisitante, senha, local, guichê, atendente) e a ordem, arrastando a lista. Em <strong>Tipos de atendimento</strong> a Senha geral já vem pronta e não sai da lista; cada tipo (inclusive a recepção) marca se tem guichês e quantos. Se tiver, na aba a pessoa escolhe o guichê antes de chamar.</p>
 
       <h3>Painel da TV</h3>
-      <p>Em <strong>Opções → Painel da TV</strong> (ou pelo link na tela de login) o sistema pergunta se o painel abre nesta aba ou em outra. Cada TV escolhe o que chama: Senha geral, Triagem, Consulta… Uma TV pode ficar com tudo; outra, só com dois tipos. No topo, no centro, tem data (DD/MM/AAAA) e relógio (HH:MM:SS). O fundo é um YouTube (padrão sem som) ou só o símbolo, se o YouTube estiver bloqueado. Imagens 16:9 ficam no banco (até 30, para todas as TVs): cada TV diz em segundos a espera de fundo até a foto surgir (padrão 300) e quanto tempo fica na tela (padrão 20) — depois a foto sai e o vídeo volta. A foto aparece como cartão no meio, com folga em volta; senha e histórico descem para a faixa de baixo. O som do YouTube continua. Serve em Full HD, monitor 4:3 e tablet. A voz padrão é a feminina do Google neste aparelho; também há as neurais Dii, Cadu, Faber e Edresson. As chamadas entram numa fila (intervalo padrão de 3 segundos) para uma não falar em cima da outra. Na Senha geral a voz fala só o número; nos tipos, número e o nome do atendimento.</p>
+      <p>Em <strong>Opções → Painel da TV</strong> (ou pelo link na tela de login) o sistema pergunta se o painel abre nesta aba ou em outra. Cada TV escolhe o que chama: Senha geral, Triagem, Consulta… Uma TV pode ficar com tudo; outra, só com dois tipos. No topo, no centro, tem data (DD/MM/AAAA) e relógio (HH:MM:SS). O fundo é um YouTube (padrão sem som) ou só o símbolo, se o YouTube estiver bloqueado. Imagens de qualquer proporção (A4, retrato, paisagem, quadrado) ficam no banco (até 30, para todas as TVs): cada TV diz em segundos a espera de fundo até a foto surgir (padrão 300) e quanto tempo fica na tela (padrão 20) — depois a foto sai e o vídeo volta. Retrato fica inteiro de um lado, com senha e histórico do outro; paisagem ou quadrado viram cartão no meio e a faixa desce para baixo. O som do YouTube continua. Serve em Full HD, monitor 4:3 e tablet. A voz padrão é a feminina do Google neste aparelho; também há as neurais Dii, Cadu, Faber e Edresson. As chamadas entram numa fila (intervalo padrão de 3 segundos) para uma não falar em cima da outra. O que a voz fala (requisitante, senha, local, guichê, atendente — só o primeiro nome) se configura em Opções → Configurações, na ordem que o administrador arrastar.</p>
 
       <h3>Atendimento — aba do tipo</h3>
       <ol>
@@ -174,7 +175,7 @@
       <p>Rosa = espera · amarelo = em atendimento · azul = finalizado. Passa o mouse na hora para ver o histórico. Duas pessoas não pegam a mesma senha.</p>
 
       <h3>Dashboard e relatórios</h3>
-      <p>O <strong>dashboard</strong> (admin) acompanha a <strong>data do topo</strong>: é o dia da fila, ao vivo. Em <strong>Opções → Relatórios</strong> abre uma tela só de levantamento, sem a data do topo nem as abas da fila. Lá você escolhe o tipo — <strong>Painel</strong> ou <strong>Lista</strong> — e o período (de/até, ou Hoje, 7 dias, 30 dias e Este mês). Dá para imprimir ou salvar a lista em CSV. Chamada continua valendo só hoje.</p>
+      <p>O <strong>dashboard</strong> (admin) acompanha a <strong>data do topo</strong> (DD/MM/AAAA): é o dia da fila, ao vivo. Em <strong>Opções → Relatórios</strong> abre uma tela só de levantamento, sem a data do topo nem as abas da fila. Lá você escolhe o tipo — <strong>Painel</strong> ou <strong>Lista</strong> — e o período (de/até, ou Hoje, 7 dias, 30 dias e Este mês). Dá para imprimir ou salvar a lista em CSV. Chamada continua valendo só hoje.</p>
 
       <h3>Login</h3>
       <p>O usuário junta o primeiro nome e o sobrenome com um ponto: Nelson Salvador Teixeira vira <strong>nelson.salvador</strong>. A senha padrão é o CPF do usuário.</p>
@@ -188,8 +189,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
   <script src="js/config.js"></script>
-  <script src="js/app.js?v=93"></script>
-  <script src="js/tv.js?v=93"></script>
-  <script src="js/pwa.js?v=93"></script>
+  <script src="js/app.js?v=105"></script>
+  <script src="js/tv.js?v=105"></script>
+  <script src="js/pwa.js?v=105"></script>
 </body>
 </html>

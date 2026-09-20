@@ -1,8 +1,7 @@
 const TV_CFG_KEY = "senha-jec-tv";
 const TV_YT_PADRAO = "https://www.youtube.com/watch?v=0R7O0hwYBTc";
 const TV_DIGITOS = ["zero", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"];
-const TV_CROP_W = 1280;
-const TV_CROP_H = 720;
+const TV_IMG_LADO_MAX = 1600;
 const TV_IMG_MAX = 30;
 const TV_IMG_SEG_PADRAO = 300;
 const TV_IMG_DUR_PADRAO = 20;
@@ -34,7 +33,6 @@ let tvImgTimer = 0;
 let tvYt = null;
 let tvYtPronto = false;
 let tvFalando = false;
-let tvCrop = null;
 let tvCfgAberta = false;
 let tvCfgSuja = false;
 let tvCfgEdicao = null;
@@ -119,7 +117,7 @@ function salvarTvCfg() {
 }
 
 function tvTiposAtivos() {
-  const ativos = tipos.filter((t) => t.ativo);
+  const ativos = typeof tiposFila === "function" ? tiposFila() : tipos.filter((t) => t.ativo && t.codigo !== "geral");
   if (tvCfg.tiposTodos) return ativos;
   return ativos.filter((t) => tvCfg.tipos.includes(t.id));
 }
@@ -151,11 +149,24 @@ function tvRotulo(row) {
 
 function tvLocal(row) {
   if (!row) return "";
-  if (row.origem === "geral" || !row.tipo_id) return "Senha geral";
-  return tipoDe(row.tipo_id)?.nome || "Atendimento";
+  const base = row.local_nome
+    || (row.origem === "geral" || !row.tipo_id ? "Senha geral" : (tipoDe(row.tipo_id)?.nome || "Atendimento"));
+  const g = Number(row.guiche);
+  if (Number.isFinite(g) && g >= 1) return `${base} · guichê ${g}`;
+  return base;
 }
 
 function tvTextoVoz(row) {
+  if (typeof textoVozChamada === "function") {
+    const extra = {};
+    if (!row.requisitante) {
+      const senha = typeof senhas !== "undefined" ? senhas.find((s) => s.id === row.senha_id) : null;
+      extra.requisitante = senha?.nome || "";
+    }
+    if (!row.atendente) extra.atendente = typeof primeiroNome === "function" ? primeiroNome(sessao?.nome) : "";
+    if (!row.local_nome) extra.local_nome = tvLocal(row).replace(/\s·\sguichê\s+\d+$/i, "");
+    return textoVozChamada({ ...row, ...extra });
+  }
   const n = padSenha(row.numero || 0);
   const falado = n.split("").map((d) => TV_DIGITOS[Number(d)] || d).join(" ");
   const pref = row.preferencial ? "P, " : "";
@@ -829,7 +840,6 @@ function tvParar() {
   tvCfgAberta = false;
   tvCfgSuja = false;
   tvCfgEdicao = null;
-  tvCrop = null;
   tvPronto = false;
 }
 
@@ -1048,9 +1058,24 @@ function tvEsconderSlide() {
   document.getElementById("tv-slide")?.classList.remove("visivel");
   clearTimeout(tvAnuncioTimer);
   tvAnuncioTimer = setTimeout(() => {
-    document.querySelector(".tv-shell")?.classList.remove("tv-anuncio");
+    document.querySelector(".tv-shell")?.classList.remove("tv-anuncio", "tv-retrato");
     tvAnuncioTimer = 0;
   }, 520);
+}
+
+function tvFormaFoto(w, h) {
+  const largura = Number(w) || 0;
+  const altura = Number(h) || 0;
+  if (!largura || !altura) return "paisagem";
+  const r = largura / altura;
+  if (r >= 0.92 && r <= 1.08) return "quadrado";
+  return r < 1 ? "retrato" : "paisagem";
+}
+
+function tvAplicarFormaFoto(img, shell) {
+  const forma = tvFormaFoto(img.naturalWidth, img.naturalHeight);
+  shell.classList.toggle("tv-retrato", forma === "retrato");
+  shell.classList.toggle("tv-anuncio", forma !== "retrato");
 }
 
 function tvMostrarSlide() {
@@ -1060,19 +1085,28 @@ function tvMostrarSlide() {
   const shell = document.querySelector(".tv-shell");
   if (!el || !img || !shell) return;
   tvSlideIdx = tvSlideIdx % tvImagens.length;
-  img.src = tvUrlImagem(tvImagens[tvSlideIdx]);
+  const atual = tvImagens[tvSlideIdx];
   const proxima = tvImagens[(tvSlideIdx + 1) % tvImagens.length];
-  if (proxima && proxima !== tvImagens[tvSlideIdx]) {
+  tvSlideIdx += 1;
+  let ja = false;
+  const entrar = () => {
+    if (ja) return;
+    ja = true;
+    tvAplicarFormaFoto(img, shell);
+    clearTimeout(tvAnuncioTimer);
+    tvAnuncioTimer = 0;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => el.classList.add("visivel"));
+    });
+  };
+  img.onload = entrar;
+  img.onerror = entrar;
+  img.src = tvUrlImagem(atual);
+  if (img.complete && img.naturalWidth) entrar();
+  if (proxima && proxima !== atual) {
     const preload = new Image();
     preload.src = tvUrlImagem(proxima);
   }
-  tvSlideIdx += 1;
-  clearTimeout(tvAnuncioTimer);
-  tvAnuncioTimer = 0;
-  shell.classList.add("tv-anuncio");
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => el.classList.add("visivel"));
-  });
 }
 
 function tvLigarSlides() {
@@ -1137,7 +1171,6 @@ function telaTv() {
       <ol id="tv-historico" class="tv-historico"></ol>
     </div>
     ${tvCfgAberta ? htmlTvCfg() : ""}
-    ${tvCrop ? htmlTvCrop() : ""}
   </div>`;
 }
 
@@ -1166,7 +1199,7 @@ function tvOpcoesVoz() {
 
 function htmlTvCfg() {
   const cfg = tvCfgForm();
-  const tiposHtml = tipos.filter((t) => t.ativo).map((t) => `
+  const tiposHtml = tiposFila().map((t) => `
     <label class="chip-check">
       <input type="checkbox" data-tv-tipo="${t.id}" ${cfg.tiposTodos || cfg.tipos.includes(t.id) ? "checked" : ""}>
       <span class="chip-check-ui"><i class="tab-dot" style="background:${escapar(t.cor)}"></i>${escapar(t.nome)}</span>
@@ -1220,7 +1253,7 @@ function htmlTvCfg() {
         </section>
         <section>
           <h3>Voz da chamada</h3>
-          <p class="muted form-dica">Padrão: a voz feminina do Google neste aparelho. Se o Google não aparecer, usa a mulher do sistema. Cadu, Faber, Edresson e Dii são neurais (a primeira vez baixa uns 60 MB). Na Senha geral fala só o número; nos tipos, número e o nome do atendimento. Se várias pessoas chamarem ao mesmo tempo, a TV fala uma senha por vez, com o intervalo abaixo, e descarta o excesso da fila.</p>
+          <p class="muted form-dica">Padrão: a voz feminina do Google neste aparelho. Se o Google não aparecer, usa a mulher do sistema. Cadu, Faber, Edresson e Dii são neurais (a primeira vez baixa uns 60 MB). O que ela fala (requisitante, senha, local, guichê, atendente) se configura em <strong>Opções → Configurações</strong>. Se várias pessoas chamarem ao mesmo tempo, a TV fala uma senha por vez, com o intervalo abaixo, e descarta o excesso da fila.</p>
           <label>Voz
             <select id="tv-voz">${tvOpcoesVoz()}</select>
           </label>
@@ -1241,7 +1274,7 @@ function htmlTvCfg() {
         </section>
         <section>
           <h3>Imagens sobre o fundo</h3>
-          <p class="muted form-dica">Valem para todas as TVs assim que você enviar (ficam no banco). Quando a foto entra, senha e histórico descem para a faixa de baixo — a imagem aparece inteira no molde 16:9, e o som do YouTube continua se estiver ligado. Até <strong>${TV_IMG_MAX}</strong> imagens. Depois da amostra o fundo <strong>sempre</strong> volta; a espera é o tempo de vídeo (ou do símbolo) até a próxima foto.</p>
+          <p class="muted form-dica">Valem para todas as TVs assim que você enviar (ficam no banco). Sem recorte: a foto entra inteira. Retrato (A4) fica de um lado e a senha do outro; paisagem ou quadrado viram cartão no meio, com a faixa de baixo. Até <strong>${TV_IMG_MAX}</strong> imagens. Depois da amostra o fundo <strong>sempre</strong> volta.</p>
           <div class="cfg-dupla">
             <label>Surge uma imagem a cada
               <span class="tv-seg-linha">
@@ -1257,8 +1290,8 @@ function htmlTvCfg() {
             </label>
           </div>
           <p class="muted form-dica">Padrão: espera 300 segundos (5 minutos) de fundo, 20 segundos em amostra. Com 5 e 5, a foto aparece 5 segundos e o vídeo volta 5 segundos.</p>
-          <label class="btn ghost tv-file-btn${tvImagens.length >= TV_IMG_MAX ? " off" : ""}">Enviar imagem 16:9
-            <input id="tv-img-file" class="tv-file" type="file" accept="image/*" ${tvImagens.length >= TV_IMG_MAX ? "disabled" : ""}>
+          <label class="btn ghost tv-file-btn${tvImagens.length >= TV_IMG_MAX ? " off" : ""}">Enviar imagens
+            <input id="tv-img-file" class="tv-file" type="file" accept="image/*" multiple ${tvImagens.length >= TV_IMG_MAX ? "disabled" : ""}>
           </label>
           <p class="muted form-dica" id="tv-img-conta">${tvImagens.length} / ${TV_IMG_MAX}</p>
           <ul class="tv-img-lista">${imgs || "<li class='muted'>Nenhuma imagem ainda.</li>"}</ul>
@@ -1273,65 +1306,62 @@ function htmlTvCfg() {
   </div>`;
 }
 
-function htmlTvCrop() {
-  return `<div class="tv-crop" role="dialog" aria-labelledby="tv-crop-tit">
-    <div class="tv-crop-card">
-      <h2 id="tv-crop-tit">Enquadrar na TV (16:9)</h2>
-      <p class="muted form-dica">Arrasta a imagem e usa o scroll para aproximar. A janela amarela é o recorte 16:9. Na TV a foto aparece inteira nesse molde; senha e histórico descem para a faixa de baixo, então nada cobre a imagem.</p>
-      <div class="tv-crop-view"><canvas id="tv-crop-canvas" width="${TV_CROP_W}" height="${TV_CROP_H}"></canvas></div>
-      <div class="topo-acoes">
-        <button type="button" class="btn ghost" data-tv="crop-cancelar">Cancelar</button>
-        <button type="button" class="btn primary" data-tv="crop-ok">Usar este recorte</button>
-      </div>
-    </div>
-  </div>`;
+function tvImgTamanho(imgW, imgH) {
+  const w0 = Math.max(1, imgW);
+  const h0 = Math.max(1, imgH);
+  const k = Math.max(w0, h0) > TV_IMG_LADO_MAX ? TV_IMG_LADO_MAX / Math.max(w0, h0) : 1;
+  return { w: Math.max(1, Math.round(w0 * k)), h: Math.max(1, Math.round(h0 * k)) };
 }
 
-function tvDesenharCrop() {
-  const canvas = document.getElementById("tv-crop-canvas");
-  if (!canvas || !tvCrop?.img) return;
-  const ctx = canvas.getContext("2d");
-  const { img, x, y, scale } = tvCrop;
-  ctx.fillStyle = "#0d3b5e";
-  ctx.fillRect(0, 0, TV_CROP_W, TV_CROP_H);
-  const w = img.width * scale;
-  const h = img.height * scale;
-  ctx.drawImage(img, x, y, w, h);
+function tvLerArquivoImagem(file) {
+  return new Promise((ok, falhou) => {
+    const img = new Image();
+    img.onload = () => ok(img);
+    img.onerror = () => falhou(new Error("Não deu para ler a imagem."));
+    img.src = URL.createObjectURL(file);
+  });
 }
 
-function tvAbrirCrop(file) {
-  const img = new Image();
-  img.onload = () => {
-    const cover = Math.max(TV_CROP_W / img.width, TV_CROP_H / img.height);
-    tvCrop = {
-      img,
-      scale: cover,
-      x: (TV_CROP_W - img.width * cover) / 2,
-      y: (TV_CROP_H - img.height * cover) / 2,
-      arrasto: null,
-    };
-    if (!document.querySelector(".tv-crop")) {
-      document.querySelector(".tv-shell")?.insertAdjacentHTML("beforeend", htmlTvCrop());
+async function tvPrepararImagem(file) {
+  const img = await tvLerArquivoImagem(file);
+  const url = img.src;
+  const maxLado = Math.max(img.naturalWidth, img.naturalHeight);
+  const jpeg = /jpe?g$/i.test(file.type || "") || /\.jpe?g$/i.test(file.name || "");
+  try {
+    if (jpeg && maxLado <= TV_IMG_LADO_MAX && file.size < 900000) return file;
+    const { w, h } = tvImgTamanho(img.naturalWidth, img.naturalHeight);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    const blob = await new Promise((ok) => canvas.toBlob(ok, "image/jpeg", 0.92));
+    if (!blob) throw new Error("Não deu para preparar a imagem.");
+    return blob;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function tvEnviarArquivos(files) {
+  let enviadas = 0;
+  for (const file of files) {
+    if (tvImagens.length >= TV_IMG_MAX) {
+      mostrarErro(`O painel guarda no máximo ${TV_IMG_MAX} imagens.`);
+      break;
     }
-    ligarTvCrop();
-    document.querySelector("[data-tv=crop-cancelar]")?.addEventListener("click", tvFecharCrop);
-    document.querySelector("[data-tv=crop-ok]")?.addEventListener("click", tvConfirmarCrop);
-  };
-  img.src = URL.createObjectURL(file);
-}
-
-function tvFecharCrop() {
-  tvCrop = null;
-  document.querySelector(".tv-crop")?.remove();
-}
-
-async function tvConfirmarCrop() {
-  const canvas = document.getElementById("tv-crop-canvas");
-  if (!canvas) return;
-  const blob = await new Promise((ok) => canvas.toBlob(ok, "image/jpeg", 0.88));
-  if (blob) await tvSalvarImagem(blob);
-  tvFecharCrop();
-  tvAtualizarListaImagens();
+    try {
+      const blob = await tvPrepararImagem(file);
+      await tvSalvarImagem(blob);
+      enviadas += 1;
+    } catch (err) {
+      mostrarErro(err?.message || "Não deu para guardar a imagem.");
+      break;
+    }
+  }
+  return enviadas;
 }
 
 function tvAtualizarListaImagens() {
@@ -1358,34 +1388,6 @@ function tvAtualizarListaImagens() {
   });
 }
 
-function ligarTvCrop() {
-  const canvas = document.getElementById("tv-crop-canvas");
-  if (!canvas || !tvCrop) return;
-  tvDesenharCrop();
-  canvas.addEventListener("pointerdown", (ev) => {
-    canvas.setPointerCapture(ev.pointerId);
-    tvCrop.arrasto = { x: ev.clientX, y: ev.clientY, ox: tvCrop.x, oy: tvCrop.y };
-  });
-  canvas.addEventListener("pointermove", (ev) => {
-    if (!tvCrop.arrasto) return;
-    const dx = ev.clientX - tvCrop.arrasto.x;
-    const dy = ev.clientY - tvCrop.arrasto.y;
-    const rect = canvas.getBoundingClientRect();
-    const k = TV_CROP_W / rect.width;
-    tvCrop.x = tvCrop.arrasto.ox + dx * k;
-    tvCrop.y = tvCrop.arrasto.oy + dy * k;
-    tvDesenharCrop();
-  });
-  canvas.addEventListener("pointerup", () => { tvCrop.arrasto = null; });
-  canvas.addEventListener("wheel", (ev) => {
-    ev.preventDefault();
-    const fator = ev.deltaY < 0 ? 1.08 : 0.92;
-    const min = Math.max(TV_CROP_W / tvCrop.img.width, TV_CROP_H / tvCrop.img.height);
-    tvCrop.scale = Math.min(8, Math.max(min, tvCrop.scale * fator));
-    tvDesenharCrop();
-  }, { passive: false });
-}
-
 function ligarTv() {
   tvDestravarVoz();
   tvPintarChamada(false);
@@ -1401,11 +1403,6 @@ function ligarTv() {
     tvDestravarVoz();
   });
   if (tvCfgAberta) ligarTvCfg();
-  if (tvCrop) {
-    ligarTvCrop();
-    document.querySelector("[data-tv=crop-cancelar]")?.addEventListener("click", tvFecharCrop);
-    document.querySelector("[data-tv=crop-ok]")?.addEventListener("click", tvConfirmarCrop);
-  }
 }
 
 function tvAtualizarBotaoYtPadrao() {
@@ -1433,18 +1430,24 @@ function ligarTvCfg() {
     const rascunho = tvColetarCfgTela();
     if (rascunho) Object.assign(tvCfg, rascunho);
     const tipo = tvTiposAtivos()[0];
-    if (tipo) tvFalarAgora({ numero: 3, preferencial: true, origem: "tipo", tipo_id: tipo.id });
-    else tvFalarAgora({ numero: 3, preferencial: false, origem: "geral" });
+    const exemplo = {
+      numero: 4,
+      preferencial: false,
+      origem: tipo ? "tipo" : "geral",
+      tipo_id: tipo?.id || null,
+      requisitante: "Maria Silva",
+      atendente: typeof primeiroNome === "function" ? (primeiroNome(sessao?.nome) || "Flávia") : "Flávia",
+      guiche: tipo && Number(tipo.guiches) > 0 ? 1 : null,
+      local_nome: tipo?.nome || "Senha geral",
+    };
+    tvFalarAgora(exemplo);
   });
-  document.getElementById("tv-img-file")?.addEventListener("change", (ev) => {
-    const file = ev.target.files?.[0];
+  document.getElementById("tv-img-file")?.addEventListener("change", async (ev) => {
+    const files = [...(ev.target.files || [])];
     ev.target.value = "";
-    if (!file) return;
-    if (tvImagens.length >= TV_IMG_MAX) {
-      mostrarErro(`O painel guarda no máximo ${TV_IMG_MAX} imagens.`);
-      return;
-    }
-    tvAbrirCrop(file);
+    if (!files.length) return;
+    await tvEnviarArquivos(files);
+    tvAtualizarListaImagens();
   });
   tvAtualizarListaImagens();
   ["tv-yt-som", "tv-yt-vol", "tv-voz", "tv-voz-rate", "tv-voz-vol", "tv-intervalo-chamada", "tv-img-seg", "tv-img-dur", "tv-fonte-geral", "tv-sem-video"].forEach((id) => {
@@ -1486,7 +1489,7 @@ function tvAtualizarCamposVideo() {
 function tvColetarCfgTela() {
   if (!document.getElementById("tv-fonte-geral") && !document.querySelector("[data-tv-tipo]")) return null;
   const tiposMarcados = [...document.querySelectorAll("[data-tv-tipo]:checked")].map((el) => el.getAttribute("data-tv-tipo"));
-  const todos = tipos.filter((t) => t.ativo).map((t) => t.id);
+  const todos = (typeof tiposFila === "function" ? tiposFila() : tipos.filter((t) => t.ativo && t.codigo !== "geral")).map((t) => t.id);
   const r = { ...tvCfg };
   r.geral = !!document.getElementById("tv-fonte-geral")?.checked;
   r.tipos = tiposMarcados;
@@ -1531,6 +1534,8 @@ function tvGuardarCfgTela() {
 
 async function publicarPainelGeral() {
   if (!sb || !sessao || !ehHoje()) return;
+  const tipo = typeof tipoGeral === "function" ? tipoGeral() : null;
+  const g = tipo && typeof guicheAtualDoTipo === "function" ? guicheAtualDoTipo(tipo) : 0;
   const { error } = await sb.from("painel_chamadas").insert({
     data: hojeISO(),
     numero: proximoNumero(),
@@ -1539,6 +1544,10 @@ async function publicarPainelGeral() {
     senha_id: null,
     origem: "geral",
     chamado_por: sessao.id,
+    requisitante: "",
+    atendente: typeof primeiroNome === "function" ? primeiroNome(sessao.nome) : "",
+    local_nome: tipo?.nome || "Senha geral",
+    guiche: g > 0 ? g : null,
   });
   if (error) console.warn("painel_chamadas", error.message);
 }

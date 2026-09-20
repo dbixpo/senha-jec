@@ -51,15 +51,41 @@ create table if not exists tipos_atendimento (
   cor text not null default '#6B3FA0',
   ordem smallint not null default 1,
   ativo boolean not null default true,
+  guiches smallint not null default 1,
+  codigo text,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint tipos_guiches_ok check (guiches >= 0 and guiches <= 20)
 );
 
-insert into tipos_atendimento (nome, sigla, cor, ordem) values
-  ('Triagem', 'T', '#6B3FA0', 1),
-  ('Consulta', 'C', '#7BA83D', 2),
-  ('Ajuizamento', 'A', '#D97A9A', 3)
+alter table tipos_atendimento add column if not exists codigo text;
+create unique index if not exists tipos_codigo_unico
+  on tipos_atendimento (codigo)
+  where codigo is not null;
+
+insert into tipos_atendimento (nome, sigla, cor, ordem, codigo) values
+  ('Senha geral', 'G', '#0D3B5E', 0, 'geral'),
+  ('Triagem', 'T', '#6B3FA0', 1, null),
+  ('Consulta', 'C', '#7BA83D', 2, null),
+  ('Ajuizamento', 'A', '#D97A9A', 3, null)
 on conflict (sigla) do nothing;
+
+do $$
+declare
+  sigla_g text := 'G';
+begin
+  if exists (select 1 from tipos_atendimento where codigo = 'geral') then
+    update tipos_atendimento
+      set nome = 'Senha geral', ativo = true, ordem = 0
+      where codigo = 'geral';
+    return;
+  end if;
+  if exists (select 1 from tipos_atendimento where upper(sigla) = 'G') then
+    sigla_g := 'SG';
+  end if;
+  insert into tipos_atendimento (nome, sigla, cor, ordem, codigo, guiches, ativo)
+  values ('Senha geral', sigla_g, '#0D3B5E', 0, 'geral', 1, true);
+end $$;
 
 create table if not exists configuracoes (
   chave text primary key,
@@ -73,6 +99,7 @@ insert into configuracoes (chave, valor) values
   ('ordem_normais', '2'),
   ('ordem_preferenciais', '1'),
   ('ordem_comecar_pref', 'nao'),
+  ('voz_script', '[{"id":"requisitante","on":true},{"id":"senha","on":true},{"id":"local","on":true},{"id":"guiche","on":true},{"id":"atendente","on":false}]'),
   ('dispenser_modo', 'nenhum'),
   ('dispenser_proxima', '1'),
   ('dispenser_proxima_comum', '1'),
@@ -141,7 +168,11 @@ create table if not exists painel_chamadas (
   origem text not null default 'tipo'
     check (origem in ('geral', 'tipo')),
   chamado_em timestamptz not null default now(),
-  chamado_por uuid references operadores (id)
+  chamado_por uuid references operadores (id),
+  guiche smallint,
+  requisitante text not null default '',
+  atendente text not null default '',
+  local_nome text not null default ''
 );
 create index if not exists painel_chamadas_dia_idx on painel_chamadas (data, chamado_em desc);
 
@@ -275,6 +306,45 @@ create trigger configuracoes_updated_at
 before update on configuracoes
 for each row execute procedure set_updated_at();
 
+create or replace function tipos_proteger_fixos()
+returns trigger
+language plpgsql
+as $$
+begin
+  if old.codigo = 'geral' then
+    new.nome := old.nome;
+    new.sigla := old.sigla;
+    new.cor := old.cor;
+    new.ordem := old.ordem;
+    new.codigo := old.codigo;
+    new.ativo := true;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists tipos_proteger_fixos on tipos_atendimento;
+create trigger tipos_proteger_fixos
+before update on tipos_atendimento
+for each row execute procedure tipos_proteger_fixos();
+
+create or replace function tipos_bloquear_delete_fixo()
+returns trigger
+language plpgsql
+as $$
+begin
+  if old.codigo = 'geral' then
+    raise exception 'A Senha geral não pode ser apagada.';
+  end if;
+  return old;
+end;
+$$;
+
+drop trigger if exists tipos_bloquear_delete_fixo on tipos_atendimento;
+create trigger tipos_bloquear_delete_fixo
+before delete on tipos_atendimento
+for each row execute procedure tipos_bloquear_delete_fixo();
+
 create or replace function login_operador(p_usuario text, p_senha text)
 returns json
 language plpgsql
@@ -347,7 +417,12 @@ begin
 end;
 $$;
 
-create or replace function chamar_senha(p_id uuid, p_operador uuid, p_hora timestamptz default null)
+create or replace function chamar_senha(
+  p_id uuid,
+  p_operador uuid,
+  p_hora timestamptz default null,
+  p_guiche integer default null
+)
 returns json
 language plpgsql
 security definer
@@ -355,8 +430,13 @@ set search_path = public
 as $$
 declare
   alvo senhas%rowtype;
-  local_nome text;
+  local_nome text := '';
+  n_guiches smallint := 0;
+  v_guiche integer := p_guiche;
   quem text;
+  atendente_nome text := '';
+  primeiro text := '';
+  hist_local text := '';
   primeira boolean := false;
   agora timestamptz;
 begin
@@ -382,9 +462,25 @@ begin
     return json_build_object('ok', false, 'motivo', 'ja_chamada', 'com', coalesce(quem, 'outra pessoa'));
   end if;
 
-  select coalesce(t.nome, '') into local_nome
-  from tipos_atendimento t
-  where t.id = alvo.tipo_id;
+  select coalesce(t.nome, ''), coalesce(t.guiches, 0)
+    into local_nome, n_guiches
+    from tipos_atendimento t
+    where t.id = alvo.tipo_id;
+
+  if n_guiches > 0 then
+    if v_guiche is null or v_guiche < 1 or v_guiche > n_guiches then
+      return json_build_object('ok', false, 'motivo', 'sem_guiche');
+    end if;
+  else
+    v_guiche := null;
+  end if;
+
+  select coalesce(nome, '') into atendente_nome from operadores where id = p_operador;
+  primeiro := split_part(trim(atendente_nome), ' ', 1);
+  hist_local := coalesce(local_nome, '');
+  if v_guiche is not null then
+    hist_local := hist_local || ' · guichê ' || v_guiche::text;
+  end if;
 
   agora := coalesce(p_hora, timezone('utc', now()));
 
@@ -407,10 +503,16 @@ begin
   end if;
 
   insert into historico_chamadas (senha_id, tipo_id, chamado_por, local)
-  values (alvo.id, alvo.tipo_id, p_operador, coalesce(local_nome, ''));
+  values (alvo.id, alvo.tipo_id, p_operador, hist_local);
 
-  insert into painel_chamadas (data, numero, preferencial, tipo_id, senha_id, origem, chamado_por)
-  values (alvo.data, alvo.numero, alvo.preferencial, alvo.tipo_id, alvo.id, 'tipo', p_operador);
+  insert into painel_chamadas (
+    data, numero, preferencial, tipo_id, senha_id, origem, chamado_por,
+    guiche, requisitante, atendente, local_nome
+  )
+  values (
+    alvo.data, alvo.numero, alvo.preferencial, alvo.tipo_id, alvo.id, 'tipo', p_operador,
+    v_guiche, coalesce(alvo.nome, ''), primeiro, coalesce(local_nome, '')
+  );
 
   return json_build_object('ok', true, 'primeira', primeira, 'senha', row_to_json(alvo));
 end;
@@ -657,7 +759,12 @@ begin
 end;
 $$;
 
-create or replace function chamar_proxima(p_tipo_id uuid, p_operador uuid, p_data date)
+create or replace function chamar_proxima(
+  p_tipo_id uuid,
+  p_operador uuid,
+  p_data date,
+  p_guiche integer default null
+)
 returns json
 language plpgsql
 security definer
@@ -680,7 +787,7 @@ begin
     return json_build_object('ok', false, 'motivo', 'fila_vazia');
   end if;
 
-  return chamar_senha(escolhida, p_operador, null);
+  return chamar_senha(escolhida, p_operador, null, p_guiche);
 end;
 $$;
 
