@@ -382,6 +382,8 @@ function parseVozScript(raw) {
 }
 
 function vozScriptAtual(vista) {
+  const noDom = lerVozListaDom();
+  if (noDom) return noDom;
   if (vista?.voz_script != null) return parseVozScript(vista.voz_script);
   if (cfgRascunho?.voz_script != null) return parseVozScript(cfgRascunho.voz_script);
   return parseVozScript(configuracoes.voz_script);
@@ -443,14 +445,15 @@ function textoVozExemplo(script) {
   }, script);
 }
 
-function htmlVozLista(script) {
-  return `<ul id="cfg-voz-lista" class="cfg-voz-lista">
+function htmlVozLista(script, opts = {}) {
+  const trava = !!opts.trava;
+  return `<ul id="cfg-voz-lista" class="cfg-voz-lista${trava ? " travada" : ""}">
     ${parseVozScript(script).map((item) => {
       const campo = VOZ_CAMPOS.find((c) => c.id === item.id);
-      return `<li draggable="true" data-id="${item.id}">
+      return `<li ${trava ? "" : "draggable=\"true\""} data-id="${item.id}">
         <span class="cfg-voz-arrasta" title="Arrasta para mudar a ordem" aria-hidden="true">⋮⋮</span>
         <span class="cfg-voz-nome">${escapar(campo?.nome || item.id)}</span>
-        <select data-voz-on aria-label="${escapar(campo?.nome || item.id)} na voz">
+        <select data-voz-on aria-label="${escapar(campo?.nome || item.id)} na voz" ${trava ? "disabled" : ""}>
           <option value="sim" ${item.on ? "selected" : ""}>Fala</option>
           <option value="nao" ${item.on ? "" : "selected"}>Não fala</option>
         </select>
@@ -2334,7 +2337,7 @@ function telaConfiguracoes() {
     </div>
     <div class="cfg-bloco">
       <h3>O que a TV fala</h3>
-      <p class="muted form-dica">Marca <strong>Fala</strong> no que entra na voz e arrasta para a ordem. Atendente usa só o primeiro nome. Vale para todas as TVs.</p>
+      <p class="muted form-dica">Marca <strong>Fala</strong> no que entra na voz e arrasta para a ordem. Atendente usa só o primeiro nome. Vale para todas as TVs. A mesma lista aparece em <strong>Painel da TV → Configurações</strong>.</p>
       ${htmlVozLista(vista.voz_script)}
       <p id="cfg-voz-exemplo" class="cfg-exemplo-tit">Exemplo: <strong>${escapar(textoVozExemplo(vista.voz_script) || "—")}</strong></p>
     </div>
@@ -2783,7 +2786,7 @@ function ligarCfgPagina() {
 
 function ligarCfgVozLista() {
   const lista = document.getElementById("cfg-voz-lista");
-  if (!lista) return;
+  if (!lista || lista.classList.contains("travada")) return;
   let dragEl = null;
   lista.querySelectorAll("li").forEach((li) => {
     li.addEventListener("dragstart", () => {
@@ -2809,9 +2812,11 @@ function ligarCfgVozLista() {
 }
 
 function onCfgVozPreview() {
-  sincronizarCfgRascunho();
+  if (document.getElementById("cfg-salvar")) sincronizarCfgRascunho();
+  const script = lerVozListaDom();
   const ex = document.getElementById("cfg-voz-exemplo");
-  if (ex) ex.innerHTML = `Exemplo: <strong>${escapar(textoVozExemplo(cfgVista().voz_script) || "—")}</strong>`;
+  if (ex) ex.innerHTML = `Exemplo: <strong>${escapar(textoVozExemplo(script) || "—")}</strong>`;
+  if (document.querySelector(".tv-cfg") && typeof tvMarcarCfgSuja === "function") tvMarcarCfgSuja();
 }
 
 function onCfgOrdemPreview() {

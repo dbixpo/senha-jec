@@ -21,7 +21,7 @@ Tudo da **fila** (chamar, finalizar, não respondeu) e o **dashboard** são do *
 
 **Relatórios** (Opções → Relatórios) é outra tela: some a data do topo e as abas da fila. O período (de/até, ou atalhos de 7 dias, 30 dias e o mês) vale para todos os relatórios. Hoje dá para ver em **Painel** (gráficos) ou **Lista** (senha a senha).
 
-**Painel da TV** (Opções → Painel da TV, ou o atalho na tela de login) pergunta se abre **nesta aba** ou em **outra**. Este aparelho vira a televisão da espera. No topo, no centro, tem data e relógio. Cada TV escolhe as fontes (Senha geral e/ou tipos). O fundo é um YouTube (padrão sem som) ou só o símbolo do Senha JEC, um pouco menor e embaçado, se o YouTube estiver bloqueado ou para economizar banda. Imagens de qualquer proporção (A4, retrato, paisagem, quadrado) ficam no banco (até 30, valem para todas as TVs). Cada TV informa a espera de fundo até a foto surgir (padrão **300** s) e quanto ela fica na tela (padrão **20** s); depois o vídeo **volta**. Retrato entra inteiro de um lado, com senha e histórico do outro; paisagem ou quadrado viram **cartão** no meio e a faixa desce para baixo. O som do YouTube continua, se estiver ligado. Serve em Full HD, 4:3 (tipo 800×600) e tablet. A voz padrão é a feminina do **Google** neste aparelho; nas neurais ficam Dii, Cadu, Faber e Edresson. As chamadas entram numa fila com intervalo padrão de **3 segundos**, para uma não falar em cima da outra. O que a voz fala (requisitante, senha, local, guichê, atendente) se configura em **Opções → Configurações**, arrastando a ordem.
+**Painel da TV** (Opções → Painel da TV, ou o atalho na tela de login) pergunta se abre **nesta aba** ou em **outra**. Este aparelho vira a televisão da espera. No topo, no centro, tem data e relógio. Cada TV escolhe as fontes (Senha geral e/ou tipos). O fundo é um YouTube (padrão sem som) ou só o símbolo do Senha JEC, um pouco menor e embaçado, se o YouTube estiver bloqueado ou para economizar banda. Imagens de qualquer proporção (A4, retrato, paisagem, quadrado) ficam no banco (até 30, valem para todas as TVs). Cada TV informa a espera de fundo até a foto surgir (padrão **300** s) e quanto ela fica na tela (padrão **20** s); depois o vídeo **volta**. Retrato entra inteiro de um lado, com senha e histórico do outro; paisagem ou quadrado viram **cartão** no meio e a faixa desce para baixo. O som do YouTube continua, se estiver ligado. Serve em Full HD, 4:3 (tipo 800×600) e tablet. A voz padrão é a feminina do **Google** neste aparelho; nas neurais ficam Dii, Cadu, Faber e Edresson. As chamadas entram numa fila com intervalo padrão de **3 segundos**, para uma não falar em cima da outra. O que a voz fala (requisitante, senha, local, guichê, atendente) se configura em **Configurações da TV** (e também em Opções → Configurações), arrastando a ordem.
 
 ### Recepção — Senha geral
 
@@ -30,7 +30,7 @@ Tudo da **fila** (chamar, finalizar, não respondeu) e o **dashboard** são do *
 3. **Registrar** — grava na fila daquele tipo.
 4. **Não veio** (na recepção) — descarta o rascunho, sem criar senha.
 
-A numeração pode vir do dispenser de papel (um rolo ou dois) ou, se não usa dispenser, começa no 01 todo dia. Preferencial no rolo único usa o mesmo número com prefixo P. A **ordem de chamada** (Opções → Configurações) é *Chamar P preferenciais para cada N senhas normais* (padrão **1 para 2**), começando pelas **normais**. Dá para marcar **Começar com as preferenciais**. A chegada dentro de cada grupo não muda. Em **O que a TV fala** marca Fala/Não fala e arrasta a ordem (padrão: requisitante, senha, local, guichê; atendente desligado, e quando liga fala só o primeiro nome). Ordem, voz e dispenser só entram no sistema depois de **Salvar**. Em **Tipos de atendimento** a **Senha geral** já vem cadastrada (não apaga, não muda nome/sigla/cor). Cada tipo — inclusive a recepção — informa se **tem guichês** e quantos; se tiver, na aba escolhe o guichê antes de chamar.
+A numeração pode vir do dispenser de papel (um rolo ou dois) ou, se não usa dispenser, começa no 01 todo dia. Preferencial no rolo único usa o mesmo número com prefixo P. A **ordem de chamada** (Opções → Configurações) é *Chamar P preferenciais para cada N senhas normais* (padrão **1 para 2**), começando pelas **normais**. Dá para marcar **Começar com as preferenciais**. A chegada dentro de cada grupo não muda. Em **O que a TV fala** (Configurações e também no Painel da TV) marca Fala/Não fala e arrasta a ordem (padrão: requisitante, senha, local, guichê; atendente desligado, e quando liga fala só o primeiro nome). Ordem, voz e dispenser só entram no sistema depois de **Salvar**. Em **Tipos de atendimento** a **Senha geral** já vem cadastrada (não apaga, não muda nome/sigla/cor). Cada tipo — inclusive a recepção — informa se **tem guichês** e quantos; se tiver, na aba escolhe o guichê antes de chamar.
 
 ### Atendimento — aba do tipo
 
@@ -74,14 +74,14 @@ Cores da linha:
 | Configurações → Tipos | Admin | Senha geral é fixa (só guichês). Os outros: nome, sigla, cor, guichês, ativar/desativar |
 | Configurações → Operadores | Admin | Incluir, perfil, senha, ativar/desativar |
 | Configurações | Admin | Ordem de chamada, o que a TV fala, dispenser de papel e próxima senha do rolo — só vale depois de Salvar |
-| Painel da TV | Todo mundo | Tela da espera neste aparelho: fontes, YouTube ou símbolo, imagens, voz e relógio |
+| Painel da TV | Todo mundo | Tela da espera neste aparelho: fontes, YouTube ou símbolo, imagens, voz, o que ela fala e relógio |
 
 ### Configurações (admin)
 
 Vale para **todo o sistema**, não só para um computador. O rascunho só entra depois de **Salvar**.
 
 - **Ordem de chamada.** *Chamar P preferenciais para cada N senhas normais* (padrão 1 para 2). O ciclo começa pelas **normais**, a não ser que marque **Começar com as preferenciais**. A chegada dentro de cada grupo não muda — o 03 não passa o 01, o P08 não passa o P04. Preferencial que já é a próxima da fila não espera. O exemplo na tela mostra a ordem. Com 0 preferenciais, fica só chegada; com 0 normais, as P sobem primeiro. Quem não respondeu continua no fim.
-- **O que a TV fala.** Lista arrastável: Requisitante, Senha, Local de atendimento, Guichê e Atendente. Em cada um escolhe **Fala** ou **Não fala**. Padrão: os quatro primeiros ligados; atendente desligado (quando liga, só o primeiro nome).
+- **O que a TV fala.** Lista arrastável: Requisitante, Senha, Local de atendimento, Guichê e Atendente. Em cada um escolhe **Fala** ou **Não fala**. Padrão: os quatro primeiros ligados; atendente desligado (quando liga, só o primeiro nome). A mesma lista está em **Painel da TV → Configurações**.
 - **Dispenser**
   - *Nenhum*: todo dia a numeração começa no 01.
   - *Rolo único*: um bloco de senhas; preferencial usa o mesmo número com P (P01, 02, P03…).
@@ -89,13 +89,13 @@ Vale para **todo o sistema**, não só para um computador. O rascunho só entra 
 
 ### Painel da TV
 
-Vale **neste aparelho** (salvo no navegador), com um **Salvar** próprio. Outra TV pode mostrar outros tipos, outro vídeo e outra voz. As **imagens** são a exceção: ficam no Postgres e valem para todas as TVs.
+Vale **neste aparelho** (salvo no navegador), com um **Salvar** próprio. Outra TV pode mostrar outros tipos, outro vídeo e outra voz — marcar Consulta numa não muda a outra. As **imagens** e **o que ela fala** são a exceção: ficam no Postgres e valem para todas as TVs. Fechar e Salvar ficam no rodapé; a grade de fotos tem rolagem própria.
 
 O botão **Painel da TV** (no login e em Opções) pergunta se o painel abre **nesta aba** ou em **nova aba**. Clique fora ou Escape cancela.
 
 - **O que esta TV chama.** Senha geral e/ou os tipos. Uma TV pode ficar com tudo; outra, só com Consulta.
 - **Vídeo de fundo.** Live ou vídeo do YouTube (padrão sem som). Dá para voltar o link padrão. **Sem vídeo** usa o símbolo do Senha JEC, menor e embaçado — serve se o YouTube estiver bloqueado ou para economizar banda.
-- **Voz.** Duas listas: **Vozes Padrão** (as do aparelho; a feminina do Google é a recomendada) e **Vozes Neurais** (Dii, Cadu, Faber, Edresson — as três últimas são as da Vivver). Na primeira vez a neural baixa uns 60 MB e guarda neste aparelho. Velocidade, volume e **intervalo entre chamadas** (padrão 3 s). O texto falado (requisitante, senha, local, guichê, atendente) se configura em **Opções → Configurações**, para todas as TVs. Se várias pessoas chamarem ao mesmo tempo, a TV fala uma por vez e descarta o excesso da fila (no máximo 10 à espera).
+- **Voz.** Duas listas: **Vozes Padrão** (as do aparelho; a feminina do Google é a recomendada) e **Vozes Neurais** (Dii, Cadu, Faber, Edresson — as três últimas são as da Vivver). Na primeira vez a neural baixa uns 60 MB e guarda neste aparelho. Velocidade, volume e **intervalo entre chamadas** (padrão 3 s). **O que ela fala** (requisitante, senha, local, guichê, atendente) fica nessa mesma tela, para todas as TVs; só o administrador altera. Se várias pessoas chamarem ao mesmo tempo, a TV fala uma por vez e descarta o excesso da fila (no máximo 10 à espera).
 - **Imagens.** Até 30 fotos no banco, em qualquer proporção (A4, retrato, paisagem, quadrado). Envia direto, sem recorte — dá para selecionar várias de uma vez. *Surge uma imagem a cada* é a espera de fundo (padrão 300 s) até entrar a foto; *fica em amostra* é quanto a foto permanece (padrão 20 s). Depois a foto **sempre** sai e o vídeo volta, mesmo se os dois tempos forem iguais. Retrato (mais alta que larga) fica **inteira de um lado**, senha e histórico do outro. Paisagem ou quadrado viram **cartão** no meio, com folga em volta; senha e histórico descem para a faixa de baixo. Se o som do YouTube estiver ligado, ele não é cortado. O layout se ajeita em Full HD, monitor 4:3 (800×600) e tablet.
 - **Relógio.** No topo, no centro: data DD/MM/AAAA e hora HH:MM:SS (fuso de São Paulo).
 

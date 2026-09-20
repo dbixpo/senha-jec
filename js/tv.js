@@ -49,6 +49,7 @@ let tvFilaFala = [];
 let tvFilaTimer = 0;
 let tvFalaLivreEm = 0;
 let tvRelogioTimer = 0;
+let tvVozTimer = 0;
 
 function tvSegundos(valor, padrao, min, max) {
   const n = Number(valor);
@@ -174,28 +175,49 @@ function tvTextoVoz(row) {
   return `Senha ${pref}${falado}, ${tvLocal(row)}`;
 }
 
+function tvAssinaturaVoz(v) {
+  return `${v?.name || ""} ${v?.lang || ""} ${v?.voiceURI || ""}`;
+}
+
+function tvVozEhPt(v) {
+  const n = tvAssinaturaVoz(v);
+  return /^pt/i.test(v.lang || "") || /portugu|brasil/i.test(n);
+}
+
 function tvVozesPt() {
   if (!window.speechSynthesis) return [];
   const todas = speechSynthesis.getVoices() || [];
-  const pt = todas.filter((v) => /^pt/i.test(v.lang || "") || /portugu|brasil/i.test(v.name || ""));
+  const pt = todas.filter(tvVozEhPt);
+  const google = todas.filter((v) => /google/i.test(tvAssinaturaVoz(v)));
+  const base = pt.length ? pt : todas;
+  google.forEach((g) => {
+    if (!base.some((v) => v.voiceURI === g.voiceURI)) base.push(g);
+  });
   const nota = (v) => {
-    const n = `${v.name} ${v.lang}`.toLowerCase();
+    const n = tvAssinaturaVoz(v).toLowerCase();
     if (n.includes("google") && (/pt-br|pt_br|brasil/.test(n)) && !/male|homem/.test(n)) return 6;
-    if (n.includes("google") && /^pt/i.test(v.lang || "")) return 5;
+    if (n.includes("google") && (/^pt/i.test(v.lang || "") || /portugu/.test(n))) return 5;
     if (n.includes("microsoft") && (n.includes("maria") || n.includes("francisca") || n.includes("thalita"))) return 4;
     if (/pt-br|pt_br/.test(n)) return 3;
     if (n.includes("brasil")) return 2;
     return 1;
   };
-  return (pt.length ? pt : todas).slice().sort((a, b) => nota(b) - nota(a) || a.name.localeCompare(b.name, "pt"));
+  return base.slice().sort((a, b) => nota(b) - nota(a) || a.name.localeCompare(b.name, "pt"));
 }
 
 function tvVozGoogleMulher() {
-  const lista = tvVozesPt();
-  return lista.find((v) => {
-    const n = `${v.name} ${v.lang} ${v.voiceURI}`.toLowerCase();
-    return n.includes("google") && (/pt-br|pt_br|brasil/.test(n) || /^pt/i.test(v.lang || "")) && !/male|homem|daniel/.test(n);
-  }) || lista.find((v) => /google/i.test(`${v.name} ${v.voiceURI}`) && /^pt/i.test(v.lang || ""))
+  const lista = tvVozesPt().concat(window.speechSynthesis ? speechSynthesis.getVoices() || [] : []);
+  const visto = new Set();
+  const unica = lista.filter((v) => {
+    if (!v?.voiceURI || visto.has(v.voiceURI)) return false;
+    visto.add(v.voiceURI);
+    return true;
+  });
+  return unica.find((v) => {
+    const n = tvAssinaturaVoz(v).toLowerCase();
+    return n.includes("google") && (/pt-br|pt_br|brasil|portugu/.test(n) || /^pt/i.test(v.lang || "")) && !/male|homem|daniel/.test(n);
+  }) || unica.find((v) => /google/i.test(tvAssinaturaVoz(v)) && /^pt/i.test(v.lang || ""))
+    || unica.find((v) => /google/i.test(tvAssinaturaVoz(v)) && !/male|homem|daniel|english|español|francais|français|deutsch|italiano/.test(tvAssinaturaVoz(v).toLowerCase()))
     || null;
 }
 
@@ -759,21 +781,54 @@ async function tvEntrar() {
   tvEscutar();
 }
 
+function tvAtualizarListaVoz() {
+  const sel = document.getElementById("tv-voz");
+  if (!sel) return;
+  const atual = sel.value || tvCfgForm().vozUri;
+  sel.innerHTML = tvOpcoesVoz();
+  const rec = (tvVozGoogleMulher() || tvVozMulherSistema())?.voiceURI;
+  const alvo = atual === TV_VOZ_PADRAO ? rec : atual;
+  if (alvo && [...sel.options].some((o) => o.value === alvo)) sel.value = alvo;
+}
+
+function tvAguardarVozes() {
+  if (!window.speechSynthesis) return;
+  if (tvVozTimer) clearInterval(tvVozTimer);
+  speechSynthesis.getVoices();
+  tvAtualizarListaVoz();
+  let n = 0;
+  tvVozTimer = setInterval(() => {
+    n += 1;
+    speechSynthesis.getVoices();
+    tvAtualizarListaVoz();
+    if (tvVozGoogleMulher() || n >= 20) {
+      clearInterval(tvVozTimer);
+      tvVozTimer = 0;
+    }
+  }, 250);
+}
+
 function tvAbrirCfg() {
   tvPararSlides();
   tvCfgAberta = true;
   tvCfgSuja = false;
   tvCfgEdicao = null;
-  if (document.querySelector(".tv-cfg")) return;
+  if (document.querySelector(".tv-cfg")) {
+    tvDestravarVoz();
+    tvAguardarVozes();
+    return;
+  }
   document.querySelector(".tv-shell")?.insertAdjacentHTML("beforeend", htmlTvCfg());
   ligarTvCfg();
+  tvDestravarVoz();
+  tvAguardarVozes();
 }
 
 async function tvFecharCfg() {
   if (tvCfgSuja) {
     const ok = await perguntarConfirmacao({
       titulo: "Sair sem salvar?",
-      texto: "As alterações desta TV ainda não foram salvas. Tipos, vídeo e voz só entram depois de Salvar.",
+      texto: "As alterações desta TV ainda não foram salvas. Tipos, vídeo, voz e o que ela fala só entram depois de Salvar.",
       ok: "Sair sem salvar",
       cancelar: "Continuar editando",
     });
@@ -783,6 +838,10 @@ async function tvFecharCfg() {
   tvCfgAberta = false;
   tvCfgSuja = false;
   tvCfgEdicao = null;
+  if (tvVozTimer) {
+    clearInterval(tvVozTimer);
+    tvVozTimer = 0;
+  }
   document.querySelector(".tv-cfg")?.remove();
   tvAtualizarFontes();
   tvAplicarFundo();
@@ -801,8 +860,19 @@ function tvMarcarCfgSuja() {
   }
 }
 
-function tvSalvarCfgTela() {
+async function tvSalvarCfgTela() {
   tvGuardarCfgTela();
+  if (typeof ehAdmin === "function" && ehAdmin() && typeof lerVozListaDom === "function" && typeof salvarCfg === "function") {
+    const voz = lerVozListaDom();
+    if (voz) {
+      const err = await salvarCfg("voz_script", JSON.stringify(voz));
+      if (err) {
+        if (typeof mostrarErro === "function") mostrarErro(err.message || "Não deu para gravar o que a TV fala.");
+        return;
+      }
+      if (typeof configuracoes !== "undefined") configuracoes.voz_script = JSON.stringify(voz);
+    }
+  }
   tvCfgSuja = false;
   tvCfgEdicao = null;
   tvAtualizarFontes();
@@ -1215,13 +1285,14 @@ function htmlTvCfg() {
         <div>
           <p class="eyebrow">Esta televisão</p>
           <h2 id="tv-cfg-tit">Configurações da TV</h2>
-          <p class="muted form-dica">Vale só neste aparelho. Tipos, vídeo e voz só entram depois de <strong>Salvar</strong>. Outra TV pode mostrar outros tipos, outro vídeo e outra voz.</p>
+          <p class="muted form-dica">Tipos, vídeo e voz deste aparelho só entram depois de <strong>Salvar</strong>. O que ela fala vale para todas as TVs.</p>
         </div>
       </div>
+      <div class="tv-cfg-corpo">
       <div class="tv-cfg-grid">
         <section>
           <h3>O que esta TV chama</h3>
-          <p class="muted form-dica">Marca Senha geral e os tipos que devem aparecer aqui. Uma TV pode ficar com tudo; outra, só com Consulta e Ajuizamento.</p>
+          <p class="muted form-dica">Marca o que aparece aqui. Outra TV pode ficar só com Consulta, por exemplo.</p>
           <div class="tv-checks">
             <label class="chip-check">
               <input id="tv-fonte-geral" type="checkbox" ${cfg.geral ? "checked" : ""}>
@@ -1232,70 +1303,88 @@ function htmlTvCfg() {
         </section>
         <section>
           <h3>Vídeo de fundo</h3>
-          <p class="muted form-dica">Live ou vídeo do YouTube atrás do painel. O padrão é sem som, para a voz da senha aparecer limpa. Sem vídeo, o fundo é o símbolo do Senha JEC — serve se o YouTube estiver bloqueado ou para economizar banda.</p>
-          <label class="chip-check">
-            <input id="tv-sem-video" type="checkbox" ${cfg.semVideo ? "checked" : ""}>
-            <span class="chip-check-ui">Sem vídeo</span>
-          </label>
+          <p class="muted form-dica">YouTube (padrão sem som) ou só o símbolo, se o vídeo estiver bloqueado.</p>
+          <div class="tv-video-chips">
+            <label class="chip-check">
+              <input id="tv-sem-video" type="checkbox" ${cfg.semVideo ? "checked" : ""}>
+              <span class="chip-check-ui">Sem vídeo</span>
+            </label>
+            <label class="chip-check${cfg.semVideo ? " hidden" : ""}" id="tv-yt-som-chip">
+              <input id="tv-yt-som" type="checkbox" ${cfg.youtubeSom ? "checked" : ""}>
+              <span class="chip-check-ui">Som do vídeo</span>
+            </label>
+          </div>
           <div id="tv-yt-campos" class="${cfg.semVideo ? "hidden" : ""}">
-          <label>Link do YouTube
-            <input id="tv-yt-url" type="url" value="${escapar(cfg.youtube)}" placeholder="${escapar(TV_YT_PADRAO)}">
-          </label>
-          <button type="button" class="btn ghost small" data-tv="yt-padrao" ${tvYoutubeEhPadrao(cfg.youtube) ? "disabled" : ""}>Voltar link do vídeo padrão</button>
-          <label class="chip-check">
-            <input id="tv-yt-som" type="checkbox" ${cfg.youtubeSom ? "checked" : ""}>
-            <span class="chip-check-ui">Som do vídeo</span>
-          </label>
-          <label>Volume do vídeo
-            <input id="tv-yt-vol" type="range" min="0" max="100" value="${Number(cfg.youtubeVolume) || 0}" ${cfg.youtubeSom ? "" : "disabled"}>
-          </label>
+            <label>Link do YouTube
+              <span class="tv-yt-url-linha">
+                <input id="tv-yt-url" type="url" value="${escapar(cfg.youtube)}" placeholder="${escapar(TV_YT_PADRAO)}">
+                <button type="button" class="btn ghost small" data-tv="yt-padrao" ${tvYoutubeEhPadrao(cfg.youtube) ? "disabled" : ""}>Padrão</button>
+              </span>
+            </label>
+            <label>Volume do vídeo
+              <input id="tv-yt-vol" type="range" min="0" max="100" value="${Number(cfg.youtubeVolume) || 0}" ${cfg.youtubeSom ? "" : "disabled"}>
+            </label>
           </div>
         </section>
-        <section>
+        <section class="tv-cfg-voz">
           <h3>Voz da chamada</h3>
-          <p class="muted form-dica">Padrão: a voz feminina do Google neste aparelho. Se o Google não aparecer, usa a mulher do sistema. Cadu, Faber, Edresson e Dii são neurais (a primeira vez baixa uns 60 MB). O que ela fala (requisitante, senha, local, guichê, atendente) se configura em <strong>Opções → Configurações</strong>. Se várias pessoas chamarem ao mesmo tempo, a TV fala uma senha por vez, com o intervalo abaixo, e descarta o excesso da fila.</p>
-          <label>Voz
-            <select id="tv-voz">${tvOpcoesVoz()}</select>
-          </label>
-          <p id="tv-voz-status" class="tv-voz-status hidden"></p>
-          <label>Velocidade
-            <input id="tv-voz-rate" type="range" min="60" max="140" value="${Math.round((Number(cfg.vozRate) || 0.95) * 100)}">
-          </label>
-          <label>Volume da voz
-            <input id="tv-voz-vol" type="range" min="0" max="100" value="${Math.round((Number(cfg.vozVolume) ?? 1) * 100)}">
-          </label>
-          <label>Intervalo de uma chamada para a outra
-            <span class="tv-seg-linha">
-              <input id="tv-intervalo-chamada" type="number" min="0" max="120" step="1" inputmode="numeric" value="${tvSegundos(cfg.intervaloChamada, TV_INTERVALO_CHAMADA_PADRAO, 0, 120)}">
-              <span>segundos</span>
-            </span>
-          </label>
-          <button type="button" class="btn primary small" data-tv="ouvir">Ouvir exemplo</button>
-        </section>
-        <section>
-          <h3>Imagens sobre o fundo</h3>
-          <p class="muted form-dica">Valem para todas as TVs assim que você enviar (ficam no banco). Sem recorte: a foto entra inteira. Retrato (A4) fica de um lado e a senha do outro; paisagem ou quadrado viram cartão no meio, com a faixa de baixo. Até <strong>${TV_IMG_MAX}</strong> imagens. Depois da amostra o fundo <strong>sempre</strong> volta.</p>
-          <div class="cfg-dupla">
-            <label>Surge uma imagem a cada
-              <span class="tv-seg-linha">
-                <input id="tv-img-seg" type="number" min="1" max="86400" step="1" inputmode="numeric" value="${tvSegundos(cfg.imagensSeg, TV_IMG_SEG_PADRAO, 1, 86400)}">
-                <span>segundos</span>
-              </span>
-            </label>
-            <label>Fica em amostra
-              <span class="tv-seg-linha">
-                <input id="tv-img-dur" type="number" min="1" max="86400" step="1" inputmode="numeric" value="${tvSegundos(cfg.imagensDuracao, TV_IMG_DUR_PADRAO, 1, 86400)}">
-                <span>segundos</span>
-              </span>
-            </label>
+          <p class="muted form-dica">Padrão: Google feminina neste aparelho. Neurais (Dii, Cadu, Faber, Edresson) baixam ~60 MB na primeira vez. Várias chamadas: uma por vez, no intervalo.</p>
+          <div class="tv-cfg-voz-grade">
+            <div class="tv-cfg-voz-ctrl">
+              <label>Voz
+                <select id="tv-voz">${tvOpcoesVoz()}</select>
+              </label>
+              <p id="tv-voz-status" class="tv-voz-status hidden"></p>
+              <label>Velocidade
+                <input id="tv-voz-rate" type="range" min="60" max="140" value="${Math.round((Number(cfg.vozRate) || 0.95) * 100)}">
+              </label>
+              <label>Volume da voz
+                <input id="tv-voz-vol" type="range" min="0" max="100" value="${Math.round((Number(cfg.vozVolume) ?? 1) * 100)}">
+              </label>
+              <label>Intervalo de uma chamada para a outra
+                <span class="tv-seg-linha">
+                  <input id="tv-intervalo-chamada" type="number" min="0" max="120" step="1" inputmode="numeric" value="${tvSegundos(cfg.intervaloChamada, TV_INTERVALO_CHAMADA_PADRAO, 0, 120)}">
+                  <span>segundos</span>
+                </span>
+              </label>
+              <button type="button" class="btn primary small" data-tv="ouvir">Ouvir exemplo</button>
+            </div>
+            <div class="tv-cfg-voz-script">
+              <p class="tv-voz-script-tit">O que ela fala</p>
+              <p class="muted form-dica">${typeof ehAdmin === "function" && ehAdmin() ? "Marca <strong>Fala</strong> ou <strong>Não fala</strong> e arrasta a ordem. Vale para todas as TVs depois de <strong>Salvar</strong>." : "O administrador define o que entra na voz. Aqui só dá para ouvir o exemplo."}</p>
+              ${typeof htmlVozLista === "function" ? htmlVozLista(typeof configuracoes !== "undefined" ? configuracoes.voz_script : "", { trava: typeof ehAdmin !== "function" || !ehAdmin() }) : ""}
+              <p id="cfg-voz-exemplo" class="cfg-exemplo-tit">Exemplo: <strong>${escapar((typeof textoVozExemplo === "function" ? textoVozExemplo(typeof configuracoes !== "undefined" ? configuracoes.voz_script : "") : "") || "—")}</strong></p>
+            </div>
           </div>
-          <p class="muted form-dica">Padrão: espera 300 segundos (5 minutos) de fundo, 20 segundos em amostra. Com 5 e 5, a foto aparece 5 segundos e o vídeo volta 5 segundos.</p>
-          <label class="btn ghost tv-file-btn${tvImagens.length >= TV_IMG_MAX ? " off" : ""}">Enviar imagens
-            <input id="tv-img-file" class="tv-file" type="file" accept="image/*" multiple ${tvImagens.length >= TV_IMG_MAX ? "disabled" : ""}>
-          </label>
-          <p class="muted form-dica" id="tv-img-conta">${tvImagens.length} / ${TV_IMG_MAX}</p>
-          <ul class="tv-img-lista">${imgs || "<li class='muted'>Nenhuma imagem ainda.</li>"}</ul>
         </section>
+        <section class="tv-cfg-imgs">
+          <h3>Imagens sobre o fundo</h3>
+          <p class="muted form-dica">Até <strong>${TV_IMG_MAX}</strong>, para todas as TVs, sem recorte. Retrato de um lado; paisagem ou quadrado em cartão. Depois da amostra o fundo volta. Padrão: 300 s de espera, 20 s em amostra.</p>
+          <div class="tv-img-barra">
+            <div class="cfg-dupla">
+              <label>Surge uma imagem a cada
+                <span class="tv-seg-linha">
+                  <input id="tv-img-seg" type="number" min="1" max="86400" step="1" inputmode="numeric" value="${tvSegundos(cfg.imagensSeg, TV_IMG_SEG_PADRAO, 1, 86400)}">
+                  <span>segundos</span>
+                </span>
+              </label>
+              <label>Fica em amostra
+                <span class="tv-seg-linha">
+                  <input id="tv-img-dur" type="number" min="1" max="86400" step="1" inputmode="numeric" value="${tvSegundos(cfg.imagensDuracao, TV_IMG_DUR_PADRAO, 1, 86400)}">
+                  <span>segundos</span>
+                </span>
+              </label>
+            </div>
+            <label class="btn ghost tv-file-btn${tvImagens.length >= TV_IMG_MAX ? " off" : ""}">Enviar imagens
+              <input id="tv-img-file" class="tv-file" type="file" accept="image/*" multiple ${tvImagens.length >= TV_IMG_MAX ? "disabled" : ""}>
+            </label>
+            <p class="muted form-dica" id="tv-img-conta">${tvImagens.length} / ${TV_IMG_MAX}</p>
+          </div>
+          <div class="tv-img-caixa">
+            <ul class="tv-img-lista">${imgs || "<li class='muted'>Nenhuma imagem ainda.</li>"}</ul>
+          </div>
+        </section>
+      </div>
       </div>
       <div class="tv-cfg-acoes">
         <p id="tv-cfg-ok" class="ok-msg hidden">Configuração desta TV salva.</p>
@@ -1462,6 +1551,7 @@ function ligarTvCfg() {
   document.querySelectorAll("[data-tv-tipo]").forEach((el) => {
     el.addEventListener("change", tvMarcarCfgSuja);
   });
+  if (typeof ligarCfgVozLista === "function") ligarCfgVozLista();
 }
 
 function tvDestravarVoz() {
@@ -1482,8 +1572,9 @@ function tvDestravarVoz() {
 }
 
 function tvAtualizarCamposVideo() {
-  const box = document.getElementById("tv-yt-campos");
-  if (box) box.classList.toggle("hidden", !!document.getElementById("tv-sem-video")?.checked);
+  const sem = !!document.getElementById("tv-sem-video")?.checked;
+  document.getElementById("tv-yt-campos")?.classList.toggle("hidden", sem);
+  document.getElementById("tv-yt-som-chip")?.classList.toggle("hidden", sem);
 }
 
 function tvColetarCfgTela() {
@@ -1555,12 +1646,6 @@ async function publicarPainelGeral() {
 if (window.speechSynthesis) {
   speechSynthesis.addEventListener("voiceschanged", () => {
     tvAplicarVozPadraoSePreciso();
-    const sel = document.getElementById("tv-voz");
-    if (!sel || !tvCfgAberta) return;
-    const atual = sel.value || tvCfg.vozUri;
-    sel.innerHTML = tvOpcoesVoz();
-    const rec = (tvVozGoogleMulher() || tvVozMulherSistema())?.voiceURI;
-    const alvo = atual === TV_VOZ_PADRAO ? rec : atual;
-    if (alvo && [...sel.options].some((o) => o.value === alvo)) sel.value = alvo;
+    tvAtualizarListaVoz();
   });
 }

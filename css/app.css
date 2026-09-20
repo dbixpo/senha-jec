@@ -602,6 +602,10 @@ textarea {
   height: var(--control-h);
   min-height: var(--control-h);
 }
+.cfg-voz-lista.travada li {
+  cursor: default;
+  opacity: 0.88;
+}
 .guiche-sel {
   display: inline-flex;
   flex-direction: row;

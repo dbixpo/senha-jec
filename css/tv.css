@@ -497,52 +497,80 @@ body.tela-tv .app {
   position: absolute;
   inset: 0;
   z-index: 5;
-  display: grid;
-  place-items: center;
-  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
   background: rgba(13, 59, 94, 0.72);
-  overflow: auto;
+  overflow: hidden;
 }
 
 .tv-cfg-card {
-  width: min(980px, 100%);
-  max-height: min(96dvh, 100%);
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  width: min(1080px, 100%);
+  height: min(96dvh, 100%);
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
   background: #fff;
   color: var(--ink);
   border-radius: 16px;
   box-shadow: var(--shadow);
-  padding: clamp(12px, 2vw, 24px) clamp(12px, 2vw, 22px);
+  padding: 14px 16px 12px;
+}
+.tv-cfg-card .card-topo {
+  flex: 0 0 auto;
+  margin-bottom: 0;
 }
 .tv-cfg-card h2 {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
 }
 .tv-cfg-card h3 {
-  margin: 0 0 6px;
-  font-size: 16px;
+  margin: 0;
+  font-size: 15px;
   color: var(--dark);
+}
+.tv-cfg-corpo {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-top: 10px;
 }
 .tv-cfg-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 18px;
-  margin-top: 16px;
+  grid-template-rows: auto minmax(180px, 0.7fr) minmax(300px, 1.8fr);
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .tv-cfg-grid section {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   align-content: start;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: #f8fafc;
 }
+.tv-cfg-grid .form-dica,
+.tv-cfg-card .card-topo .form-dica {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
 .tv-cfg-grid label {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   font-size: 13px;
   font-weight: 600;
   color: var(--dark);
+}
+.tv-cfg-grid label.chip-check {
+  display: block;
 }
 .tv-voz-status {
   margin: 0;
@@ -571,25 +599,62 @@ body.tela-tv .app {
   font-weight: 600;
   color: var(--muted);
 }
+.tv-img-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px 14px;
+}
+.tv-img-barra .cfg-dupla {
+  flex: 1 1 280px;
+}
+.tv-img-barra .tv-file-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--control-h);
+  min-height: var(--control-h);
+  padding: 0 14px;
+}
+.tv-img-barra #tv-img-conta {
+  margin: 0 0 8px;
+  white-space: nowrap;
+}
+.tv-img-caixa {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
 .tv-img-lista {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 .tv-img-lista li {
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 .tv-img-lista img {
   width: 100%;
-  height: 148px;
+  height: 72px;
   object-fit: contain;
   background: #0d3b5e;
   border-radius: 8px;
   border: 1px solid var(--line);
+}
+.tv-img-lista .btn.small {
+  height: 32px;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
 }
 
 .tv-file-btn { position: relative; overflow: hidden; cursor: pointer; }
@@ -600,22 +665,81 @@ body.tela-tv .app {
   opacity: 0;
   cursor: pointer;
 }
+.tv-video-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tv-yt-url-linha {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.tv-yt-url-linha input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 #tv-yt-campos {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 .tv-cfg-grid .btn.small {
   justify-self: start;
   width: auto;
 }
+.tv-voz-script-tit {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dark);
+}
+.tv-cfg-voz-grade {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.85fr) minmax(260px, 1.15fr);
+  gap: 12px 16px;
+  align-items: start;
+}
+.tv-cfg-voz-ctrl,
+.tv-cfg-voz-script {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.tv-cfg-grid .cfg-voz-lista {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  gap: 6px;
+}
+.tv-cfg-grid .cfg-voz-lista li {
+  background: #fff;
+  padding: 6px 8px;
+}
+.tv-cfg-grid .cfg-exemplo-tit {
+  margin: 0;
+  font-size: 12.5px;
+}
+.tv-cfg-voz,
+.tv-cfg-imgs {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+.tv-cfg-voz {
+  overflow: auto;
+}
+.tv-cfg-grid section.tv-cfg-imgs {
+  display: flex;
+  flex-direction: column;
+}
 .tv-cfg-acoes {
   display: flex;
   flex-wrap: wrap;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 18px;
-  padding-top: 16px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid var(--line);
 }
 .tv-cfg-acoes .ok-msg {
@@ -623,8 +747,19 @@ body.tela-tv .app {
 }
 
 @media (max-width: 900px) {
+  .tv-cfg-corpo {
+    overflow: auto;
+  }
   .tv-cfg-grid {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
+  }
+  .tv-cfg-voz-grade {
+    grid-template-columns: 1fr;
+  }
+  .tv-img-caixa {
+    flex: 0 0 auto;
+    max-height: min(36vh, 320px);
   }
   .tv-marca span { max-width: 100%; }
   .tv-cfg-acoes { display: grid; }
